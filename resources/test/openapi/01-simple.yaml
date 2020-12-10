@@ -1,0 +1,53 @@
+requestBodies:
+  requestbody1:
+    content:
+      application/json:
+        schema:
+          required:
+            - items
+          type: object
+          properties:
+            items:
+              type: string
+    required: true
+  responses:
+    response1:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: object
+                additionalProperties: false
+                description: Error object containing information about the error.
+                properties:
+                  code:
+                    description: String based error identification code.
+                    example: invalid-data
+                    type: string
+                  data:
+                    description: "Additional error information"
+                    example: {}
+                    type: object
+paths:
+  /v2/resources:
+    post:
+      requestBody:
+        $ref: "#/components/requestBodies/requestBody1"
+      responses:
+        "200":
+          $ref: "#/components/responses/response1"
+        "400":
+          $ref: "#/components/responses/response1"
+  '/v2/resources/{id}':
+    get:
+      description: Some description
+      operationId: resourceGet
+      responses:
+        "200":
+          $ref: "#/components/responses/response1"
+    patch:
+      responses:
+        "200":
+          $ref: "#/components/responses/response1"
