@@ -1,5 +1,5 @@
 use serde_json::Value;
-use std::{fmt, fs, path::PathBuf};
+use std::{fs, path::PathBuf};
 use url::Url;
 
 use crate::error::Error;
@@ -8,47 +8,6 @@ use crate::error::Error;
 pub struct Schema {
     body: Value,
     url: Url,
-}
-#[derive(Default)]
-pub struct SchemaScope {
-    scope: Vec<String>,
-}
-
-impl SchemaScope {
-    pub fn index(&mut self, index: usize) {
-        self.scope.push(index.to_string());
-    }
-
-    pub fn property(&mut self, property: &str) {
-        self.scope.push(property.to_string());
-    }
-
-    pub fn pop(&mut self) {
-        self.scope.pop();
-    }
-
-    pub fn len(&self) -> usize {
-        self.scope.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.scope.is_empty()
-    }
-}
-
-impl fmt::Display for SchemaScope {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "/{}",
-            self.scope
-                .clone()
-                .into_iter()
-                .map(|s| s.replace("/", "~1"))
-                .collect::<Vec<String>>()
-                .join("/")
-        )
-    }
 }
 
 impl<'a> Schema {
@@ -146,6 +105,10 @@ impl<'a> Schema {
 }
 
 pub fn path_to_url(path: String) -> Result<Url, Error> {
+    if path == "-" {
+        return Err(Error::SchemaAsReference);
+    }
+
     let real_path = PathBuf::from(&path);
 
     if real_path.exists() {

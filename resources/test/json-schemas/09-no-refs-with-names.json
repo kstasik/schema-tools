@@ -1,0 +1,64 @@
+{
+    "$id": "https://example.com/arrays.schema.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "title": "Basket",
+    "required": ["withHandle"],
+    "properties": {
+      "type": {
+        "type": "string"
+      },
+      "withHandle": {
+        "type": "boolean"
+      },
+      "fruits": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "test1": {
+        "type": "array",
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "vegetables": {
+        "type": "array",
+        "items": { 
+          "type": "object",
+          "title": "Vegetable",
+          "required": [ "veggieName", "veggieLike" ],
+          "properties": {
+            "veggieName": {
+              "type": "string",
+              "description": "The name of the vegetable."
+            },
+            "veggieLike": {
+              "type": "boolean",
+              "description": "Do I like this vegetable?"
+            },
+            "qty": {
+              "type": "number"
+            },
+            "damage": {
+              "title": "Damage",
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "isInternal": { "type": "boolean" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
