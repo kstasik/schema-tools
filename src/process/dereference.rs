@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use crate::error::Error;
-use crate::schema::{Schema, SchemaScope};
+use crate::schema::Schema;
+use crate::scope::SchemaScope;
 use url::Url;
 
 use serde_json::Value;
@@ -12,16 +13,23 @@ pub struct DereferencerContext {
     pub schemas: HashMap<String, Schema>,
     pub current: Vec<Url>,
     pub scope: SchemaScope,
+    pub resolved: HashMap<String, String>,
 }
 
 #[derive(Default)]
 pub struct DereferencerOptions {
     pub skip_root_internal_references: bool,
+    pub create_internal_references: bool,
 }
 
 impl DereferencerOptions {
     pub fn with_skip_root_internal_references(&mut self, value: bool) -> &mut Self {
         self.skip_root_internal_references = value;
+        self
+    }
+
+    pub fn with_create_internal_references(&mut self, value: bool) -> &mut Self {
+        self.create_internal_references = value;
         self
     }
 
@@ -31,6 +39,7 @@ impl DereferencerOptions {
         let mut root = schema.get_body_mut();
         let mut context = DereferencerContext {
             schemas: HashMap::new(),
+            resolved: HashMap::new(),
             current: vec![],
             scope: SchemaScope::default(),
         };
@@ -49,9 +58,11 @@ impl DereferencerContext {
     pub fn resolve(&mut self, url: Url) {
         let key = url.to_string();
 
-        self.schemas
-            .entry(key)
-            .or_insert_with(|| Schema::load_url(url.clone()).unwrap());
+        self.schemas.entry(key).or_insert_with(|| {
+            log::info!("resolving {}", url);
+
+            Schema::load_url(url.clone()).unwrap()
+        });
 
         self.current.push(url);
     }
@@ -61,6 +72,7 @@ impl Dereferencer {
     pub fn options() -> DereferencerOptions {
         DereferencerOptions {
             skip_root_internal_references: false,
+            create_internal_references: true,
         }
     }
 }
@@ -106,7 +118,7 @@ fn dereference(
             let spec = context.schemas.get(&name.to_string()).unwrap();
             let schema = spec.get_body();
 
-            let mut resolved = match fragment {
+            let mut resolved = match fragment.clone() {
                 Some(real_fragment) => match schema.pointer(real_fragment.as_ref()) {
                     Some(p) => Some(p.clone()),
                     None => {
@@ -116,6 +128,25 @@ fn dereference(
                 },
                 None => Some(schema.clone()),
             };
+
+            // todo: consider different way of prioritizing paths...
+            if options.create_internal_references {
+                let resolved_path = format!("{}#{:?}", spec.get_url(), fragment);
+                if let Some(internal_path) = context.resolved.get(&resolved_path) {
+                    log::info!("{}: referencing to -> #{}", context.scope, internal_path);
+
+                    // todo: refactor is_some is duplicated
+                    if address.is_some() {
+                        context.current.pop();
+                    }
+
+                    return serde_json::json!({ "$ref": format!("#{}", internal_path) });
+                } else {
+                    context
+                        .resolved
+                        .insert(resolved_path, context.scope.to_string());
+                }
+            }
 
             if let Some(ref mut data) = resolved {
                 process_node(data, options, context);
@@ -137,7 +168,7 @@ fn dereference(
 fn process_ref(root: &mut Value, options: &DereferencerOptions, context: &mut DereferencerContext) {
     match root.as_object_mut().unwrap().get_mut("$ref").unwrap() {
         Value::String(reference) => {
-            log::trace!("{}.$ref", context.scope);
+            log::info!("{}.$ref", context.scope);
 
             let mut dereferenced = dereference(reference.clone(), root, options, context);
             let result = dereferenced.as_object_mut().unwrap();
@@ -169,7 +200,7 @@ fn process_node(
                 process_ref(root, options, context)
             } else {
                 for (property, value) in map.into_iter() {
-                    context.scope.property(property);
+                    context.scope.any(property);
                     process_node(value, options, context);
                     context.scope.pop();
                 }
@@ -186,7 +217,7 @@ fn process_node(
     }
 }
 
-fn parse_url(reference: String) -> Result<(Option<String>, Option<String>), Error> {
+pub fn parse_url(reference: String) -> Result<(Option<String>, Option<String>), Error> {
     let parts = reference.split('#').collect::<Vec<&str>>();
 
     match parts.len() {
@@ -219,7 +250,10 @@ mod tests {
     #[should_panic(expected = "Infinite reference occured!")]
     fn test_infinite_ref() {
         let mut spec = spec_from_file("resources/test/json-schemas/07-with-infinite-ref.json");
-        Dereferencer::options().process(&mut spec);
+        Dereferencer::options()
+            .with_create_internal_references(false)
+            .with_skip_root_internal_references(false)
+            .process(&mut spec);
     }
 
     #[test]

@@ -5,13 +5,31 @@ use clap::Clap;
 use env_logger::Builder as LoggerBuilder;
 use serde_json::Value;
 
+pub mod chain;
 pub mod codegen;
 pub mod process;
 pub mod validate;
 
-use crate::error::Error;
+use crate::{error::Error, schema::Schema};
 
 static OUTPUT: &[&str] = &["json", "yaml"];
+pub trait GetSchemaCommand {
+    fn get_schema(&self) -> Result<Schema, Error>;
+}
+
+fn get_options<T>(
+    s: &str,
+) -> Result<(T, serde_json::Value), Box<dyn std::error::Error + Send + Sync + 'static>>
+where
+    T: std::str::FromStr,
+    T::Err: std::error::Error + Send + Sync + 'static,
+{
+    let pos = s
+        .find('=')
+        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{}`", s))?;
+
+    Ok((s[..pos].parse()?, serde_json::to_value(&s[pos + 1..])?))
+}
 
 #[derive(Clap, Debug)]
 pub struct Verbosity {
@@ -25,8 +43,9 @@ pub struct Verbosity {
 }
 
 impl Verbosity {
-    pub fn start(self: Verbosity) -> Result<(), Error> {
+    pub fn start(self: &Verbosity) -> Result<(), Error> {
         LoggerBuilder::new()
+            .filter(Some("globset"), log::LevelFilter::Error)
             .filter(
                 None,
                 match self.verbose {

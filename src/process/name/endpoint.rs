@@ -18,7 +18,10 @@ impl Endpoint {
             static ref VERSION: Regex = Regex::new("^v([0-9]+)$").unwrap();
         }
 
-        let path = original_path.trim_matches('/').to_string();
+        let path = original_path
+            .trim_matches('/')
+            .trim_matches('_')
+            .to_string();
 
         if !METHOD.is_match(&method) || path.is_empty() {
             return Err(Error::EndpointValidation { method, path });

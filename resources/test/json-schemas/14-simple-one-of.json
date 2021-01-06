@@ -1,0 +1,57 @@
+{
+  "$id": "https://example.com/arrays.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Garage",
+  "required": ["vehicles", "doors"],
+  "properties": {
+    "vehicles": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/motorcycle" },
+          { "$ref": "#/definitions/car" }
+        ]
+      }
+    },
+    "desks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "doors": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "definitions": {
+    "car": {
+      "type": "object",
+      "required": [ "plate", "doors" ],
+      "properties": {
+        "plate": {
+          "type": "string",
+          "description": "Plate"
+        },
+        "doors": {
+          "type": "number"
+        }
+      }
+    },
+    "motorcycle": {
+      "type": "object",
+      "required": [ "plate", "isTankFull" ],
+      "properties": {
+        "plate": {
+          "type": "string",
+          "description": "Plate"
+        },
+        "isTankFull": {
+          "type": "boolean",
+          "description": "Is tank full"
+        }
+      }
+    }
+  }
+}

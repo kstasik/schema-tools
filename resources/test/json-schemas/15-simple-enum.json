@@ -1,0 +1,32 @@
+{
+  "$id": "https://example.com/arrays.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "ProductPrice",
+  "required": ["currencyCode", "value"],
+  "properties": {
+    "currencyCode": {
+      "type": "string",
+      "enum": ["AED", "AFN", "ALL"]
+    },
+    "status": {
+      "type": "number",
+      "enum": [1,2,3,4,5,6,-5]
+    },
+    "simple": {
+      "type": "string",
+      "enum": ["abc", "efg"]
+    },
+    "simple2": {
+      "type": "integer",
+      "enum": [1, 2]
+    },
+    "simple3": {
+      "type": "boolean",
+      "enum": [false]
+    },
+    "value": {
+      "type": "number"
+    }
+  }
+}

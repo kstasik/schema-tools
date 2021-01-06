@@ -1,6 +1,8 @@
 use serde_json::Value;
 
-use crate::schema::{Schema, SchemaScope};
+use crate::schema::Schema;
+use crate::scope::SchemaScope;
+
 pub struct Merger;
 
 pub struct MergerOptions {
@@ -38,7 +40,7 @@ fn process_merge(root: &mut Value, options: &MergerOptions, scope: &mut SchemaSc
                 return log::warn!("allOf needs to be not empty array");
             }
 
-            log::trace!("{}.allOf", scope);
+            log::info!("{}.allOf", scope);
 
             let mut first = schemas.get_mut(0).unwrap().clone(); //.clone();
             for n in 1..size {
@@ -62,7 +64,7 @@ fn process_node(root: &mut Value, options: &MergerOptions, scope: &mut SchemaSco
             // go deeper first
             {
                 for (property, value) in map.into_iter() {
-                    scope.property(property);
+                    scope.any(property);
                     process_node(value, options, scope);
                     scope.pop();
                 }
@@ -389,14 +391,14 @@ mod tests {
     #[test]
     fn test_should_leave_additional_properties() {
         let expected = json!({
+            "c": "d",
+            "a": "b",
             "type": "object",
             "required": ["prop2", "prop1"],
             "properties": {
                 "prop2": { "type": "string" },
                 "prop1": { "type": "string" }
-            },
-            "a": "b",
-            "c": "d"
+            }
         });
 
         let value = json!({

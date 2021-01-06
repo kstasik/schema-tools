@@ -3,10 +3,14 @@ extern crate lazy_static;
 
 use clap::Clap;
 
+pub mod codegen;
 pub mod commands;
 pub mod error;
 pub mod process;
+pub mod resolver;
 pub mod schema;
+pub mod scope;
+pub mod tools;
 pub mod validate;
 
 #[derive(Clap)]
@@ -39,6 +43,13 @@ enum Command {
         author = "Kacper S. <kacper@stasik.eu>"
     )]
     Codegen(commands::codegen::Opts),
+
+    #[clap(
+        version = "0.0.1",
+        about = "Chain different operations in one process",
+        author = "Kacper S. <kacper@stasik.eu>"
+    )]
+    Chain(commands::chain::Opts),
 }
 
 fn main() {
@@ -48,6 +59,7 @@ fn main() {
         Command::Process(opts) => commands::process::execute(opts),
         Command::Codegen(opts) => commands::codegen::execute(opts),
         Command::Validate(opts) => commands::validate::execute(opts),
+        Command::Chain(opts) => commands::chain::execute(opts),
     };
 
     std::process::exit(match result {
