@@ -124,7 +124,11 @@ impl EnumType {
                 type_: self.type_.clone(),
                 name: Some(self.name.clone()),
                 model: None,
-                attributes: self.attributes.clone().unwrap_or_else(Attributes::default),
+                attributes: Attributes {
+                    required: true,
+                    nullable: false,
+                    ..self.attributes.clone().unwrap_or_else(Attributes::default)
+                },
             })),
             attributes: self.attributes.clone().unwrap_or_else(Attributes::default),
         })

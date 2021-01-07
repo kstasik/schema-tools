@@ -2,6 +2,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Json Patch error occured: {0}")]
+    JsonPatchError(json_patch::PatchError),
+
     #[error("Cannot fill parameters: {0}")]
     CannotFillParameters(String),
 
@@ -106,4 +109,7 @@ pub enum Error {
 
     #[error("Derefence critical issue: {0}")]
     DereferenceError(String),
+
+    #[error("De/serialization error: {0}")]
+    SerdeJsonError(serde_json::Error),
 }

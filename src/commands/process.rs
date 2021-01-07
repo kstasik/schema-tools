@@ -4,7 +4,7 @@ use crate::commands::GetSchemaCommand;
 use clap::Clap;
 
 use crate::error::Error;
-use crate::process::{dereference, merge, name};
+use crate::process::{dereference, merge, name, patch};
 use crate::schema::{path_to_url, Schema};
 #[derive(Clap, Debug)]
 pub struct Opts {
@@ -18,6 +18,7 @@ impl Display for Opts {
             Command::Merge(_) => write!(f, "merge"),
             Command::Dereference(_) => write!(f, "dereference"),
             Command::Name(_) => write!(f, "name"),
+            Command::Patch(_) => write!(f, "patch"),
         }
     }
 }
@@ -41,6 +42,12 @@ pub enum Command {
         author = "Kacper S. <kacper@stasik.eu>"
     )]
     Name(NameOpts),
+
+    #[clap(
+        about = "Apply json patch to schema",
+        author = "Kacper S. <kacper@stasik.eu>"
+    )]
+    Patch(PatchOpts),
 }
 #[derive(Clap, Debug)]
 pub struct MergeOpts {
@@ -102,12 +109,28 @@ pub struct NameOpts {
     verbose: crate::commands::Verbosity,
 }
 
+#[derive(Clap, Debug)]
+pub struct PatchOpts {
+    #[clap(short, about = "Path to json/yaml file with schema")]
+    file: String,
+
+    #[clap(subcommand)]
+    pub action: patch::Action,
+
+    #[clap(flatten)]
+    output: crate::commands::Output,
+
+    #[clap(flatten)]
+    verbose: crate::commands::Verbosity,
+}
+
 impl GetSchemaCommand for Opts {
     fn get_schema(&self) -> Result<Schema, Error> {
         match &self.command {
             Command::Merge(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Dereference(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Name(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::Patch(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
         }
     }
 }
@@ -139,6 +162,7 @@ impl Opts {
                     .with_overwrite(opts.overwrite)
                     .process(schema)
             }
+            Command::Patch(opts) => patch::execute(schema, &opts.action),
         }
     }
 }
@@ -162,6 +186,13 @@ pub fn execute(opts: Opts) -> Result<(), Error> {
             Ok(())
         }
         Command::Name(o) => {
+            o.verbose.start()?;
+            opts.run(&mut schema)?;
+            o.output.show(schema.get_body());
+
+            Ok(())
+        }
+        Command::Patch(o) => {
             o.verbose.start()?;
             opts.run(&mut schema)?;
             o.output.show(schema.get_body());
