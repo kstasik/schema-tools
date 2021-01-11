@@ -1,7 +1,6 @@
 use serde_json::Value;
 
-use crate::schema::Schema;
-use crate::scope::SchemaScope;
+use crate::{resolver::SchemaResolver, schema::Schema, scope::SchemaScope};
 
 pub struct Merger;
 
@@ -16,10 +15,12 @@ impl MergerOptions {
     }
 
     pub fn process(&self, schema: &mut Schema) {
+        let resolver = &SchemaResolver::new(&schema.clone());
+
         let mut root = schema.get_body_mut();
         let mut scope = SchemaScope::default();
 
-        process_node(&mut root, &self, &mut scope);
+        process_node(&mut root, &self, &mut scope, resolver);
     }
 }
 
@@ -31,7 +32,12 @@ impl Merger {
     }
 }
 
-fn process_merge(root: &mut Value, options: &MergerOptions, scope: &mut SchemaScope) {
+fn process_merge(
+    root: &mut Value,
+    options: &MergerOptions,
+    scope: &mut SchemaScope,
+    resolver: &SchemaResolver,
+) {
     match root.as_object_mut().unwrap().get_mut("allOf").unwrap() {
         Value::Array(schemas) => {
             let size = schemas.len();
@@ -42,9 +48,18 @@ fn process_merge(root: &mut Value, options: &MergerOptions, scope: &mut SchemaSc
 
             log::info!("{}.allOf", scope);
 
-            let mut first = schemas.get_mut(0).unwrap().clone(); //.clone();
+            let mut first = resolver
+                .resolve(schemas.get_mut(0).unwrap(), scope, |value, _| {
+                    Ok(value.clone())
+                })
+                .unwrap();
+
             for n in 1..size {
-                let value = schemas.get(n).unwrap().clone();
+                let value = resolver
+                    .resolve(schemas.get_mut(n).unwrap(), scope, |value, _| {
+                        Ok(value.clone())
+                    })
+                    .unwrap();
                 merge_values(&mut first, value, options);
             }
 
@@ -52,33 +67,41 @@ fn process_merge(root: &mut Value, options: &MergerOptions, scope: &mut SchemaSc
             root.as_object_mut().unwrap().remove("allOf");
             merge_values(root, first, options);
         }
-        _ => {
-            log::warn!("{}.allOf has to be an array", scope);
-        }
+
+        Value::Null => {}
+        Value::Bool(_) => {}
+        Value::Number(_) => {}
+        Value::String(_) => {}
+        Value::Object(_) => {}
     }
 }
 
-fn process_node(root: &mut Value, options: &MergerOptions, scope: &mut SchemaScope) {
+fn process_node(
+    root: &mut Value,
+    options: &MergerOptions,
+    scope: &mut SchemaScope,
+    resolver: &SchemaResolver,
+) {
     match root {
         Value::Object(ref mut map) => {
             // go deeper first
             {
                 for (property, value) in map.into_iter() {
                     scope.any(property);
-                    process_node(value, options, scope);
+                    process_node(value, options, scope, resolver);
                     scope.pop();
                 }
             }
 
             // process allOf
             if map.contains_key("allOf") {
-                process_merge(root, options, scope)
+                process_merge(root, options, scope, resolver)
             }
         }
         Value::Array(a) => {
             for (index, mut x) in a.iter_mut().enumerate() {
                 scope.index(index);
-                process_node(&mut x, options, scope);
+                process_node(&mut x, options, scope, resolver);
                 scope.pop();
             }
         }
@@ -108,6 +131,57 @@ fn merge_values(a: &mut Value, b: Value, options: &MergerOptions) {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_internal_reference() {
+        let expected = json!({
+            "definitions": {
+                "test": {
+                    "type": "object",
+                    "required": ["prop2"],
+                    "properties": {
+                        "prop2": { "type": "string" }
+                    }
+                }
+            },
+            "type": "object",
+            "required": ["prop2", "prop1"],
+            "properties": {
+                "prop2": { "type": "string" },
+                "prop1": { "type": "string" }
+            }
+        });
+
+        let value = json!({
+            "definitions": {
+                "test": {
+                    "type": "object",
+                    "required": ["prop2"],
+                    "properties": {
+                        "prop2": { "type": "string" }
+                    }
+                }
+            },
+            "allOf": [
+                {
+                    "$ref": "#/definitions/test"
+                },
+                {
+                    "type": "object",
+                    "required": ["prop1"],
+                    "properties": {
+                        "prop1": { "type": "string" }
+                    }
+                }
+            ]
+        });
+
+        let mut schema = Schema::from_json(value);
+
+        Merger::options().process(&mut schema);
+
+        assert_eq!(schema.get_body().to_string(), expected.to_string());
+    }
 
     // fail on all of mixed types (only objects)
     // overwrite same property names
