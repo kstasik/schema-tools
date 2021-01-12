@@ -171,14 +171,16 @@ fn process_ref(root: &mut Value, options: &DereferencerOptions, context: &mut De
             log::info!("{}.$ref", context.scope);
 
             let mut dereferenced = dereference(reference.clone(), root, options, context);
-            let result = dereferenced.as_object_mut().unwrap();
 
-            for (key, value) in root.as_object().unwrap() {
-                if key == "$ref" {
-                    continue;
+            // add neighbour elements if reference is an object
+            if let Some(result) = dereferenced.as_object_mut() {
+                for (key, value) in root.as_object().unwrap() {
+                    if key == "$ref" {
+                        continue;
+                    }
+
+                    result.insert(key.clone(), value.clone());
                 }
-
-                result.insert(key.clone(), value.clone());
             }
 
             *root = dereferenced;
@@ -254,6 +256,34 @@ mod tests {
             .with_create_internal_references(false)
             .with_skip_root_internal_references(false)
             .process(&mut spec);
+    }
+
+    #[test]
+    fn test_string_reference() {
+        let mut spec = spec_from_file("resources/test/json-schemas/16-string-reference.json");
+        Dereferencer::options().process(&mut spec);
+
+        let expected = json!({
+            "$id": "https://example.com/arrays.schema.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "title": "Object",
+            "required": ["type", "name"],
+            "properties": {
+                "type": {
+                    "const": "test"
+                },
+                "name": { "type": "string" }
+            },
+            "definitions": {
+                "test": {
+                    "type": "object",
+                    "-x-just-testing": "test"
+                }
+            }
+        });
+
+        assert_eq!(spec.get_body().to_string(), expected.to_string());
     }
 
     #[test]

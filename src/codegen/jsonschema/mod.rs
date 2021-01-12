@@ -4,6 +4,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use serde_json::{Map, Value};
 
 pub mod additionalproperties;
+pub mod const_;
 pub mod enum_;
 pub mod items;
 pub mod oneof;
@@ -29,6 +30,9 @@ pub enum Model {
 
     #[serde(rename = "enum")]
     EnumType(types::EnumType),
+
+    #[serde(rename = "const")]
+    ConstType(types::ConstType),
 
     #[serde(rename = "any")]
     AnyType(types::AnyType),
@@ -56,6 +60,7 @@ impl Model {
             Self::ArrayType(a) => a.flatten(container, scope),
             Self::PrimitiveType(p) => p.flatten(container, scope),
             Self::EnumType(e) => e.flatten(container, scope),
+            Self::ConstType(c) => c.flatten(container, scope),
             Self::AnyType(a) => a.flatten(container, scope),
             Self::WrapperType(w) => w.flatten(container, scope),
             Self::NullableOptionalWrapperType(s) => s.flatten(container, scope),
@@ -232,6 +237,9 @@ pub fn extract_type(
                                 schema, container, scope, resolver, options,
                             )
                         })
+                        .or_else(|_| {
+                            const_::from_const(schema, container, scope, resolver, options)
+                        })
                         .or_else(|_| Ok(types::AnyType::model(schema, scope))),
                 };
 
@@ -301,7 +309,7 @@ fn add_validation_and_nullable(
     let x = schema
         .iter()
         .filter_map(|(key, val)| {
-            if let Some(stripped) = key.strip_prefix("-x") {
+            if let Some(stripped) = key.strip_prefix("x-") {
                 Some((stripped.to_string(), val.clone()))
             } else {
                 None

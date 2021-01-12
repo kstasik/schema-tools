@@ -136,6 +136,47 @@ impl EnumType {
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
+pub struct ConstType {
+    #[serde(rename = "name")]
+    pub name: String,
+
+    #[serde(rename = "type")]
+    pub type_: String,
+
+    #[serde(rename = "value")]
+    pub value: String,
+
+    #[serde(rename = "attributes")]
+    pub attributes: Option<Attributes>,
+}
+
+impl ConstType {
+    pub fn flatten(
+        &self,
+        container: &mut ModelContainer,
+        scope: &mut SchemaScope,
+    ) -> Result<FlattenedType, Error> {
+        container.add(scope, super::Model::ConstType(self.clone()));
+
+        Ok(FlattenedType {
+            name: Some(self.name.clone()),
+            type_: "const".to_string(),
+            model: Some(Box::new(FlattenedType {
+                type_: self.type_.clone(),
+                name: Some(self.value.clone()),
+                model: None,
+                attributes: Attributes {
+                    required: true,
+                    nullable: false,
+                    ..self.attributes.clone().unwrap_or_else(Attributes::default)
+                },
+            })),
+            attributes: self.attributes.clone().unwrap_or_else(Attributes::default),
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq, Default)]
 pub struct Attributes {
     #[serde(rename = "description")]
     pub description: Option<String>,
