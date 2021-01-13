@@ -217,6 +217,7 @@ pub fn extract_type(
 
                                 // enum is mostly used for validation
                                 // only simple type enums can be used model building
+                                // todo: from_const
                                 Ok(enum_::convert_to_enum(model, schema, scope, options))
                             }
                             Value::Array(_) => extract_type(
