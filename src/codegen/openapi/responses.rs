@@ -128,8 +128,12 @@ pub fn extract_response(
                 })?
             };
 
+            scope.glue(&status_code.to_string());
+
             let model = super::get_content(data, scope, mcontainer, resolver, options)
                 .map_or(Ok(None), |v| v.map(Some));
+
+            scope.pop();
 
             let headers = data
                 .get("headers")
