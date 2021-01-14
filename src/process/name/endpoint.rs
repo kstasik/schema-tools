@@ -4,6 +4,7 @@ use crate::error::Error;
 use regex::Regex;
 
 pub struct Endpoint {
+    original: String,
     version: Option<String>,
     method: String,
     resources: Vec<String>,
@@ -49,6 +50,7 @@ impl Endpoint {
             .collect();
 
         Ok(Endpoint {
+            original: original_path,
             version,
             method,
             resources,
@@ -67,6 +69,7 @@ impl Endpoint {
             match self.method.as_str() {
                 "get" => {
                     if self.resources.len() != self.identifiers.len()
+                        && !self.original.ends_with('}')
                         && is_plurar(self.resources.last().unwrap().to_string())
                     {
                         "list"
@@ -150,6 +153,15 @@ mod tests {
     #[test_case( "get".to_string(), "user-groups/{id}".to_string(), "getUsergroup".to_string(); "endpoint name test 13" )]
     #[test_case( "get".to_string(), "v1/users/{id}/statuses".to_string(), "v1ListUserStatuses".to_string(); "endpoint name test 14" )]
     fn test_operation_name(method: String, path: String, expected: String) {
+        assert_eq!(
+            Endpoint::new(method, path).unwrap().get_operation_id(false),
+            expected
+        );
+    }
+
+    #[test_case( "get".to_string(), "/api/xyz/v1/namespaces".to_string(), "listApiXyzV1Namespaces".to_string(); "endpoint name non restful endpoint 1" )]
+    #[test_case( "get".to_string(), "/api/xyz/v1/namespaces/{namespaceId}".to_string(), "getApiXyzV1Namespaces".to_string(); "endpoint name non restful endpoint 2" )]
+    fn test_operation_name2(method: String, path: String, expected: String) {
         assert_eq!(
             Endpoint::new(method, path).unwrap().get_operation_id(false),
             expected
