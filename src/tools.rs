@@ -234,9 +234,46 @@ pub fn fill_parameters(phrase: &str, data: (impl Serialize + Clone)) -> Result<S
     Ok(result)
 }
 
+pub fn bump_suffix_number(phrase: &str) -> String {
+    let chars = phrase.chars();
+    let mut result: Vec<u32> = vec![];
+
+    for c in chars.rev() {
+        if c.is_numeric() {
+            result.push(c.to_digit(10).unwrap());
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    if result.is_empty() {
+        let new_phrase = phrase.to_string();
+        new_phrase + "2"
+    } else {
+        let new_phrase = phrase[..phrase.len() - result.len()].to_string();
+        let sum = result.iter().rev().fold(0, |acc, elem| acc * 10 + elem) + 1;
+        new_phrase + &sum.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_extract_suffix_number_empty() {
+        let result = bump_suffix_number("asd");
+
+        assert_eq!(result, "asd2".to_string());
+    }
+
+    #[test]
+    fn test_extract_suffix_number_success() {
+        let result = bump_suffix_number("asd543");
+
+        assert_eq!(result, "asd544".to_string());
+    }
 
     #[test]
     fn test_fill_parameters() {
