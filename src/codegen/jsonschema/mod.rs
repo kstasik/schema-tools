@@ -14,7 +14,7 @@ pub mod required;
 pub mod title;
 pub mod types;
 
-use crate::{error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope};
+use crate::{error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope, tools};
 
 #[derive(Debug, Serialize, Clone, PartialEq)]
 pub enum Model {
@@ -67,6 +67,55 @@ impl Model {
             Self::FlattenedType(f) => Ok(f.clone()),
         }
     }
+
+    pub fn name(&self) -> Result<&str, Error> {
+        match self {
+            Self::ObjectType(o) => Ok(&o.name),
+            Self::EnumType(e) => Ok(&e.name),
+            Self::ConstType(c) => Ok(&c.name),
+            Self::WrapperType(w) => Ok(&w.name),
+            Self::NullableOptionalWrapperType(s) => Ok(&s.name),
+            Self::PrimitiveType(p) => {
+                if let Some(s) = &p.name {
+                    Ok(&s)
+                } else {
+                    Err(Error::NotImplemented)
+                }
+            }
+            _ => Err(Error::NotImplemented),
+        }
+    }
+
+    pub fn rename(self, name: String) -> Model {
+        // todo: all models could have name ...
+        match self {
+            Self::ObjectType(mut o) => {
+                o.name = name;
+                Self::ObjectType(o)
+            }
+            Self::EnumType(mut e) => {
+                e.name = name;
+                Self::EnumType(e)
+            }
+            Self::ConstType(mut c) => {
+                c.name = name;
+                Self::ConstType(c)
+            }
+            Self::WrapperType(mut w) => {
+                w.name = name;
+                Self::WrapperType(w)
+            }
+            Self::NullableOptionalWrapperType(mut s) => {
+                s.name = name;
+                Self::NullableOptionalWrapperType(s)
+            }
+            Self::PrimitiveType(mut p) => {
+                p.name = Some(name);
+                Self::PrimitiveType(p)
+            }
+            rest => rest,
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -103,6 +152,15 @@ impl ModelContainer {
             self.models.values().find(|&s| s == &model).unwrap()
         } else {
             let key = scope.path();
+
+            if !self.models.contains_key(&key) {
+                let name = model.name().unwrap();
+
+                if self.models.values().any(|c| c.name().unwrap() == name) {
+                    let new_name = tools::bump_suffix_number(name);
+                    return self.add(scope, model.rename(new_name));
+                }
+            }
 
             self.models.entry(key).or_insert(model)
         }
