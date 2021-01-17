@@ -4,7 +4,7 @@ use crate::commands::GetSchemaCommand;
 use clap::Clap;
 
 use crate::error::Error;
-use crate::process::{dereference, merge, name, patch};
+use crate::process::{dereference, merge_allof, merge_openapi, name, patch};
 use crate::schema::{path_to_url, Schema};
 #[derive(Clap, Debug)]
 pub struct Opts {
@@ -15,7 +15,8 @@ pub struct Opts {
 impl Display for Opts {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.command {
-            Command::Merge(_) => write!(f, "merge"),
+            Command::MergeOpenapi(_) => write!(f, "merge_openapi"),
+            Command::MergeAllOf(_) => write!(f, "merge_allof"),
             Command::Dereference(_) => write!(f, "dereference"),
             Command::Name(_) => write!(f, "name"),
             Command::Patch(_) => write!(f, "patch"),
@@ -26,10 +27,16 @@ impl Display for Opts {
 #[derive(Clap, Debug)]
 pub enum Command {
     #[clap(
-        about = "Merges each occurence of allOf to one schema",
+        about = "Merges openapi specifications",
         author = "Kacper S. <kacper@stasik.eu>"
     )]
-    Merge(MergeOpts),
+    MergeOpenapi(MergeOpenapiOpts),
+
+    #[clap(
+        about = "Merges each occurence of allOf to one json schema",
+        author = "Kacper S. <kacper@stasik.eu>"
+    )]
+    MergeAllOf(MergeAllOfOpts),
 
     #[clap(
         about = "Recursively resolves all $ref occurences in a schema file",
@@ -49,8 +56,27 @@ pub enum Command {
     )]
     Patch(PatchOpts),
 }
+
 #[derive(Clap, Debug)]
-pub struct MergeOpts {
+pub struct MergeOpenapiOpts {
+    #[clap(short, about = "Path to json/yaml file")]
+    pub file: String,
+
+    #[clap(long, about = "Openapi file to merge with")]
+    with: String,
+
+    #[clap(long, about = "Should change tags of all endpoints of merged openapi")]
+    retag: Option<String>,
+
+    #[clap(flatten)]
+    output: crate::commands::Output,
+
+    #[clap(flatten)]
+    verbose: crate::commands::Verbosity,
+}
+
+#[derive(Clap, Debug)]
+pub struct MergeAllOfOpts {
     #[clap(short, about = "Path to json/yaml file")]
     pub file: String,
 
@@ -127,7 +153,8 @@ pub struct PatchOpts {
 impl GetSchemaCommand for Opts {
     fn get_schema(&self) -> Result<Schema, Error> {
         match &self.command {
-            Command::Merge(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::MergeAllOf(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::MergeOpenapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Dereference(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Name(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Patch(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
@@ -138,11 +165,18 @@ impl GetSchemaCommand for Opts {
 impl Opts {
     pub fn run(&self, schema: &mut Schema) -> Result<(), Error> {
         match &self.command {
-            Command::Merge(opts) => {
-                merge::Merger::options()
+            Command::MergeAllOf(opts) => {
+                merge_allof::Merger::options()
                     .with_leave_invalid_properties(opts.leave_invalid_properties)
                     .process(schema);
                 Ok(())
+            }
+            Command::MergeOpenapi(opts) => {
+                let merge = Schema::load_url(path_to_url(opts.with.clone())?)?;
+
+                merge_openapi::Merger::options(merge)
+                    .with_retag(opts.retag.clone())
+                    .process(schema)
             }
             Command::Dereference(opts) => {
                 dereference::Dereferencer::options()
@@ -171,7 +205,14 @@ pub fn execute(opts: Opts) -> Result<(), Error> {
     let mut schema = opts.get_schema()?;
 
     match &opts.command {
-        Command::Merge(o) => {
+        Command::MergeAllOf(o) => {
+            o.verbose.start()?;
+            opts.run(&mut schema)?;
+            o.output.show(schema.get_body());
+
+            Ok(())
+        }
+        Command::MergeOpenapi(o) => {
             o.verbose.start()?;
             opts.run(&mut schema)?;
             o.output.show(schema.get_body());
