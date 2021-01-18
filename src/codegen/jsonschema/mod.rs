@@ -82,6 +82,13 @@ impl Model {
                     Err(Error::NotImplemented)
                 }
             }
+            Self::ArrayType(p) => {
+                if let Some(s) = &p.name {
+                    Ok(&s)
+                } else {
+                    Err(Error::NotImplemented)
+                }
+            }
             _ => Err(Error::NotImplemented),
         }
     }
@@ -113,7 +120,11 @@ impl Model {
                 p.name = Some(name);
                 Self::PrimitiveType(p)
             }
-            rest => rest,
+            Self::ArrayType(mut p) => {
+                p.name = Some(name);
+                Self::ArrayType(p)
+            }
+            _ => panic!("Unsupported rename: {}", name),
         }
     }
 }
@@ -158,6 +169,8 @@ impl ModelContainer {
 
                 if self.models.values().any(|c| c.name().unwrap() == name) {
                     let new_name = tools::bump_suffix_number(name);
+                    log::warn!("{}: conflict, renaming to: {}", scope, new_name);
+
                     return self.add(scope, model.rename(new_name));
                 }
             }

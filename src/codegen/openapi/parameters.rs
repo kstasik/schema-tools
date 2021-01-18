@@ -64,10 +64,9 @@ pub fn extract(
 
                     for (i, param) in params.iter().enumerate() {
                         scope.index(i);
-                        collection.add(extract_parameter(
-                            param, scope, mcontainer, resolver, options,
-                        )?);
+                        let result = extract_parameter(param, scope, mcontainer, resolver, options);
                         scope.pop();
+                        collection.add(result?)
                     }
 
                     scope.pop();
