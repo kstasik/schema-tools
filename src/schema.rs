@@ -109,7 +109,7 @@ pub fn path_to_url(path: String) -> Result<Url, Error> {
         return Err(Error::SchemaAsReference);
     } else if path.starts_with("http") {
         // todo: support http path in cli, reconsider different schemes support
-        return Ok(Url::parse(&path).map_err(|_| Error::SchemaInvalidPath { path })?);
+        return Url::parse(&path).map_err(|_| Error::SchemaInvalidPath { path });
     }
 
     let real_path = PathBuf::from(&path);

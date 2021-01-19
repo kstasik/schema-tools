@@ -124,16 +124,25 @@ impl OpenapiNamerOptions {
                 if let [endpoint, method] = &parts[..] {
                     let details = node.as_object_mut().unwrap();
 
-                    let operation_id =
-                        endpoint::Endpoint::new(method.to_string(), endpoint.to_string())
-                            .unwrap()
-                            .get_operation_id(self.resource_method_version);
+                    match endpoint::Endpoint::new(method.to_string(), endpoint.to_string()) {
+                        Ok(endpoint) => {
+                            let operation_id =
+                                endpoint.get_operation_id(self.resource_method_version);
 
-                    if !details.contains_key("operationId") || self.overwrite {
-                        log::info!("{}/operationId -> {}", ctx, operation_id);
-                        details.insert("operationId".to_string(), Value::String(operation_id));
-                    } else {
-                        log::info!("{}/operationId -> using original", ctx);
+                            if !details.contains_key("operationId") || self.overwrite {
+                                log::info!("{}/operationId -> {}", ctx, operation_id);
+                                details
+                                    .insert("operationId".to_string(), Value::String(operation_id));
+                            } else {
+                                log::info!("{}/operationId -> using original", ctx);
+                            }
+                        }
+                        Err(e) => log::error!(
+                            "/paths/{}/{}: cannot parse endpoint: {}",
+                            endpoint,
+                            method,
+                            e
+                        ),
                     }
                 }
 

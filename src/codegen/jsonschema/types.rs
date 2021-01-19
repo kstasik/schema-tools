@@ -248,7 +248,7 @@ pub struct AnyType {}
 
 impl AnyType {
     pub fn model(schema: &Map<String, Value>, scope: &mut SchemaScope) -> super::Model {
-        log::debug!("{}: {:?}", scope, schema);
+        log::debug!("{}: {:?} may be invalid json schema", scope, schema);
 
         super::Model::AnyType(Self {})
     }
