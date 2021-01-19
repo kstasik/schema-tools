@@ -79,17 +79,26 @@ impl Model {
                 if let Some(s) = &p.name {
                     Ok(&s)
                 } else {
-                    Err(Error::NotImplemented)
+                    Err(Error::CodegenCannotNameModelError(format!(
+                        "primitive: {:?}",
+                        self
+                    )))
                 }
             }
             Self::ArrayType(p) => {
                 if let Some(s) = &p.name {
                     Ok(&s)
                 } else {
-                    Err(Error::NotImplemented)
+                    Err(Error::CodegenCannotNameModelError(format!(
+                        "array: {:?}",
+                        self
+                    )))
                 }
             }
-            _ => Err(Error::NotImplemented),
+            _ => Err(Error::CodegenCannotNameModelError(format!(
+                "unknown: {:?}",
+                self
+            ))),
         }
     }
 
@@ -157,11 +166,13 @@ impl ModelContainer {
         }
     }
 
-    pub fn add(&mut self, scope: &mut SchemaScope, model: Model) -> &Model {
-        if self.exists(&model) {
-            // log::warn!("{}: Duplicated", scope);
-            self.models.values().find(|&s| s == &model).unwrap()
-        } else {
+    pub fn add(&mut self, scope: &mut SchemaScope, model: Model) {
+        if let Model::AnyType(_) = model {
+            log::error!("{}: trying to save anyType as model", scope);
+            return;
+        }
+
+        if !self.exists(&model) {
             let key = scope.path();
 
             if !self.models.contains_key(&key) {
@@ -175,7 +186,7 @@ impl ModelContainer {
                 }
             }
 
-            self.models.entry(key).or_insert(model)
+            self.models.entry(key).or_insert(model);
         }
     }
 

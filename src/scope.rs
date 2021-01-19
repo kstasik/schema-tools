@@ -248,8 +248,7 @@ impl SchemaScope {
                     .filter_map(|s| scope_to_string(s.clone()))
                     .collect::<Vec<String>>();
 
-                let mut parts = vec![];
-                parts.push(reference.to_string());
+                let mut parts = vec![reference.to_string()];
                 parts.append(&mut post);
 
                 parts.join("/")

@@ -2,6 +2,9 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Cannot name model: {0}")]
+    CodegenCannotNameModelError(String),
+
     #[error("Json Patch error occured: {0}")]
     JsonPatchError(json_patch::PatchError),
 
