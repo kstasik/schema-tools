@@ -127,7 +127,7 @@ impl Opts {
             Command::JsonSchema(opts) => {
                 let renderer = codegen::renderer::create(
                     &opts.templates_dir,
-                    &[codegen::templates::TemplateType::MODELS],
+                    &[codegen::templates::TemplateType::Models],
                     codegen::create_container(&opts.options),
                 )?;
 
@@ -147,8 +147,8 @@ impl Opts {
                 let renderer = codegen::renderer::create(
                     &opts.templates_dir,
                     &[
-                        codegen::templates::TemplateType::MODELS,
-                        codegen::templates::TemplateType::ENDPOINTS,
+                        codegen::templates::TemplateType::Models,
+                        codegen::templates::TemplateType::Endpoints,
                     ],
                     codegen::create_container(&opts.options),
                 )?;

@@ -18,7 +18,7 @@ impl OpenapiNamer {
         OpenapiNamerOptions {
             resource_method_version: false,
             overwrite: false,
-            naming_strategy: SchemaNamingStrategy::DEFAULT,
+            naming_strategy: SchemaNamingStrategy::Default,
         }
     }
 }
@@ -49,7 +49,7 @@ impl OpenapiNamerOptions {
             &mut scope,
             "/any:components/any:schemas/definition:*",
             |node, parts, ctx| {
-                if let [key] = &parts[..] {
+                if let [key] = parts {
                     ctx.glue(key);
 
                     jsonschema::name_schema(
@@ -73,7 +73,7 @@ impl OpenapiNamerOptions {
             &mut scope,
             "/any:components/any:responses/definition:*/any:content/any:*/any:schema",
             |node, parts, ctx| {
-                if let [key, _] = &parts[..] {
+                if let [key, _] = parts {
                     ctx.glue(key).glue("response");
 
                     jsonschema::name_schema(
@@ -97,7 +97,7 @@ impl OpenapiNamerOptions {
             &mut scope,
             "/any:components/any:requestBodies/definition:*/any:content/any:*/any:schema",
             |node, parts, ctx| {
-                if let [key, _] = &parts[..] {
+                if let [key, _] = parts {
                     ctx.glue(key).glue("request");
 
                     jsonschema::name_schema(
@@ -121,7 +121,7 @@ impl OpenapiNamerOptions {
             &mut scope,
             "/path:paths/any:*/any:*",
             |node, parts, ctx| {
-                if let [endpoint, method] = &parts[..] {
+                if let [endpoint, method] = parts {
                     let details = node.as_object_mut().unwrap();
 
                     match endpoint::Endpoint::new(method.to_string(), endpoint.to_string()) {

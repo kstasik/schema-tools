@@ -2,10 +2,13 @@ use std::fmt::Display;
 
 use crate::commands::GetSchemaCommand;
 use clap::Clap;
+use std::str::FromStr;
 
 use crate::error::Error;
-use crate::process::{dereference, merge_allof, merge_openapi, name, patch};
+use crate::process::{bump_openapi, dereference, merge_allof, merge_openapi, name, patch};
 use crate::schema::{path_to_url, Schema};
+
+static BUMP_OPENAPI_KIND: &[&str] = &["x-version"];
 #[derive(Clap, Debug)]
 pub struct Opts {
     #[clap(subcommand)]
@@ -16,6 +19,7 @@ impl Display for Opts {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.command {
             Command::MergeOpenapi(_) => write!(f, "merge_openapi"),
+            Command::BumpOpenapi(_) => write!(f, "bump_openapi"),
             Command::MergeAllOf(_) => write!(f, "merge_allof"),
             Command::Dereference(_) => write!(f, "dereference"),
             Command::Name(_) => write!(f, "name"),
@@ -31,6 +35,12 @@ pub enum Command {
         author = "Kacper S. <kacper@stasik.eu>"
     )]
     MergeOpenapi(MergeOpenapiOpts),
+
+    #[clap(
+        about = "Bumps version of openapi specifications",
+        author = "Kacper S. <kacper@stasik.eu>"
+    )]
+    BumpOpenapi(BumpOpenapiOpts),
 
     #[clap(
         about = "Merges each occurence of allOf to one json schema",
@@ -67,6 +77,30 @@ pub struct MergeOpenapiOpts {
 
     #[clap(long, about = "Should change tags of all endpoints of merged openapi")]
     retag: Option<String>,
+
+    #[clap(
+        long,
+        about = "Should add info.x-version- attribute to openapi specification"
+    )]
+    add_version: Option<String>,
+
+    #[clap(flatten)]
+    output: crate::commands::Output,
+
+    #[clap(flatten)]
+    verbose: crate::commands::Verbosity,
+}
+
+#[derive(Clap, Debug)]
+pub struct BumpOpenapiOpts {
+    #[clap(short, about = "Path to json/yaml file")]
+    pub file: String,
+
+    #[clap(long, about = "Path to previos version of openapi specification")]
+    original: String,
+
+    #[clap(short, long, about = "Type of bump", possible_values = BUMP_OPENAPI_KIND, parse(try_from_str), default_value = "x-version")]
+    kind: String,
 
     #[clap(flatten)]
     output: crate::commands::Output,
@@ -155,6 +189,7 @@ impl GetSchemaCommand for Opts {
         match &self.command {
             Command::MergeAllOf(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::MergeOpenapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::BumpOpenapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Dereference(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Name(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Patch(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
@@ -176,6 +211,14 @@ impl Opts {
 
                 merge_openapi::Merger::options(merge)
                     .with_retag(opts.retag.clone())
+                    .with_add_version(opts.add_version.clone())
+                    .process(schema)
+            }
+            Command::BumpOpenapi(opts) => {
+                let original = Schema::load_url(path_to_url(opts.original.clone())?)?;
+
+                bump_openapi::Bumper::options(original)
+                    .with_kind(bump_openapi::BumpKind::from_str(&opts.kind).unwrap())
                     .process(schema)
             }
             Command::Dereference(opts) => {
@@ -213,6 +256,13 @@ pub fn execute(opts: Opts) -> Result<(), Error> {
             Ok(())
         }
         Command::MergeOpenapi(o) => {
+            o.verbose.start()?;
+            opts.run(&mut schema)?;
+            o.output.show(schema.get_body());
+
+            Ok(())
+        }
+        Command::BumpOpenapi(o) => {
             o.verbose.start()?;
             opts.run(&mut schema)?;
             o.output.show(schema.get_body());

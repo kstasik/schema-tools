@@ -17,7 +17,7 @@ impl JsonSchemaNamer {
         JsonSchemaNamerOptions {
             overwrite: false,
             base_name: None,
-            naming_strategy: SchemaNamingStrategy::DEFAULT,
+            naming_strategy: SchemaNamingStrategy::Default,
         }
     }
 }

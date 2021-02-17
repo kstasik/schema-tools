@@ -6,7 +6,7 @@ use crate::error::Error;
 
 #[derive(Clone, Debug)]
 pub enum SchemaNamingStrategy {
-    DEFAULT,
+    Default,
 }
 
 #[derive(Clone, Debug)]
@@ -148,7 +148,7 @@ impl SchemaScope {
     pub fn default() -> Self {
         Self {
             scope: vec![],
-            naming_strategy: SchemaNamingStrategy::DEFAULT,
+            naming_strategy: SchemaNamingStrategy::Default,
         }
     }
 

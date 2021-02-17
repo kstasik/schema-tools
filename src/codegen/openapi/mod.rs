@@ -107,7 +107,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
         &mut scope,
         "/any:components/any:schemas/definition:*",
         |node, parts, scope| {
-            if let [key] = &parts[..] {
+            if let [key] = parts {
                 scope.glue(key);
 
                 add_types(node, &mut mcontainer, scope, resolver, options)?;
@@ -124,7 +124,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
         &mut scope,
         "/any:components/any:parameters/definition:*/any:schema",
         |node, parts, scope| {
-            if let [key] = &parts[..] {
+            if let [key] = parts {
                 scope.glue(key).glue("parameter");
 
                 // todo ?????
@@ -143,7 +143,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
         &mut scope,
         "/any:components/any:responses/definition:*/any:content/any:*/any:schema",
         |node, parts, scope| {
-            if let [key, _] = &parts[..] {
+            if let [key, _] = parts {
                 scope.glue(key).glue("response");
 
                 add_types(node, &mut mcontainer, scope, resolver, options)?;
@@ -161,7 +161,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
         &mut scope,
         "/any:components/any:requestBodies/definition:*/any:content/any:*/any:schema",
         |node, parts, scope| {
-            if let [key, _] = &parts[..] {
+            if let [key, _] = parts {
                 scope.glue(key).glue("request");
                 add_types(node, &mut mcontainer, scope, resolver, options)?;
                 scope.reduce(2);
@@ -176,7 +176,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
         &mut scope,
         "path:paths/any:*/any:*",
         |node, parts, scope| {
-            if let [path, method] = &parts[..] {
+            if let [path, method] = parts {
                 log::trace!("{}", scope);
                 let endpoint = new_endpoint(
                     node,
