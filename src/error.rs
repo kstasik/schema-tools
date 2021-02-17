@@ -2,6 +2,15 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Openapi schema format is invalid")]
+    InvalidOpenapiSchemaError,
+
+    #[error("Cannot parse semversion: {0}")]
+    SemVersion(semver::SemVerError),
+
+    #[error("Cannot flatten model and change model type during container.add")]
+    FlatteningTypeError,
+
     #[error("Cannot name model: {0}")]
     CodegenCannotNameModelError(String),
 

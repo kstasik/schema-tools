@@ -51,8 +51,8 @@ pub struct StaticTemplate {
 }
 #[derive(PartialEq, Debug)]
 pub enum TemplateType {
-    MODELS,
-    ENDPOINTS,
+    Models,
+    Endpoints,
 }
 
 #[derive(Debug, Clone)]
@@ -94,8 +94,8 @@ impl Templates {
         self.list
             .iter()
             .filter_map(|t| match *t {
-                Template::Models(_) => Some(TemplateType::MODELS),
-                Template::Endpoints(_) => Some(TemplateType::ENDPOINTS),
+                Template::Models(_) => Some(TemplateType::Models),
+                Template::Endpoints(_) => Some(TemplateType::Endpoints),
                 _ => None,
             })
             .filter(|f| types.contains(&f))

@@ -6,12 +6,18 @@ pub struct Merger;
 
 pub struct MergerOptions {
     pub retag: Option<String>,
+    pub add_version: Option<String>,
     pub schema: Schema,
 }
 
 impl MergerOptions {
     pub fn with_retag(&mut self, value: Option<String>) -> &mut Self {
         self.retag = value;
+        self
+    }
+
+    pub fn with_add_version(&mut self, value: Option<String>) -> &mut Self {
+        self.add_version = value;
         self
     }
 
@@ -84,6 +90,18 @@ impl MergerOptions {
                 },
             )?;
 
+            if let Some(version) = &self.add_version {
+                let info = openapi
+                    .entry("info")
+                    .or_insert(serde_json::json!({}))
+                    .as_object_mut()
+                    .unwrap();
+
+                if let Some(val) = merged.pointer("/info/version") {
+                    info.insert(format!("x-version-{}", version), val.clone());
+                }
+            }
+
             if self.retag.is_some() {
                 return Ok(());
             }
@@ -132,6 +150,7 @@ impl Merger {
     pub fn options(schema: Schema) -> MergerOptions {
         MergerOptions {
             retag: None,
+            add_version: None,
             schema,
         }
     }
@@ -141,6 +160,39 @@ impl Merger {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_add_version() {
+        let first = json!({
+            "info": {
+                "version": "0.0.1",
+            }
+        });
+
+        let second = json!({
+            "info": {
+                "version": "0.0.8"
+            }
+        });
+
+        let expected = json!({
+            "info": {
+                "version": "0.0.1",
+                "x-version-test": "0.0.8"
+            },
+            "components": {},
+            "paths": {},
+            "tags": []
+        });
+
+        let mut schema = Schema::from_json(first);
+
+        let _result = Merger::options(Schema::from_json(second))
+            .with_add_version(Some("test".to_string()))
+            .process(&mut schema);
+
+        assert_eq!(schema.get_body().to_string(), expected.to_string());
+    }
 
     #[test]
     fn test_tags() {
