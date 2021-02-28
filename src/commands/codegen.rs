@@ -2,7 +2,10 @@ use codegen::jsonschema::JsonSchemaExtractOptions;
 use serde_json::Value;
 use std::fmt::Display;
 
-use crate::schema::{path_to_url, Schema};
+use crate::{
+    discovery::Discovery,
+    schema::{path_to_url, Schema},
+};
 use clap::Clap;
 
 use crate::codegen;
@@ -57,8 +60,12 @@ pub struct JsonSchemaOpts {
     #[clap(long, about = "Schema base name if title is absent")]
     pub base_name: Option<String>,
 
-    #[clap(long, about = "Location of template files")]
-    templates_dir: String,
+    #[clap(
+        long,
+        about = "Directory with templates, name:: prefix if pointing to registry",
+        required = true
+    )]
+    template: Vec<String>,
 
     #[clap(
         long,
@@ -93,8 +100,12 @@ pub struct OpenapiOpts {
     #[clap(long, about = "Treat nested arrays as models")]
     pub nested_arrays_as_models: bool,
 
-    #[clap(long, about = "Location of template files")]
-    templates_dir: String,
+    #[clap(
+        long,
+        about = "Directory with templates, name:: prefix if pointing to registry",
+        required = true
+    )]
+    template: Vec<String>,
 
     #[clap(
         long,
@@ -122,11 +133,11 @@ impl GetSchemaCommand for Opts {
 }
 
 impl Opts {
-    pub fn run(&self, schema: &mut Schema) -> Result<(), Error> {
+    pub fn run(&self, schema: &mut Schema, discovery: &Discovery) -> Result<(), Error> {
         match &self.command {
             Command::JsonSchema(opts) => {
                 let renderer = codegen::renderer::create(
-                    &opts.templates_dir,
+                    discovery.resolve(&opts.template)?,
                     &[codegen::templates::TemplateType::Models],
                     codegen::create_container(&opts.options),
                 )?;
@@ -145,7 +156,7 @@ impl Opts {
             }
             Command::Openapi(opts) => {
                 let renderer = codegen::renderer::create(
-                    &opts.templates_dir,
+                    discovery.resolve(&opts.template)?,
                     &[
                         codegen::templates::TemplateType::Models,
                         codegen::templates::TemplateType::Endpoints,
@@ -170,17 +181,18 @@ impl Opts {
 
 pub fn execute(opts: Opts) -> Result<(), Error> {
     let mut schema = opts.get_schema()?;
+    let discovery = Discovery::default();
 
     match &opts.command {
         Command::JsonSchema(o) => {
             o.verbose.start()?;
 
-            opts.run(&mut schema)
+            opts.run(&mut schema, &discovery)
         }
         Command::Openapi(o) => {
             o.verbose.start()?;
 
-            opts.run(&mut schema)
+            opts.run(&mut schema, &discovery)
         }
     }
 }

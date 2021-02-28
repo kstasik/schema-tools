@@ -8,6 +8,7 @@ use serde_json::Value;
 pub mod chain;
 pub mod codegen;
 pub mod process;
+pub mod registry;
 pub mod validate;
 
 use crate::{error::Error, schema::Schema};

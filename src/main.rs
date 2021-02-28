@@ -5,6 +5,7 @@ use clap::Clap;
 
 pub mod codegen;
 pub mod commands;
+pub mod discovery;
 pub mod error;
 pub mod process;
 pub mod resolver;

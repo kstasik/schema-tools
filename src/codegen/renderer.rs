@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::{discovery::Discovered, error::Error};
 use tera::Tera;
 
 pub struct Renderer {
@@ -7,21 +7,21 @@ pub struct Renderer {
     pub container: super::CodegenContainer,
 }
 
+// todo: refactor, it should allocate templates only once if same templates are used
 pub fn create(
-    templates_dir: &str,
+    discovered: Discovered,
     required: &[super::templates::TemplateType],
     container: super::CodegenContainer,
 ) -> Result<Renderer, Error> {
-    let tera = match Tera::new(&format!(
-        "{}{}",
-        templates_dir.trim_end_matches('/'),
-        "/**/*"
-    )) {
-        Ok(ref mut t) => Ok(super::filters::register(t)),
-        Err(e) => Err(Error::CodegenTemplatesParseError(e)),
-    }?;
+    let mut tera = Tera::default();
 
-    let templates = super::templates::get(templates_dir)?;
+    // todo: more borrowing, less allocating
+    tera.add_raw_templates(discovered.templates.clone())
+        .map_err(Error::CodegenTemplatesParseError)?;
+
+    super::filters::register(&mut tera);
+
+    let templates = super::templates::get(discovered)?;
     if !templates.includes(required) {
         return Err(Error::CodegenMissingRequiredTemplates);
     }
