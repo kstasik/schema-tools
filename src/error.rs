@@ -2,6 +2,24 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Please provide revision, branch or tag")]
+    RegistryMissingRevTagBranch,
+
+    #[error("Read file error: {0}")]
+    DiscoveryReadFile(std::io::Error),
+
+    #[error("Provided registry doesnt exist: {0}")]
+    DiscoveryNoRegistry(String),
+
+    #[error("Git url format should match git://repository#(branch|tag)?(#directory) pattern")]
+    DiscoveryInvalidGitUrl,
+
+    #[error("Cannot discover git repository: {0}")]
+    DiscoveryInvalidUrlError(url::ParseError),
+
+    #[error("Cannot discover git repository: {0}")]
+    GitDiscoveryError(git2::Error),
+
     #[error("Openapi schema format is invalid")]
     InvalidOpenapiSchemaError,
 
@@ -59,8 +77,8 @@ pub enum Error {
     #[error("Cannot parse header of codegen file: {0}")]
     CodegenFileHeaderParseError(String),
 
-    #[error("Cannot read templates directory: {0}")]
-    CodegenTemplatesDirectoryError(String),
+    #[error("Cannot get template from directory")]
+    CodegenTemplatesDirectoryError,
 
     #[error("Property is not available: {0}")]
     SchemaPropertyNotAvailable(String),
@@ -91,6 +109,9 @@ pub enum Error {
 
     #[error("Schema compilation error occured {url}, reason: {reason}")]
     SchemaCompilation { url: String, reason: String },
+
+    #[error("Schema not applicable")]
+    SchemaNotApplicable,
 
     #[error("Cannot load schema: {url}")]
     SchemaLoad { url: String },

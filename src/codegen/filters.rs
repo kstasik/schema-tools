@@ -6,7 +6,7 @@ use serde_json::Value;
 use tera::Tera;
 use tera::{try_get_value, Result as TeraResult};
 
-pub fn register(tera: &mut Tera) -> Tera {
+pub fn register(tera: &mut Tera) {
     tera.register_filter("snakecase", snakecase);
     tera.register_filter("ucfirst", ucfirst);
     tera.register_filter("camelcase", camelcase);
@@ -17,8 +17,6 @@ pub fn register(tera: &mut Tera) -> Tera {
     tera.register_filter("filter_not", filter_not);
     tera.register_filter("filter_startswith", filter_startswith);
     tera.register_filter("filter_inarray", filter_inarray);
-
-    tera.clone()
 }
 
 pub fn snakecase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {

@@ -2,17 +2,10 @@ use serde::Serialize;
 use serde_json::Value;
 use tera::Context;
 use tera::Tera;
-use walkdir::WalkDir;
 
-use crate::{error::Error, tools};
-use std::{
-    collections::HashMap,
-    ffi::OsStr,
-    fs::File,
-    io::{BufRead, BufReader, Write},
-    path::PathBuf,
-    process::Command,
-};
+use crate::{discovery::Discovered, error::Error, tools};
+use std::{collections::HashMap, fs::File, io::Write, path::PathBuf, process::Command};
+
 #[derive(Debug)]
 pub struct Templates {
     pub list: Vec<Template>,
@@ -46,8 +39,8 @@ pub struct Condition {
 
 #[derive(Debug)]
 pub struct StaticTemplate {
-    absolute: PathBuf,
-    relative: PathBuf,
+    relative: String,
+    path: PathBuf,
 }
 #[derive(PartialEq, Debug)]
 pub enum TemplateType {
@@ -105,45 +98,41 @@ impl Templates {
 }
 
 impl Template {
-    pub fn from(absolute: PathBuf, relative: PathBuf) -> Result<Self, Error> {
-        if absolute.extension().and_then(OsStr::to_str) == Some("j2") {
-            Template::parse(absolute, relative)
-        } else {
-            Ok(Template::Static(StaticTemplate { absolute, relative }))
-        }
+    fn from_static(relative: String, path: PathBuf) -> Result<Self, Error> {
+        Ok(Template::Static(StaticTemplate { relative, path }))
     }
 
-    fn parse(absolute: PathBuf, relative: PathBuf) -> Result<Self, Error> {
-        let mut reader =
-            BufReader::new(File::open(absolute).map_err(|_| Error::CodegenFileSkipped)?);
+    fn from_content(relative: String, content: String) -> Result<Self, Error> {
+        let first = content.lines().next();
 
-        let mut first_line = String::new();
-        reader
-            .read_line(&mut first_line)
-            .map_err(|_| Error::CodegenFileSkipped)?;
+        if let Some(line) = first {
+            let mut first_line = line.to_string();
 
-        let last_hash = first_line
-            .char_indices()
-            .find(|&(_, c)| c != '#')
-            .map_or(0, |(idx, _)| idx);
-        first_line = first_line[last_hash..].trim().to_string();
+            let last_hash = first_line
+                .char_indices()
+                .find(|&(_, c)| c != '#')
+                .map_or(0, |(idx, _)| idx);
+            first_line = first_line[last_hash..].trim().to_string();
 
-        if !first_line.starts_with("{# ") {
-            return Err(Error::CodegenFileSkipped);
+            if !first_line.starts_with("{# ") {
+                return Err(Error::CodegenFileSkipped);
+            }
+
+            let params = super::format(&first_line.trim_matches(&['{', '}', '#', ' '] as &[_]))?;
+
+            params
+                .get("type")
+                .ok_or_else(|| Error::CodegenFileHeaderRequired("type".to_string()))?
+                .as_str()
+                .map(|type_| match type_ {
+                    "endpoints" => EndpointsTemplate::from(PathBuf::from(relative), &params),
+                    "models" => ModelsTemplate::from(PathBuf::from(relative), &params),
+                    _ => Err(Error::CodegenFileHeaderRequired("type".to_string())),
+                })
+                .unwrap()
+        } else {
+            Err(Error::CodegenFileSkipped)
         }
-
-        let params = super::format(&first_line.trim_matches(&['{', '}', '#', ' '] as &[_]))?;
-
-        params
-            .get("type")
-            .ok_or_else(|| Error::CodegenFileHeaderRequired("type".to_string()))?
-            .as_str()
-            .map(|type_| match type_ {
-                "endpoints" => EndpointsTemplate::from(relative, &params),
-                "models" => ModelsTemplate::from(relative, &params),
-                _ => Err(Error::CodegenFileHeaderRequired("type".to_string())),
-            })
-            .unwrap()
     }
 
     pub fn format(&self, command: &str, files: Vec<String>) -> Result<(), Error> {
@@ -291,11 +280,7 @@ impl ModelsTemplate {
 
 impl StaticTemplate {
     pub fn copy(&self, target_dir: &str) -> Result<Vec<String>, Error> {
-        let target = PathBuf::from(format!(
-            "{}/{}",
-            target_dir,
-            self.relative.to_string_lossy()
-        ));
+        let target = PathBuf::from(format!("{}/{}", target_dir, self.relative));
 
         log::info!("Copying: {:?}", target);
 
@@ -304,7 +289,7 @@ impl StaticTemplate {
 
         std::fs::create_dir_all(directory).map_err(|e| Error::CodegenFileError(e.to_string()))?;
 
-        std::fs::copy(self.absolute.clone(), target.clone())
+        std::fs::copy(self.path.clone(), target.clone())
             .map(|_| ())
             .map_err(|e| Error::CodegenFileError(e.to_string()))?;
 
@@ -312,32 +297,32 @@ impl StaticTemplate {
     }
 }
 
-pub fn get(templates_dir: &str) -> Result<Templates, Error> {
-    let list = WalkDir::new(templates_dir)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| !e.file_type().is_dir())
-        .filter_map(|f| {
-            match Template::from(
-                f.clone().into_path(),
-                f.into_path()
-                    .strip_prefix(templates_dir)
-                    .unwrap()
-                    .to_path_buf(),
-            ) {
-                Ok(t) => Some(Ok(t)),
-                Err(e) => match e {
-                    Error::CodegenFileSkipped => None,
-                    e => Some(Err(e)),
-                },
+pub fn get(discovered: Discovered) -> Result<Templates, Error> {
+    let mut list: Vec<Template> = vec![];
+
+    for (relative, content) in discovered.templates {
+        let result = Template::from_content(relative.clone(), content);
+
+        match result {
+            Ok(template) => {
+                list.push(template);
             }
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
+            Err(err) => match err {
+                Error::CodegenFileSkipped => {
+                    log::trace!("file skipped: {}", relative);
+                    continue;
+                }
+                e => return Err(e),
+            },
+        }
+    }
+
+    for (relative, path) in discovered.files {
+        list.push(Template::from_static(relative, path)?)
+    }
 
     if list.is_empty() {
-        return Err(Error::CodegenTemplatesDirectoryError(
-            templates_dir.to_string(),
-        ));
+        return Err(Error::CodegenTemplatesDirectoryError);
     }
 
     Ok(Templates { list })

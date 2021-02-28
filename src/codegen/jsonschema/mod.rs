@@ -392,11 +392,8 @@ fn add_validation_and_nullable(
     let x = schema
         .iter()
         .filter_map(|(key, val)| {
-            if let Some(stripped) = key.strip_prefix("x-") {
-                Some((stripped.to_string(), val.clone()))
-            } else {
-                None
-            }
+            key.strip_prefix("x-")
+                .map(|stripped| (stripped.to_string(), val.clone()))
         })
         .collect::<HashMap<String, Value>>();
 
