@@ -37,6 +37,7 @@ pub struct Endpoint {
     path: String,
     method: String,
     operation: String,
+    description: Option<String>,
     tags: Vec<String>,
     requestbody: Option<requestbody::RequestBody>,
     parameters: parameters::Parameters,
@@ -224,6 +225,12 @@ fn new_endpoint(
                         .get_operation_id(true)
                 });
 
+            let description = data.get("description").map(|v| {
+                v.as_str()
+                    .map(|s| s.lines().collect::<Vec<_>>().join(" "))
+                    .unwrap()
+            });
+
             let tags = data
                 .get("tags")
                 .map(|v| match v {
@@ -239,6 +246,7 @@ fn new_endpoint(
             scope.glue(&operation);
 
             let endpoint = Endpoint {
+                description,
                 operation,
                 method: method.to_string(),
                 path: path.to_string(),
