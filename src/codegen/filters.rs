@@ -2,14 +2,21 @@ use regex::Regex;
 use std::collections::HashMap;
 use tera::to_value;
 
+use inflector::Inflector;
 use serde_json::Value;
 use tera::Tera;
 use tera::{try_get_value, Result as TeraResult};
 
 pub fn register(tera: &mut Tera) {
-    tera.register_filter("snakecase", snakecase);
-    tera.register_filter("ucfirst", ucfirst);
     tera.register_filter("camelcase", camelcase);
+    tera.register_filter("pascalcase", pascalcase);
+    tera.register_filter("snakecase", snakecase);
+    tera.register_filter("upper_snakecase", upper_snakecase);
+    tera.register_filter("kebabcase", kebabcase);
+    tera.register_filter("traincase", traincase);
+    tera.register_filter("titlecase", titlecase);
+    tera.register_filter("lcfirst", lcfirst);
+    tera.register_filter("ucfirst", ucfirst);
     tera.register_filter("nospaces", nospaces);
 
     tera.register_filter("path_parts", path_parts);
@@ -19,23 +26,60 @@ pub fn register(tera: &mut Tera) {
     tera.register_filter("filter_inarray", filter_inarray);
 }
 
-pub fn snakecase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let mut snake = String::new();
-    for (i, ch) in try_get_value!("snakecase", "value", String, value).char_indices() {
-        if i > 0 && ch.is_uppercase() {
-            snake.push('_');
-        }
-        snake.push(ch.to_ascii_lowercase());
-    }
+pub fn pascalcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    let s = try_get_value!("pascalcase", "value", String, value);
+    let case = s.to_pascal_case();
 
-    Ok(to_value(&snake.trim_matches('_')).unwrap())
+    Ok(to_value(&case).unwrap())
 }
 
 pub fn camelcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
     let s = try_get_value!("camelcase", "value", String, value);
-    let camelcase = s[..1].to_ascii_lowercase() + &s[1..];
+    let case = s.to_camel_case();
 
-    Ok(to_value(&camelcase).unwrap())
+    Ok(to_value(&case).unwrap())
+}
+
+pub fn snakecase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    let s = try_get_value!("snakecase", "value", String, value);
+    let case = s.to_snake_case();
+
+    Ok(to_value(&case).unwrap())
+}
+
+pub fn upper_snakecase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    let s = try_get_value!("upper_snakecase", "value", String, value);
+    let case = s.to_screaming_snake_case();
+
+    Ok(to_value(&case).unwrap())
+}
+
+pub fn kebabcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    let s = try_get_value!("kebabcase", "value", String, value);
+    let case = s.to_kebab_case();
+
+    Ok(to_value(&case).unwrap())
+}
+
+pub fn traincase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    let s = try_get_value!("traincase", "value", String, value);
+    let case = s.to_train_case();
+
+    Ok(to_value(&case).unwrap())
+}
+
+pub fn titlecase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    let s = try_get_value!("titlecase", "value", String, value);
+    let case = s.to_title_case();
+
+    Ok(to_value(&case).unwrap())
+}
+
+pub fn lcfirst(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    let s = try_get_value!("lcfirst", "value", String, value);
+    let lcfirst = s[..1].to_ascii_lowercase() + &s[1..];
+
+    Ok(to_value(&lcfirst).unwrap())
 }
 
 pub fn ucfirst(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
