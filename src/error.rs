@@ -62,8 +62,14 @@ pub enum Error {
     #[error("Invalid openapi schema {0}: {1}")]
     CodegenInvalidEndpointProperty(String, String),
 
+    #[error("Invalid security scheme schema {0}: {1}")]
+    CodegenInvalidSecurityScheme(String, String),
+
     #[error("Endpoint format is invalid")]
     CodegenInvalidEndpointFormat,
+
+    #[error("Security scheme format is invalid")]
+    CodegenInvalidSecuritySchemeFormat,
 
     #[error("Cannot find any templates which could be used to render files")]
     CodegenNoTemplatesFound,

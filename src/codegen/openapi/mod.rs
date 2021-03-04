@@ -11,6 +11,7 @@ use super::jsonschema::{add_types, extract_type, JsonSchemaExtractOptions, Model
 pub mod parameters;
 pub mod requestbody;
 pub mod responses;
+pub mod security;
 
 pub struct OpenapiExtractOptions {
     pub wrappers: bool,
@@ -34,6 +35,7 @@ impl EndpointContainer {
 
 #[derive(Serialize, Clone)]
 pub struct Endpoint {
+    security: Vec<security::SecurityScheme>,
     path: String,
     method: String,
     operation: String,
@@ -81,6 +83,7 @@ impl Serialize for MediaModelsContainer {
 pub struct Openapi {
     pub models: ModelContainer,
     pub endpoints: Vec<Endpoint>,
+    pub security: security::SecuritySchemes,
     pub tags: Vec<String>,
 }
 
@@ -88,6 +91,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
     let mut scope = SchemaScope::default();
     let mut mcontainer = ModelContainer::default();
     let mut econtainer = EndpointContainer::new();
+    let mut scontainer = security::SecuritySchemes::new();
     let mut tags: Vec<String> = vec![];
 
     let root = schema.get_body();
@@ -101,6 +105,38 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
     // todo: naming should be moved to one place (translation how to interpret jpointers)
 
     // headers
+
+    // components/securitySchemes
+    tools::each_node(
+        root,
+        &mut scope,
+        "/any:components/any:securitySchemes/definition:*",
+        |node, parts, scope| {
+            if let [scheme_name] = parts {
+                scope.glue(scheme_name).glue("security_scheme");
+
+                let scheme = security::new_scheme(node, scheme_name, scope)?;
+
+                scontainer.add(scheme);
+                scope.reduce(2);
+            }
+            Ok(())
+        },
+    )?;
+
+    // security
+    tools::each_node(root, &mut scope, "path:security", |node, _parts, scope| {
+        scope.glue("security");
+
+        let schemes = security::extract_defaults(node, scope, &mut scontainer)?;
+        for scheme in schemes {
+            scontainer.add_default(scheme);
+        }
+
+        scope.pop();
+
+        Ok(())
+    })?;
 
     // components/schemas
     tools::each_node(
@@ -185,6 +221,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
                     method,
                     scope,
                     &mut mcontainer,
+                    &mut scontainer,
                     resolver,
                     options,
                 )?;
@@ -201,21 +238,30 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
     Ok(Openapi {
         models: mcontainer,
         endpoints: econtainer.endpoints,
+        security: scontainer,
         tags,
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn new_endpoint(
     node: &Value,
     path: &str,
     method: &str,
     scope: &mut SchemaScope,
     mcontainer: &mut ModelContainer,
+    scontainer: &mut security::SecuritySchemes,
     resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
 ) -> Result<Endpoint, Error> {
     match node {
         Value::Object(data) => {
+            let security = data
+                .get("security")
+                .map(|v| security::extract_defaults(v, scope, scontainer))
+                .map_or(Ok(None), |v| v.map(Some))?
+                .unwrap_or_else(|| scontainer.default.clone());
+
             let operation = data
                 .get("operationId")
                 .map(|v| v.as_str().unwrap().to_string())
@@ -246,6 +292,7 @@ fn new_endpoint(
             scope.glue(&operation);
 
             let endpoint = Endpoint {
+                security,
                 description,
                 operation,
                 method: method.to_string(),
