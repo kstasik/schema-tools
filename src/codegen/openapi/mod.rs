@@ -243,6 +243,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn new_endpoint(
     node: &Value,
     path: &str,

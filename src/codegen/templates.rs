@@ -98,8 +98,8 @@ impl Templates {
 }
 
 impl Template {
-    fn from_static(relative: String, path: PathBuf) -> Result<Self, Error> {
-        Ok(Template::Static(StaticTemplate { relative, path }))
+    fn from_static(relative: String, path: PathBuf) -> Self {
+        Template::Static(StaticTemplate { relative, path })
     }
 
     fn from_content(relative: String, content: String) -> Result<Self, Error> {
@@ -318,7 +318,7 @@ pub fn get(discovered: Discovered) -> Result<Templates, Error> {
     }
 
     for (relative, path) in discovered.files {
-        list.push(Template::from_static(relative, path)?)
+        list.push(Template::from_static(relative, path))
     }
 
     if list.is_empty() {
