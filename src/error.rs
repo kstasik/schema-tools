@@ -38,6 +38,9 @@ pub enum Error {
     #[error("Cannot fill parameters: {0}")]
     CannotFillParameters(String),
 
+    #[error("Codegen not allowed group by: {0}")]
+    CodegenNotAllowedGroupBy(String),
+
     #[error("Codegen cannot retrieve name: {0}")]
     CodegenCannotRetrieveNameError(String),
 

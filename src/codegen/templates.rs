@@ -6,6 +6,8 @@ use tera::Tera;
 use crate::{discovery::Discovered, error::Error, tools};
 use std::{collections::HashMap, fs::File, io::Write, path::PathBuf, process::Command};
 
+use super::openapi::Openapi;
+
 #[derive(Debug)]
 pub struct Templates {
     pub list: Vec<Template>,
@@ -24,6 +26,7 @@ pub struct EndpointsTemplate {
     filename: Filename,
     content_type: String,
     condition: Option<Condition>,
+    group_by: GroupBy,
 }
 #[derive(Debug)]
 pub struct ModelsTemplate {
@@ -35,6 +38,15 @@ pub struct ModelsTemplate {
 #[derive(Debug)]
 pub struct Condition {
     pub kv: String,
+}
+
+#[derive(Debug, Default)]
+pub struct GroupBy {
+    pub kind: Option<String>,
+}
+
+pub trait Group {
+    fn process(&self, openapi: &mut Openapi, container: &mut super::CodegenContainer);
 }
 
 #[derive(Debug)]
@@ -79,6 +91,73 @@ impl Condition {
                 }
             })
             .unwrap_or(false)
+    }
+}
+
+impl GroupBy {
+    pub fn from(group_by: &str) -> Result<Self, Error> {
+        if group_by != "tag" {
+            Err(Error::CodegenNotAllowedGroupBy(group_by.to_string()))
+        } else {
+            Ok(Self {
+                kind: Some(group_by.to_string()),
+            })
+        }
+    }
+
+    pub fn split(&self, openapi: &Openapi) -> impl IntoIterator<Item = impl Group> {
+        match &self.kind {
+            Some(_) => TagGroup::produce(openapi)
+                .into_iter()
+                .map(GroupType::TagGroup)
+                .collect::<Vec<_>>(),
+            None => vec![GroupType::NoGroup],
+        }
+    }
+}
+pub struct TagGroup {
+    tag: String,
+}
+
+impl Group for TagGroup {
+    fn process(&self, openapi: &mut Openapi, container: &mut super::CodegenContainer) {
+        container.data.insert(
+            "tag".to_string(),
+            Value::String(self.tag.clone().to_lowercase()),
+        );
+
+        openapi
+            .endpoints
+            .retain(|s| s.get_tags().contains(&self.tag));
+    }
+}
+
+impl TagGroup {
+    pub fn produce(openapi: &Openapi) -> Vec<TagGroup> {
+        let mut tags = openapi.endpoints.iter().fold(vec![], |mut acc, item| {
+            acc.append(&mut item.get_tags().clone());
+            acc
+        });
+
+        tags.dedup();
+
+        tags.iter()
+            .map(|t| TagGroup { tag: t.clone() })
+            .collect::<Vec<_>>()
+    }
+}
+
+pub enum GroupType {
+    TagGroup(TagGroup),
+    NoGroup,
+}
+
+impl Group for GroupType {
+    fn process(&self, openapi: &mut Openapi, container: &mut super::CodegenContainer) {
+        match &self {
+            Self::TagGroup(t) => t.process(openapi, container),
+            Self::NoGroup => {}
+        }
     }
 }
 
@@ -181,11 +260,17 @@ impl EndpointsTemplate {
             .map(|s| Condition::from(&s.as_str().unwrap()))
             .map_or(Ok(None), |v| v.map(Some))?;
 
+        let group_by = config
+            .get("group_by")
+            .map(|s| GroupBy::from(&s.as_str().unwrap()))
+            .unwrap_or_else(|| Ok(GroupBy::default()))?;
+
         Ok(Template::Endpoints(Self {
             relative,
             filename,
             content_type,
             condition,
+            group_by,
         }))
     }
 
@@ -196,30 +281,40 @@ impl EndpointsTemplate {
         openapi: &super::openapi::Openapi,
         container: &super::CodegenContainer,
     ) -> Result<Vec<String>, Error> {
-        if self
-            .condition
-            .as_ref()
-            .map(|s| s.check(container))
-            .unwrap_or(true)
-        {
-            let openapi = openapi.clone().set_content_type(&self.content_type);
+        let mut result = vec![];
 
-            process_render(
-                tera,
-                openapi,
-                PathBuf::from(format!(
-                    "{}/{}",
-                    target_dir,
-                    self.filename.resolve(container)?
-                )),
-                self.relative.clone(),
-                container,
-            )
-        } else {
-            log::info!("Template skipped due to condition: {:?}", self.relative);
+        for group in self.group_by.split(openapi) {
+            // prepare per group structures
+            let mut openapi = openapi.clone().set_content_type(&self.content_type);
+            let mut container = container.clone();
 
-            Ok(vec![])
+            // process group
+            group.process(&mut openapi, &mut container);
+
+            if self
+                .condition
+                .as_ref()
+                .map(|s| s.check(&container))
+                .unwrap_or(true)
+            {
+                // render
+                result.append(&mut process_render(
+                    tera,
+                    openapi,
+                    PathBuf::from(format!(
+                        "{}/{}",
+                        target_dir,
+                        self.filename.resolve(&container)?
+                    )),
+                    self.relative.clone(),
+                    &container,
+                )?)
+            } else {
+                log::info!("Template skipped due to condition: {:?}", self.relative);
+            }
         }
+
+        Ok(result)
     }
 }
 

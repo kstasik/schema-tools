@@ -45,6 +45,12 @@ pub struct Endpoint {
     parameters: parameters::Parameters,
     responses: responses::Responses,
 }
+
+impl Endpoint {
+    pub fn get_tags(&self) -> &Vec<String> {
+        &self.tags
+    }
+}
 #[derive(Debug, Serialize, Clone)]
 pub struct MediaModel {
     #[serde(rename = "model")]
