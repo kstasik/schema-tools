@@ -431,10 +431,11 @@ fn process_render(
     container: &super::CodegenContainer,
 ) -> Result<Vec<String>, Error> {
     let mut ctx = Context::from_serialize(serde_json::to_value(data).unwrap()).unwrap();
-    ctx.insert(
-        "options".to_string(),
-        &serde_json::to_value(container.options.clone()).unwrap(),
-    );
+
+    let data = serde_json::to_value(container).unwrap();
+    for (key, value) in data.as_object().unwrap() {
+        ctx.insert(key, value);
+    }
 
     let result = tera
         .render(&relative.to_string_lossy(), &ctx)
