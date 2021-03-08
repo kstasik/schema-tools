@@ -43,6 +43,12 @@ pub struct Parameter {
     #[serde(rename = "description")]
     pub description: Option<String>,
 
+    #[serde(rename = "style")]
+    pub style: Option<String>,
+
+    #[serde(rename = "explode")]
+    pub explode: Option<bool>,
+
     #[serde(rename = "kind")]
     pub kind: String,
 }
@@ -131,6 +137,10 @@ pub fn extract_parameter(
                 .map(|s| s.as_bool().unwrap())
                 .unwrap_or(false);
 
+            let explode = data.get("explode").map(|s| s.as_bool().unwrap());
+
+            let style = data.get("style").map(|s| s.as_str().unwrap().to_string());
+
             scope.any("schema").glue(&name).glue(&kind);
 
             let model = extract_type(schema, mcontainer, scope, resolver, options)
@@ -143,6 +153,8 @@ pub fn extract_parameter(
                 name,
                 description,
                 kind,
+                explode,
+                style,
                 model: Some(model?),
             })
         }
