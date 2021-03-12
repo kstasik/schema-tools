@@ -17,6 +17,7 @@ pub struct Templates {
 pub enum Template {
     Models(ModelsTemplate),
     Endpoints(EndpointsTemplate),
+    Tags(TagsTemplate),
     Static(StaticTemplate),
 }
 
@@ -28,6 +29,15 @@ pub struct EndpointsTemplate {
     condition: Option<Condition>,
     group_by: GroupBy,
 }
+
+#[derive(Debug)]
+pub struct TagsTemplate {
+    relative: PathBuf,
+    filename: Filename,
+    content_type: String,
+    condition: Option<Condition>,
+}
+
 #[derive(Debug)]
 pub struct ModelsTemplate {
     relative: PathBuf,
@@ -43,6 +53,11 @@ pub struct Condition {
 #[derive(Debug, Default)]
 pub struct GroupBy {
     pub kind: Option<String>,
+}
+#[derive(Serialize)]
+pub struct TagContainer {
+    tag: String,
+    endpoints: Vec<super::openapi::Endpoint>,
 }
 
 pub trait Group {
@@ -145,6 +160,14 @@ impl TagGroup {
             .map(|t| TagGroup { tag: t.clone() })
             .collect::<Vec<_>>()
     }
+
+    pub fn filter(&self, endpoints: &[super::openapi::Endpoint]) -> Vec<super::openapi::Endpoint> {
+        endpoints
+            .iter()
+            .filter(|e| e.get_tags().contains(&self.tag))
+            .cloned()
+            .collect()
+    }
 }
 
 pub enum GroupType {
@@ -206,6 +229,7 @@ impl Template {
                 .map(|type_| match type_ {
                     "endpoints" => EndpointsTemplate::from(PathBuf::from(relative), &params),
                     "models" => ModelsTemplate::from(PathBuf::from(relative), &params),
+                    "tags" => TagsTemplate::from(PathBuf::from(relative), &params),
                     _ => Err(Error::CodegenFileHeaderRequired("type".to_string())),
                 })
                 .unwrap()
@@ -315,6 +339,86 @@ impl EndpointsTemplate {
         }
 
         Ok(result)
+    }
+}
+
+impl TagsTemplate {
+    pub fn from(relative: PathBuf, config: &HashMap<&str, Value>) -> Result<Template, Error> {
+        let filename = Filename::from(
+            config
+                .get("filename")
+                .ok_or_else(|| Error::CodegenFileHeaderRequired("filename".to_string()))?
+                .as_str()
+                .unwrap()
+                .to_string(),
+        );
+
+        let content_type = config
+            .get("content_type")
+            .map(|s| s.as_str().unwrap().to_string())
+            .unwrap_or_else(|| "application/json".to_string());
+
+        let condition = config
+            .get("if")
+            .map(|s| Condition::from(&s.as_str().unwrap()))
+            .map_or(Ok(None), |v| v.map(Some))?;
+
+        Ok(Template::Tags(Self {
+            relative,
+            filename,
+            content_type,
+            condition,
+        }))
+    }
+
+    pub fn render(
+        &self,
+        tera: &Tera,
+        target_dir: &str,
+        openapi: &super::openapi::Openapi,
+        container: &super::CodegenContainer,
+    ) -> Result<Vec<String>, Error> {
+        let groups = TagGroup::produce(openapi);
+
+        let mut tags: Vec<TagContainer> = vec![];
+        let mut processed = openapi.clone().set_content_type(&self.content_type);
+        let mut container = container.clone();
+
+        for group in groups {
+            tags.push(TagContainer {
+                tag: group.tag.clone().to_lowercase(),
+                endpoints: group.filter(&openapi.endpoints),
+            })
+        }
+
+        processed.endpoints = vec![];
+
+        container
+            .data
+            .insert("tags".to_string(), serde_json::to_value(tags).unwrap());
+
+        if self
+            .condition
+            .as_ref()
+            .map(|s| s.check(&container))
+            .unwrap_or(true)
+        {
+            // render
+            process_render(
+                tera,
+                processed,
+                PathBuf::from(format!(
+                    "{}/{}",
+                    target_dir,
+                    self.filename.resolve(&container)?
+                )),
+                self.relative.clone(),
+                &container,
+            )
+        } else {
+            log::info!("Template skipped due to condition: {:?}", self.relative);
+            Ok(vec![])
+        }
     }
 }
 

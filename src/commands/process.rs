@@ -138,6 +138,9 @@ pub struct DereferenceOpts {
     )]
     create_internal_references: bool,
 
+    #[clap(long, about = "List of hostnames to skip dereference")]
+    skip_references: Vec<String>,
+
     #[clap(flatten)]
     output: crate::commands::Output,
 
@@ -225,6 +228,7 @@ impl Opts {
                 dereference::Dereferencer::options()
                     .with_skip_root_internal_references(opts.skip_root_internal_references)
                     .with_create_internal_references(opts.create_internal_references)
+                    .with_skip_references(opts.skip_references.clone())
                     .process(schema);
                 Ok(())
             }

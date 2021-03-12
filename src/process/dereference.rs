@@ -20,6 +20,7 @@ pub struct DereferencerContext {
 pub struct DereferencerOptions {
     pub skip_root_internal_references: bool,
     pub create_internal_references: bool,
+    pub skip_references: Vec<String>,
 }
 
 impl DereferencerOptions {
@@ -30,6 +31,11 @@ impl DereferencerOptions {
 
     pub fn with_create_internal_references(&mut self, value: bool) -> &mut Self {
         self.create_internal_references = value;
+        self
+    }
+
+    pub fn with_skip_references(&mut self, value: Vec<String>) -> &mut Self {
+        self.skip_references = value;
         self
     }
 
@@ -73,6 +79,7 @@ impl Dereferencer {
         DereferencerOptions {
             skip_root_internal_references: false,
             create_internal_references: true,
+            skip_references: vec![],
         }
     }
 }
@@ -110,6 +117,12 @@ fn dereference(
             }
 
             if let Some(path) = address.clone() {
+                // skip specific hostnames
+                let hostnames = &options.skip_references;
+                if hostnames.iter().any(|hostname| path.contains(hostname)) {
+                    return node.clone();
+                }
+
                 let url = ref_to_url(path, context);
                 context.resolve(url);
             }
@@ -401,6 +414,30 @@ mod tests {
                       }
                   ]
               }
+            }
+          }
+        });
+
+        assert_eq!(spec.get_body().to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_skip_references() {
+        let mut spec =
+            spec_from_file("resources/test/json-schemas/05-with-nested-remote-external-ref.json");
+        Dereferencer::options()
+            .with_skip_references(vec!["json.schemastore.org".to_string()])
+            .process(&mut spec);
+
+        let expected = json!({
+          "$id": "https://example.com/arrays.schema.json",
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "description": "Just a test",
+          "type": "object",
+          "properties": {
+            "contexts": {
+              "type": "array",
+              "items": { "$ref": "https://json.schemastore.org/azure-iot-edge-deployment-template-2.0#/definitions/moduleType" }
             }
           }
         });
