@@ -83,6 +83,9 @@ impl Renderer {
                 super::templates::Template::Endpoints(t) => {
                     t.render(&self.tera, target_dir, &openapi, &self.container)
                 }
+                super::templates::Template::Tags(t) => {
+                    t.render(&self.tera, target_dir, &openapi, &self.container)
+                }
                 super::templates::Template::Models(t) => {
                     t.render(&self.tera, target_dir, &openapi.models, &self.container)
                 }
