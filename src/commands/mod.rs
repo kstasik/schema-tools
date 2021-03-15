@@ -66,7 +66,7 @@ impl Verbosity {
 }
 
 #[derive(Clap, Debug)]
-struct Output {
+pub(crate) struct Output {
     #[clap(short, long, about = "Returned format", possible_values = OUTPUT, parse(try_from_str), default_value = "json")]
     output: String,
 

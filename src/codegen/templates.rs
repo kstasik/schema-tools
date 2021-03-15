@@ -154,6 +154,7 @@ impl TagGroup {
             acc
         });
 
+        tags.sort();
         tags.dedup();
 
         tags.iter()
