@@ -7,6 +7,11 @@ use super::registry;
 use super::validate;
 use super::{codegen, GetSchemaCommand};
 use std::fmt::Display;
+#[derive(Clap, Debug)]
+pub struct OutputOpts {
+    #[clap(flatten)]
+    output: crate::commands::Output,
+}
 
 #[derive(Debug)]
 pub enum ChainCommandOption {
@@ -14,6 +19,7 @@ pub enum ChainCommandOption {
     Process(process::Opts),
     Validate(validate::Opts),
     Registry(registry::Opts),
+    Output(OutputOpts),
 }
 
 impl Display for ChainCommandOption {
@@ -23,6 +29,7 @@ impl Display for ChainCommandOption {
             Self::Process(p) => write!(f, "process: {}", p),
             Self::Validate(p) => write!(f, "validate: {}", p),
             Self::Registry(p) => write!(f, "registry: {}", p),
+            Self::Output(p) => write!(f, "output: {:?}", p),
         }
     }
 }
@@ -46,6 +53,10 @@ fn parse_command(cmd: &str) -> Result<ChainCommandOption, Error> {
         "validate" => Ok(ChainCommandOption::Validate(
             validate::Opts::try_parse_from(parts)
                 .map_err(|e| Error::ChainWrongParameters("validate".to_string(), e))?,
+        )),
+        "output" => Ok(ChainCommandOption::Output(
+            OutputOpts::try_parse_from(parts)
+                .map_err(|e| Error::ChainWrongParameters("output".to_string(), e))?,
         )),
         s => Err(Error::ChainUnknownCommand(s.to_string())),
     }
@@ -76,6 +87,7 @@ pub fn execute(opts: Opts) -> Result<(), Error> {
 
                 Err(Error::SchemaNotApplicable)
             }
+            ChainCommandOption::Output(_) => Err(Error::SchemaNotApplicable),
         };
 
         match schema {
@@ -103,6 +115,10 @@ pub fn execute(opts: Opts) -> Result<(), Error> {
                 ChainCommandOption::Codegen(c) => c.run(current, &discovery),
                 ChainCommandOption::Process(c) => c.run(current),
                 ChainCommandOption::Validate(v) => v.run(current),
+                ChainCommandOption::Output(o) => {
+                    o.output.show(current.get_body());
+                    Ok(())
+                }
                 _ => Ok(()),
             }?
         }

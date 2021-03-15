@@ -49,15 +49,19 @@ fn process_merge(
             log::info!("{}.allOf", scope);
 
             let mut first = resolver
-                .resolve(schemas.get_mut(0).unwrap(), scope, |value, _| {
-                    Ok(value.clone())
+                .resolve(schemas.get_mut(0).unwrap(), scope, |v, ss| {
+                    let mut node = v.clone();
+                    process_node(&mut node, options, ss, resolver);
+                    Ok(node)
                 })
                 .unwrap();
 
             for n in 1..size {
                 let value = resolver
-                    .resolve(schemas.get_mut(n).unwrap(), scope, |value, _| {
-                        Ok(value.clone())
+                    .resolve(schemas.get_mut(n).unwrap(), scope, |v, ss| {
+                        let mut node = v.clone();
+                        process_node(&mut node, options, ss, resolver);
+                        Ok(node)
                     })
                     .unwrap();
                 merge_values(&mut first, value, options);
@@ -84,6 +88,7 @@ fn process_node(
 ) {
     match root {
         Value::Object(ref mut map) => {
+            // todo: allOf deep
             // go deeper first
             {
                 for (property, value) in map.into_iter() {
@@ -131,6 +136,94 @@ fn merge_values(a: &mut Value, b: Value, options: &MergerOptions) {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_merge_deep() {
+        let expected = json!({
+            "definitions": {
+                "test": {
+                    "type": "object",
+                    "required": ["prop2"],
+                    "properties": {
+                        "prop2": { "type": "string" }
+                    }
+                },
+                "testX": {
+                    "type": "object",
+                    "properties": {
+                        "test": { "type": "string" },
+                        "test6": { "type": "string" }
+                    }
+                },
+                "testY": {
+                    "type": "object",
+                    "properties": {
+                        "test6": { "type": "string" }
+                    }
+                },
+            },
+            "type": "object",
+            "required": ["prop2", "prop1"],
+            "properties": {
+                "prop2": { "type": "string" },
+                "prop1": { "type": "object", "properties": { "test": {"type": "string"}, "test6": {"type": "string"}, "test2": {"type": "string"} } }
+            }
+        });
+
+        let value = json!({
+            "definitions": {
+                "test": {
+                    "type": "object",
+                    "required": ["prop2"],
+                    "properties": {
+                        "prop2": { "type": "string" }
+                    }
+                },
+                "testX": {
+                    "allOf": [
+                        {
+                            "type": "object",
+                            "properties": {
+                                "test": { "type": "string" }
+                            }
+                        },
+                        {
+                            "$ref": "#/definitions/testY"
+                        }
+                    ]
+                },
+                "testY": {
+                    "type": "object",
+                    "properties": {
+                        "test6": { "type": "string" }
+                    }
+                },
+            },
+            "allOf": [
+                {
+                    "$ref": "#/definitions/test"
+                },
+                {
+                    "type": "object",
+                    "required": ["prop1"],
+                    "properties": {
+                        "prop1": {
+                            "allOf": [
+                                { "$ref": "#/definitions/testX" },
+                                { "type": "object", "properties": { "test2": {"type": "string"} } }
+                            ]
+                        }
+                    }
+                }
+            ]
+        });
+
+        let mut schema = Schema::from_json(value);
+
+        Merger::options().process(&mut schema);
+
+        assert_eq!(schema.get_body().to_string(), expected.to_string());
+    }
 
     #[test]
     fn test_internal_reference() {
