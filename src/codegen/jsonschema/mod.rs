@@ -1,3 +1,5 @@
+#![allow(clippy::large_enum_variant)]
+
 use std::collections::HashMap;
 
 use serde::{ser::SerializeStruct, Serialize};
@@ -376,6 +378,7 @@ fn add_validation_and_nullable(
         "uniqueItems",
         "maxProperties",
         "minProperties",
+        "default",
     ];
 
     let mut result = schema
@@ -423,8 +426,11 @@ fn add_validation_and_nullable(
             .unwrap()
     });
 
+    let default = schema.get("default").cloned();
+
     let attributes = types::Attributes {
         description,
+        default,
         nullable,
         validation,
         x,
