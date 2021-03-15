@@ -181,6 +181,9 @@ pub struct Attributes {
     #[serde(rename = "description")]
     pub description: Option<String>,
 
+    #[serde(rename = "default")]
+    pub default: Option<Value>,
+
     #[serde(rename = "nullable")]
     pub nullable: bool,
 
@@ -198,6 +201,7 @@ impl Attributes {
     pub fn default() -> Self {
         Self {
             description: None,
+            default: None,
             nullable: false,
             required: true,
             validation: None,
@@ -228,6 +232,7 @@ impl Serialize for FlattenedType {
         state.serialize_field("validation", &self.attributes.validation)?;
         state.serialize_field("x", &self.attributes.x)?;
         state.serialize_field("description", &self.attributes.description)?;
+        state.serialize_field("default", &self.attributes.default)?;
         state.end()
     }
 }
