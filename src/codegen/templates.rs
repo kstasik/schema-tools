@@ -7,6 +7,7 @@ use crate::{discovery::Discovered, error::Error, tools};
 use std::{collections::HashMap, fs::File, io::Write, path::PathBuf, process::Command};
 
 use super::openapi::Openapi;
+use inflector::Inflector;
 
 #[derive(Debug)]
 pub struct Templates {
@@ -138,7 +139,7 @@ impl Group for TagGroup {
     fn process(&self, openapi: &mut Openapi, container: &mut super::CodegenContainer) {
         container.data.insert(
             "tag".to_string(),
-            Value::String(self.tag.clone().to_lowercase()),
+            Value::String(self.tag.clone().to_pascal_case()),
         );
 
         openapi
@@ -387,7 +388,7 @@ impl TagsTemplate {
 
         for group in groups {
             tags.push(TagContainer {
-                tag: group.tag.clone().to_lowercase(),
+                tag: group.tag.clone().to_pascal_case(),
                 endpoints: group.filter(&openapi.endpoints),
             })
         }
