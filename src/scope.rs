@@ -66,6 +66,22 @@ impl BasicNamer {
             return Err(Error::NotImplemented);
         }
 
+        let form = if self.parts.len() < 2 {
+            None
+        } else if let Some(SchemaScopeType::Form(form)) = self.parts.get(self.parts.len() - 2) {
+            if form == "oneOf" {
+                let last = self.parts.last().unwrap();
+                match last {
+                    SchemaScopeType::Index(i) => Some(format!("Option{}", i + 1)),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
         match self
             .parts
             .iter()
@@ -80,7 +96,12 @@ impl BasicNamer {
             .last()
             .unwrap()
         {
-            SchemaScopeType::Entity(name) => Ok(self.split(name)),
+            SchemaScopeType::Entity(name) => {
+                let real_name = form
+                    .map(|f| format!("{}{}", name, f))
+                    .unwrap_or_else(|| name.to_string());
+                Ok(self.split(&real_name))
+            }
             SchemaScopeType::Property(last) | SchemaScopeType::Definition(last) => {
                 let entity = self
                     .parts
@@ -254,6 +275,18 @@ impl SchemaScope {
                 parts.join("/")
             })
             .unwrap_or_else(|| format!("{}", self))
+    }
+
+    pub fn is_ambigous(&mut self) -> bool {
+        if self.scope.len() < 2 {
+            return false;
+        }
+
+        if let Some(SchemaScopeType::Form(form)) = self.scope.get(self.scope.len() - 2) {
+            form == "oneOf"
+        } else {
+            false
+        }
     }
 }
 

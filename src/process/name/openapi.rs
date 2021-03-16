@@ -10,6 +10,7 @@ pub struct OpenapiNamer;
 pub struct OpenapiNamerOptions {
     pub resource_method_version: bool,
     pub overwrite: bool,
+    pub overwrite_ambigous: bool,
     pub naming_strategy: SchemaNamingStrategy,
 }
 
@@ -18,6 +19,7 @@ impl OpenapiNamer {
         OpenapiNamerOptions {
             resource_method_version: false,
             overwrite: false,
+            overwrite_ambigous: false,
             naming_strategy: SchemaNamingStrategy::Default,
         }
     }
@@ -26,6 +28,11 @@ impl OpenapiNamer {
 impl OpenapiNamerOptions {
     pub fn with_overwrite(&mut self, value: bool) -> &mut Self {
         self.overwrite = value;
+        self
+    }
+
+    pub fn with_overwrite_ambigous(&mut self, value: bool) -> &mut Self {
+        self.overwrite_ambigous = value;
         self
     }
 
@@ -57,6 +64,7 @@ impl OpenapiNamerOptions {
                         ctx,
                         &jsonschema::NamerOptions {
                             overwrite: self.overwrite,
+                            overwrite_ambigous: self.overwrite_ambigous,
                             base_name: None,
                         },
                     )?;
@@ -81,6 +89,7 @@ impl OpenapiNamerOptions {
                         ctx,
                         &jsonschema::NamerOptions {
                             overwrite: self.overwrite,
+                            overwrite_ambigous: self.overwrite_ambigous,
                             base_name: None,
                         },
                     )?;
@@ -105,6 +114,7 @@ impl OpenapiNamerOptions {
                         ctx,
                         &jsonschema::NamerOptions {
                             overwrite: self.overwrite,
+                            overwrite_ambigous: self.overwrite_ambigous,
                             base_name: None,
                         },
                     )?;
