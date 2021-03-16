@@ -162,6 +162,9 @@ pub struct NameOpts {
     #[clap(long, about = "Should overwrite existing titles")]
     overwrite: bool,
 
+    #[clap(long, about = "Should overwrite ambigous titles")]
+    overwrite_ambigous: bool,
+
     #[clap(long, about = "Base name of parsed schema")]
     base_name: Option<String>,
 
@@ -241,6 +244,7 @@ impl Opts {
                 name::OpenapiNamer::options()
                     .with_resource_method_version(opts.resource_method_version)
                     .with_overwrite(opts.overwrite)
+                    .with_overwrite_ambigous(opts.overwrite_ambigous)
                     .process(schema)
             }
             Command::Patch(opts) => patch::execute(schema, &opts.action),

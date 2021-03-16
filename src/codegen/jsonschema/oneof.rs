@@ -58,6 +58,7 @@ pub fn from_oneof(
 
                 scope.pop();
 
+                // todo: wrapper to only flattened
                 Ok(Model::WrapperType(WrapperType {
                     name: scope.namer().decorate(vec!["Variant".to_string()]),
                     models: models?,
@@ -72,16 +73,25 @@ pub fn from_oneof(
 
 fn get_const_property(model: &Model) -> Option<(String, String)> {
     if let Model::ObjectType(object) = model {
-        object
-            .properties
-            .iter()
-            .find(|f| f.type_ == "const")
-            .map(|f| {
-                (
-                    f.name.clone().unwrap(),
-                    f.model.clone().unwrap().name.unwrap(),
-                )
-            })
+        let property = if object.properties.len() == 1 {
+            object
+                .properties
+                .first()
+                .map(|f| (f.name.clone().unwrap(), f.name.clone().unwrap()))
+        } else {
+            object
+                .properties
+                .iter()
+                .find(|f| f.type_ == "const")
+                .map(|f| {
+                    (
+                        f.name.clone().unwrap(),
+                        f.model.clone().unwrap().name.unwrap(),
+                    )
+                })
+        };
+
+        property
     } else {
         None
     }
@@ -124,6 +134,80 @@ mod tests {
 
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_should_add_additional_info_about_discriminator_externally_tagged() {
+        let schema = json!({
+            "oneOf": [
+                {"title":"a","type":"object","required":["some"],"properties":{"some":{"type":"string"}}},
+                {"title":"b","type":"object","required":["testing"],"properties":{"testing":{"type":"number"}}}
+            ]
+        });
+
+        let mut container = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        scope.entity("TestName");
+        let result = from_oneof(
+            schema.as_object().unwrap(),
+            &mut container,
+            &mut scope,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(
+            result.unwrap(),
+            Model::WrapperType(WrapperType {
+                name: "TestNameVariant".to_string(),
+                models: vec![
+                    FlattenedType {
+                        name: Some("Variant0".to_string()),
+                        type_: "object".to_string(),
+                        model: Some(Box::new(FlattenedType {
+                            name: Some("A".to_string()),
+                            type_: "A".to_string(),
+                            ..FlattenedType::default()
+                        })),
+                        attributes: Attributes {
+                            x: [
+                                ("value".to_string(), Value::String("some".to_string())),
+                                ("property".to_string(), Value::String("some".to_string()))
+                            ]
+                            .iter()
+                            .cloned()
+                            .collect::<HashMap<String, Value>>(),
+                            ..Attributes::default()
+                        },
+                        ..FlattenedType::default()
+                    },
+                    FlattenedType {
+                        name: Some("Variant1".to_string()),
+                        type_: "object".to_string(),
+                        model: Some(Box::new(FlattenedType {
+                            name: Some("B".to_string()),
+                            type_: "B".to_string(),
+                            ..FlattenedType::default()
+                        })),
+                        attributes: Attributes {
+                            x: [
+                                ("value".to_string(), Value::String("testing".to_string())),
+                                ("property".to_string(), Value::String("testing".to_string()))
+                            ]
+                            .iter()
+                            .cloned()
+                            .collect::<HashMap<String, Value>>(),
+                            ..Attributes::default()
+                        },
+                        ..FlattenedType::default()
+                    }
+                ],
+                ..WrapperType::default()
+            })
+        );
+    }
 
     #[test]
     fn test_should_add_additional_info_about_discriminator() {

@@ -8,6 +8,7 @@ pub struct JsonSchemaNamer;
 
 pub struct JsonSchemaNamerOptions {
     overwrite: bool,
+    overwrite_ambigous: bool,
     base_name: Option<String>,
     naming_strategy: SchemaNamingStrategy,
 }
@@ -16,6 +17,7 @@ impl JsonSchemaNamer {
     pub fn options() -> JsonSchemaNamerOptions {
         JsonSchemaNamerOptions {
             overwrite: false,
+            overwrite_ambigous: false,
             base_name: None,
             naming_strategy: SchemaNamingStrategy::Default,
         }
@@ -25,6 +27,11 @@ impl JsonSchemaNamer {
 impl JsonSchemaNamerOptions {
     pub fn with_overwrite(&mut self, value: bool) -> &mut Self {
         self.overwrite = value;
+        self
+    }
+
+    pub fn with_overwrite_ambigous(&mut self, value: bool) -> &mut Self {
+        self.overwrite_ambigous = value;
         self
     }
 
@@ -46,6 +53,7 @@ impl JsonSchemaNamerOptions {
             &mut SchemaScope::new(self.naming_strategy.clone()),
             &NamerOptions {
                 overwrite: self.overwrite,
+                overwrite_ambigous: self.overwrite_ambigous,
                 base_name: self.base_name.clone(), // .or_else(|| Some("AnonymousType".to_string())),
             },
         )
@@ -54,6 +62,7 @@ impl JsonSchemaNamerOptions {
 
 pub struct NamerOptions {
     pub overwrite: bool,
+    pub overwrite_ambigous: bool,
     pub base_name: Option<String>,
 }
 
@@ -153,6 +162,10 @@ fn get_title(
 
         return Ok(Some(title.ok_or(Error::NamingBaseNameNotFound)?));
     } else if title.is_none() || options.overwrite {
+        if !options.overwrite_ambigous && scope.is_ambigous() {
+            return Ok(None);
+        }
+
         // skip simple types
         if map
             .get("type")
@@ -177,4 +190,128 @@ fn get_title(
     }
 
     Ok(title)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_one_of_ambigous() {
+        let expected = json!({
+            "type": "object",
+            "title": "JustTesting",
+            "oneOf": [
+                {
+                    "title": "JustTestingOption1",
+                    "type": "object",
+                    "required": ["option1"],
+                    "properties": {
+                        "option1": { "type": "string" }
+                    }
+                },
+                {
+                    "title": "JustTestingOption2",
+                    "type": "object",
+                    "required": ["option2"],
+                    "properties": {
+                        "option2": { "type": "string" },
+                    }
+                },
+            ],
+        });
+
+        let value = json!({
+            "type": "object",
+            "title": "BasicName",
+            "oneOf": [
+                {
+                    "title": "A",
+                    "type": "object",
+                    "required": ["option1"],
+                    "properties": {
+                        "option1": { "type": "string" }
+                    }
+                },
+                {
+                    "title": "B",
+                    "type": "object",
+                    "required": ["option2"],
+                    "properties": {
+                        "option2": { "type": "string" },
+                    }
+                },
+            ],
+        });
+
+        let mut schema = Schema::from_json(value);
+
+        let _result = JsonSchemaNamer::options()
+            .with_overwrite(true)
+            .with_overwrite_ambigous(true)
+            .with_base_name(Some("JustTesting".to_string()))
+            .process(&mut schema);
+
+        assert_eq!(schema.get_body().to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_one_of_ambigous_false() {
+        let expected = json!({
+            "type": "object",
+            "title": "JustTesting",
+            "oneOf": [
+                {
+                    "title": "A",
+                    "type": "object",
+                    "required": ["option1"],
+                    "properties": {
+                        "option1": { "type": "string" }
+                    }
+                },
+                {
+                    "title": "B",
+                    "type": "object",
+                    "required": ["option2"],
+                    "properties": {
+                        "option2": { "type": "string" },
+                    }
+                },
+            ],
+        });
+
+        let value = json!({
+            "type": "object",
+            "title": "BasicName",
+            "oneOf": [
+                {
+                    "title": "A",
+                    "type": "object",
+                    "required": ["option1"],
+                    "properties": {
+                        "option1": { "type": "string" }
+                    }
+                },
+                {
+                    "title": "B",
+                    "type": "object",
+                    "required": ["option2"],
+                    "properties": {
+                        "option2": { "type": "string" },
+                    }
+                },
+            ],
+        });
+
+        let mut schema = Schema::from_json(value);
+
+        let _result = JsonSchemaNamer::options()
+            .with_overwrite(true)
+            .with_overwrite_ambigous(false)
+            .with_base_name(Some("JustTesting".to_string()))
+            .process(&mut schema);
+
+        assert_eq!(schema.get_body().to_string(), expected.to_string());
+    }
 }
