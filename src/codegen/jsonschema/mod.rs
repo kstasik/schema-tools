@@ -46,6 +46,9 @@ pub enum Model {
     #[serde(rename = "optional")]
     NullableOptionalWrapperType(types::NullableOptionalWrapperType),
 
+    #[serde(rename = "map")]
+    MapType(types::MapType),
+
     // flat type
     #[serde(skip_serializing)]
     FlattenedType(types::FlattenedType),
@@ -66,6 +69,7 @@ impl Model {
             Self::AnyType(a) => a.flatten(container, scope),
             Self::WrapperType(w) => w.flatten(container, scope),
             Self::NullableOptionalWrapperType(s) => s.flatten(container, scope),
+            Self::MapType(s) => s.flatten(container, scope),
             Self::FlattenedType(f) => Ok(f.clone()),
         }
     }
@@ -97,17 +101,15 @@ impl Model {
                     )))
                 }
             }
-            Self::FlattenedType(f) => {
-                if let Some(name) = &f.name {
-                    if f.type_ == "map" {
-                        return Ok(name);
-                    }
+            Self::MapType(p) => {
+                if let Some(s) = &p.name {
+                    Ok(&s)
+                } else {
+                    Err(Error::CodegenCannotNameModelError(format!(
+                        "map: {:?}",
+                        self
+                    )))
                 }
-
-                Err(Error::CodegenCannotNameModelError(format!(
-                    "flattened: {:?}",
-                    self
-                )))
             }
             _ => Err(Error::CodegenCannotNameModelError(format!(
                 "unknown: {:?}",

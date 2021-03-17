@@ -176,6 +176,33 @@ impl ConstType {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Default, Serialize)]
+pub struct MapType {
+    pub name: Option<String>,
+    pub model: Box<FlattenedType>,
+    pub attributes: Option<Attributes>,
+}
+
+impl MapType {
+    pub fn flatten(
+        &self,
+        _container: &mut ModelContainer,
+        _scope: &mut SchemaScope,
+    ) -> Result<FlattenedType, Error> {
+        let m = self.model.as_ref().clone();
+
+        Ok(FlattenedType {
+            type_: "map".to_string(),
+            model: Some(Box::new(m)),
+            attributes: Attributes {
+                required: true,
+                ..self.attributes.clone().unwrap_or_else(Attributes::default)
+            },
+            ..FlattenedType::default()
+        })
+    }
+}
+
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
 pub struct Attributes {
     #[serde(rename = "description")]
