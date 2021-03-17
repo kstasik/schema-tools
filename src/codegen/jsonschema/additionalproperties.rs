@@ -1,10 +1,7 @@
 use serde_json::Map;
 use serde_json::Value;
 
-use super::{
-    types::{FlattenedType, MapType},
-    JsonSchemaExtractOptions, Model, ModelContainer,
-};
+use super::{types::MapType, JsonSchemaExtractOptions, Model, ModelContainer};
 use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
 
 pub fn from_object_with_additional_properties(
@@ -48,6 +45,7 @@ pub fn from_object_with_additional_properties(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::codegen::jsonschema::types::FlattenedType;
     use serde_json::json;
 
     #[test]
