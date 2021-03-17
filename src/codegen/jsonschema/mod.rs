@@ -97,6 +97,18 @@ impl Model {
                     )))
                 }
             }
+            Self::FlattenedType(f) => {
+                if let Some(name) = &f.name {
+                    if f.type_ == "map" {
+                        return Ok(name);
+                    }
+                }
+
+                Err(Error::CodegenCannotNameModelError(format!(
+                    "flattened: {:?}",
+                    self
+                )))
+            }
             _ => Err(Error::CodegenCannotNameModelError(format!(
                 "unknown: {:?}",
                 self
@@ -547,5 +559,32 @@ mod tests {
                 "nullable": false
             })
         );
+    }
+
+    #[test]
+    fn test_additional_properties_naming() {
+        let schema = Schema::from_json(json!({
+            "definitions": {
+                "def2": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/common",
+                    }
+                },
+                "common": {
+                    "type": "string"
+                }
+            },
+            "title": "MySecretName",
+            "type": "object",
+            "additionalProperties": {
+                "$ref": "#/definitions/def2"
+            },
+        }));
+
+        let options = JsonSchemaExtractOptions::default();
+        let result = extract(&schema, options);
+
+        assert_eq!(true, result.is_ok());
     }
 }
