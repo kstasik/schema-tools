@@ -29,7 +29,7 @@ where
         .find('=')
         .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{}`", s))?;
 
-    Ok((s[..pos].parse()?, serde_json::to_value(&s[pos + 1..])?))
+    Ok((s[..pos].parse()?, serde_json::from_str(&s[pos + 1..])?))
 }
 
 #[derive(Clap, Debug)]
