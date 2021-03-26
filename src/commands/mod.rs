@@ -25,11 +25,17 @@ where
     T: std::str::FromStr,
     T::Err: std::error::Error + Send + Sync + 'static,
 {
-    let pos = s
-        .find('=')
-        .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{}`", s))?;
+    if s.contains("=~") {
+        let pos = s.find("=~").unwrap();
 
-    Ok((s[..pos].parse()?, serde_json::from_str(&s[pos + 1..])?))
+        return Ok((s[..pos].parse()?, serde_json::from_str(&s[pos + 2..])?));
+    } else {
+        let pos = s
+            .find('=')
+            .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{}`", s))?;
+
+        return Ok((s[..pos].parse()?, serde_json::to_value(&s[pos + 1..])?));
+    }
 }
 
 #[derive(Clap, Debug)]
