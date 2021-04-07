@@ -1,6 +1,6 @@
 use crate::{
     codegen::jsonschema::{
-        extract_type, types::FlattenedType, JsonSchemaExtractOptions, ModelContainer,
+        extract_type, types::FlatModel, JsonSchemaExtractOptions, ModelContainer,
     },
     error::Error,
     resolver::SchemaResolver,
@@ -32,7 +32,7 @@ pub struct Parameters {
 #[derive(Debug, Serialize, Clone)]
 pub struct Parameter {
     #[serde(rename = "model")]
-    pub model: Option<FlattenedType>,
+    pub model: Option<FlatModel>,
 
     #[serde(rename = "required")]
     pub required: bool,

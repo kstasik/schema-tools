@@ -11,6 +11,9 @@ pub enum Error {
     #[error("Provided registry doesnt exist: {0}")]
     DiscoveryNoRegistry(String),
 
+    #[error("Discovery symlink error: {0}")]
+    DiscoverySymlinkError(std::io::Error),
+
     #[error("Git url format should match git://repository#(branch|tag)?(#directory) pattern")]
     DiscoveryInvalidGitUrl,
 

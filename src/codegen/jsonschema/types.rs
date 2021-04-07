@@ -1,9 +1,107 @@
 use serde::{ser::SerializeStruct, Serialize};
 use serde_json::{Map, Value};
 
-use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
+use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope, scope::Space};
 
 use super::{title, JsonSchemaExtractOptions, ModelContainer};
+
+#[derive(Debug, Serialize, Clone, PartialEq)]
+pub struct Model {
+    #[serde(flatten)]
+    inner: ModelType,
+
+    pub attributes: Attributes,
+
+    pub spaces: SpacesContainer,
+}
+
+impl Model {
+    pub fn new(inner: ModelType) -> Self {
+        Self {
+            inner,
+            attributes: Attributes::default(),
+            spaces: SpacesContainer::default(),
+        }
+    }
+
+    pub fn with_attributes(mut self, attributes: &Attributes) -> Self {
+        self.attributes = attributes.clone();
+        self
+    }
+
+    pub fn inner(&self) -> &ModelType {
+        &self.inner
+    }
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq)]
+pub enum ModelType {
+    // common types
+    #[serde(rename = "primitive")]
+    PrimitiveType(PrimitiveType),
+
+    #[serde(rename = "object")]
+    ObjectType(ObjectType),
+
+    #[serde(rename = "array")]
+    ArrayType(ArrayType),
+
+    #[serde(rename = "enum")]
+    EnumType(EnumType),
+
+    #[serde(rename = "const")]
+    ConstType(ConstType),
+
+    #[serde(rename = "any")]
+    AnyType(AnyType),
+
+    // abstract types
+    #[serde(rename = "wrapper")]
+    WrapperType(WrapperType),
+
+    #[serde(rename = "optional")]
+    NullableOptionalWrapperType(NullableOptionalWrapperType),
+
+    #[serde(rename = "map")]
+    MapType(MapType),
+
+    // flat type
+    #[serde(skip_serializing)]
+    FlatModel(FlatModel),
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct FlatModel {
+    pub name: Option<String>,
+    pub type_: String,
+    pub model: Option<Box<FlatModel>>,
+
+    pub attributes: Attributes,
+    pub spaces: SpacesContainer,
+    pub original: Option<u32>,
+}
+
+#[derive(Debug, Serialize, Clone, Default)]
+pub struct SpacesContainer {
+    pub list: Vec<Space>,
+}
+
+// skip during comparison
+impl PartialEq for SpacesContainer {
+    fn eq(&self, _other: &Self) -> bool {
+        true
+    }
+}
+
+impl SpacesContainer {
+    pub fn add(&mut self, spaces: Vec<Space>) {
+        for space in spaces {
+            if !self.list.contains(&space) {
+                self.list.push(space);
+            }
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
 pub struct PrimitiveType {
@@ -12,54 +110,12 @@ pub struct PrimitiveType {
 
     #[serde(rename = "type")]
     pub type_: String,
-
-    #[serde(rename = "attributes")]
-    pub attributes: Option<Attributes>,
-}
-
-impl PrimitiveType {
-    pub fn flatten(
-        &self,
-        _container: &mut ModelContainer,
-        _scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        Ok(FlattenedType {
-            name: self.name.clone(),
-            type_: self.type_.clone(),
-            attributes: self.attributes.clone().unwrap_or_else(Attributes::default),
-            ..FlattenedType::default()
-        })
-    }
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
 pub struct ObjectType {
     pub name: String,
-    pub properties: Vec<FlattenedType>,
-    pub attributes: Option<Attributes>,
-}
-
-impl ObjectType {
-    pub fn flatten(
-        &self,
-        container: &mut ModelContainer,
-        scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        container.add(scope, super::Model::ObjectType(self.clone()));
-
-        Ok(FlattenedType {
-            name: None,
-            type_: "object".to_string(),
-            // todo: is_reference true here if needed
-            model: Some(Box::new(FlattenedType {
-                type_: self.name.clone(),
-                name: Some(self.name.clone()),
-                // todo: is_reference true here was
-                ..FlattenedType::default()
-            })),
-            attributes: self.attributes.clone().unwrap_or_else(Attributes::default),
-        })
-    }
+    pub properties: Vec<FlatModel>,
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
@@ -68,30 +124,7 @@ pub struct ArrayType {
     pub name: Option<String>,
 
     #[serde(rename = "models")]
-    pub model: Box<FlattenedType>,
-
-    #[serde(rename = "attributes")]
-    pub attributes: Option<Attributes>,
-}
-
-impl ArrayType {
-    pub fn flatten(
-        &self,
-        _container: &mut ModelContainer,
-        _scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        let m = self.model.as_ref().clone();
-
-        Ok(FlattenedType {
-            type_: "array".to_string(),
-            model: Some(Box::new(m)),
-            attributes: Attributes {
-                required: true,
-                ..self.attributes.clone().unwrap_or_else(Attributes::default)
-            },
-            ..FlattenedType::default()
-        })
-    }
+    pub model: Box<FlatModel>,
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
@@ -104,35 +137,6 @@ pub struct EnumType {
 
     #[serde(rename = "options")]
     pub variants: Vec<String>,
-
-    #[serde(rename = "attributes")]
-    pub attributes: Option<Attributes>,
-}
-
-impl EnumType {
-    pub fn flatten(
-        &self,
-        container: &mut ModelContainer,
-        scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        container.add(scope, super::Model::EnumType(self.clone()));
-
-        Ok(FlattenedType {
-            name: None,
-            type_: "enum".to_string(),
-            model: Some(Box::new(FlattenedType {
-                type_: self.type_.clone(),
-                name: Some(self.name.clone()),
-                model: None,
-                attributes: Attributes {
-                    required: true,
-                    nullable: false,
-                    ..self.attributes.clone().unwrap_or_else(Attributes::default)
-                },
-            })),
-            attributes: self.attributes.clone().unwrap_or_else(Attributes::default),
-        })
-    }
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
@@ -145,62 +149,42 @@ pub struct ConstType {
 
     #[serde(rename = "value")]
     pub value: String,
-
-    #[serde(rename = "attributes")]
-    pub attributes: Option<Attributes>,
-}
-
-impl ConstType {
-    pub fn flatten(
-        &self,
-        container: &mut ModelContainer,
-        scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        container.add(scope, super::Model::ConstType(self.clone()));
-
-        Ok(FlattenedType {
-            name: Some(self.name.clone()),
-            type_: "const".to_string(),
-            model: Some(Box::new(FlattenedType {
-                type_: self.type_.clone(),
-                name: Some(self.value.clone()),
-                model: None,
-                attributes: Attributes {
-                    required: true,
-                    nullable: false,
-                    ..self.attributes.clone().unwrap_or_else(Attributes::default)
-                },
-            })),
-            attributes: self.attributes.clone().unwrap_or_else(Attributes::default),
-        })
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize)]
 pub struct MapType {
     pub name: Option<String>,
-    pub model: Box<FlattenedType>,
-    pub attributes: Option<Attributes>,
+    pub model: Box<FlatModel>,
 }
 
-impl MapType {
-    pub fn flatten(
-        &self,
-        _container: &mut ModelContainer,
-        _scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        let m = self.model.as_ref().clone();
+#[derive(Debug, Serialize, Clone, PartialEq)]
+pub struct AnyType {}
 
-        Ok(FlattenedType {
-            type_: "map".to_string(),
-            model: Some(Box::new(m)),
-            attributes: Attributes {
-                required: true,
-                ..self.attributes.clone().unwrap_or_else(Attributes::default)
-            },
-            ..FlattenedType::default()
-        })
-    }
+#[derive(Debug, Serialize, Clone)]
+pub struct RegexpType {
+    #[serde(rename = "name")]
+    pub name: String,
+
+    #[serde(rename = "pattern")]
+    pub pattern: String,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+pub struct WrapperType {
+    #[serde(rename = "name")]
+    pub name: String,
+
+    #[serde(rename = "models")]
+    pub models: Vec<FlatModel>,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+pub struct NullableOptionalWrapperType {
+    #[serde(rename = "name")]
+    pub name: String,
+
+    #[serde(rename = "model")]
+    pub model: FlatModel,
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
@@ -217,11 +201,318 @@ pub struct Attributes {
     #[serde(rename = "required")]
     pub required: bool,
 
+    #[serde(rename = "reference")]
+    pub reference: bool,
+
     #[serde(rename = "validation")]
     pub validation: Option<std::collections::HashMap<String, Value>>,
 
     #[serde(rename = "x")]
     pub x: std::collections::HashMap<String, Value>,
+}
+
+impl Model {
+    pub fn children(&self, container: &ModelContainer) -> Vec<u32> {
+        let childs = match self.inner() {
+            ModelType::ArrayType(a) => {
+                vec![a.model.original]
+            }
+            ModelType::MapType(s) => {
+                vec![s.model.original]
+            }
+            ModelType::ObjectType(o) => o.properties.iter().map(|p| p.original).collect(),
+            ModelType::WrapperType(w) => w.models.iter().map(|p| p.original).collect(),
+            ModelType::NullableOptionalWrapperType(s) => {
+                vec![s.model.original]
+            }
+            _ => vec![],
+        };
+
+        let mut ids = childs.iter().cloned().flatten().collect::<Vec<_>>();
+        let mut additional: Vec<u32> = vec![];
+        for id in ids.iter() {
+            additional.append(
+                &mut container
+                    .models
+                    .get(*id as usize)
+                    .unwrap()
+                    .children(container),
+            );
+        }
+
+        ids.append(&mut additional);
+        ids
+    }
+
+    pub fn flatten(
+        &self,
+        container: &mut ModelContainer,
+        scope: &mut SchemaScope,
+    ) -> Result<FlatModel, Error> {
+        match self.inner() {
+            ModelType::ArrayType(a) => a.flatten(self),
+            ModelType::PrimitiveType(p) => p.flatten(self),
+            ModelType::AnyType(a) => a.flatten(self),
+            ModelType::MapType(s) => s.flatten(self),
+            ModelType::ObjectType(o) => o.flatten(container.add(scope, self.clone())),
+            ModelType::EnumType(e) => e.flatten(container.add(scope, self.clone())),
+            ModelType::ConstType(c) => c.flatten(container.add(scope, self.clone())),
+            ModelType::WrapperType(w) => w.flatten(container.add(scope, self.clone())),
+            ModelType::NullableOptionalWrapperType(s) => {
+                s.flatten(container.add(scope, self.clone()))
+            }
+            ModelType::FlatModel(f) => Ok(f.clone()),
+        }
+        .map(|mut s| {
+            s.spaces = self.spaces.clone();
+            s
+        })
+    }
+
+    pub fn add_spaces(&mut self, scope: &mut SchemaScope) {
+        let spaces = scope.get_spaces();
+
+        if !spaces.is_empty() {
+            self.spaces.add(spaces);
+        }
+    }
+
+    pub fn name(&self) -> Result<&str, Error> {
+        match self.inner() {
+            ModelType::ObjectType(o) => Ok(&o.name),
+            ModelType::EnumType(e) => Ok(&e.name),
+            ModelType::ConstType(c) => Ok(&c.name),
+            ModelType::WrapperType(w) => Ok(&w.name),
+            ModelType::NullableOptionalWrapperType(s) => Ok(&s.name),
+            ModelType::PrimitiveType(p) => {
+                if let Some(s) = &p.name {
+                    Ok(&s)
+                } else {
+                    Err(Error::CodegenCannotNameModelError(format!(
+                        "primitive: {:?}",
+                        self
+                    )))
+                }
+            }
+            ModelType::ArrayType(p) => {
+                if let Some(s) = &p.name {
+                    Ok(&s)
+                } else {
+                    Err(Error::CodegenCannotNameModelError(format!(
+                        "array: {:?}",
+                        self
+                    )))
+                }
+            }
+            ModelType::MapType(p) => {
+                if let Some(s) = &p.name {
+                    Ok(&s)
+                } else {
+                    Err(Error::CodegenCannotNameModelError(format!(
+                        "map: {:?}",
+                        self
+                    )))
+                }
+            }
+            _ => Err(Error::CodegenCannotNameModelError(format!(
+                "unknown: {:?}",
+                self
+            ))),
+        }
+    }
+
+    pub fn rename(self, name: String) -> Model {
+        // todo: all models could have name ...
+        Model::new(match self.inner {
+            ModelType::ObjectType(mut o) => {
+                o.name = name;
+                ModelType::ObjectType(o)
+            }
+            ModelType::EnumType(mut e) => {
+                e.name = name;
+                ModelType::EnumType(e)
+            }
+            ModelType::ConstType(mut c) => {
+                c.name = name;
+                ModelType::ConstType(c)
+            }
+            ModelType::WrapperType(mut w) => {
+                w.name = name;
+                ModelType::WrapperType(w)
+            }
+            ModelType::NullableOptionalWrapperType(mut s) => {
+                s.name = name;
+                ModelType::NullableOptionalWrapperType(s)
+            }
+            ModelType::PrimitiveType(mut p) => {
+                p.name = Some(name);
+                ModelType::PrimitiveType(p)
+            }
+            ModelType::ArrayType(mut p) => {
+                p.name = Some(name);
+                ModelType::ArrayType(p)
+            }
+            _ => panic!("Unsupported rename: {}", name),
+        })
+    }
+}
+
+impl Serialize for FlatModel {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("FlattenedType", 9)?;
+        state.serialize_field("name", &self.name)?;
+        state.serialize_field("type", &self.type_)?;
+        state.serialize_field("model", &self.model)?;
+        state.serialize_field("required", &self.attributes.required)?;
+        state.serialize_field("nullable", &self.attributes.nullable)?;
+        state.serialize_field("validation", &self.attributes.validation)?;
+        state.serialize_field("x", &self.attributes.x)?;
+        state.serialize_field("description", &self.attributes.description)?;
+        state.serialize_field("default", &self.attributes.default)?;
+        // state.serialize_field("spaces", &self.spaces)?; // todo: ???
+        state.end()
+    }
+}
+
+impl FlatModel {
+    pub fn default() -> Self {
+        Self {
+            model: None,
+            name: None,
+            original: None,
+            type_: "".to_string(),
+            attributes: Attributes::default(),
+            spaces: SpacesContainer::default(),
+        }
+    }
+}
+
+impl PrimitiveType {
+    pub fn flatten(&self, added: &Model) -> Result<FlatModel, Error> {
+        Ok(FlatModel {
+            name: self.name.clone(),
+            type_: self.type_.clone(),
+            attributes: added.attributes.clone(),
+            ..FlatModel::default()
+        })
+    }
+}
+
+impl ObjectType {
+    pub fn flatten(&self, added: (Option<u32>, &Model)) -> Result<FlatModel, Error> {
+        if let ModelType::ObjectType(linked) = added.1.inner() {
+            Ok(FlatModel {
+                name: None,
+                type_: "object".to_string(),
+                model: Some(Box::new(FlatModel {
+                    type_: linked.name.clone(),
+                    name: Some(linked.name.clone()),
+                    attributes: Attributes {
+                        reference: true,
+                        ..added.1.attributes.clone()
+                    },
+                    ..FlatModel::default()
+                })),
+                original: added.0,
+                ..FlatModel::default()
+            })
+        } else {
+            Err(Error::FlatteningTypeError)
+        }
+    }
+}
+
+impl ArrayType {
+    pub fn flatten(&self, added: &Model) -> Result<FlatModel, Error> {
+        let m = self.model.as_ref().clone();
+
+        Ok(FlatModel {
+            type_: "array".to_string(),
+            attributes: Attributes {
+                required: true,
+                reference: m.attributes.reference,
+                ..added.attributes.clone()
+            },
+            original: m.original,
+            model: Some(Box::new(m)),
+            ..FlatModel::default()
+        })
+    }
+}
+
+impl EnumType {
+    pub fn flatten(&self, added: (Option<u32>, &Model)) -> Result<FlatModel, Error> {
+        if let ModelType::EnumType(linked) = added.1.inner() {
+            Ok(FlatModel {
+                name: None,
+                type_: "enum".to_string(),
+                model: Some(Box::new(FlatModel {
+                    type_: linked.type_.clone(),
+                    name: Some(linked.name.clone()),
+                    model: None,
+                    attributes: Attributes {
+                        required: true,
+                        nullable: false,
+                        ..added.1.attributes.clone()
+                    },
+                    original: added.0,
+                    ..FlatModel::default()
+                })),
+                original: added.0,
+                attributes: added.1.attributes.clone(),
+                ..FlatModel::default()
+            })
+        } else {
+            Err(Error::FlatteningTypeError)
+        }
+    }
+}
+
+impl ConstType {
+    pub fn flatten(&self, added: (Option<u32>, &Model)) -> Result<FlatModel, Error> {
+        if let ModelType::ConstType(linked) = added.1.inner() {
+            Ok(FlatModel {
+                name: Some(linked.name.clone()),
+                type_: "const".to_string(),
+                model: Some(Box::new(FlatModel {
+                    type_: linked.type_.clone(),
+                    name: Some(linked.value.clone()),
+                    model: None,
+                    attributes: Attributes {
+                        required: true,
+                        nullable: false,
+                        ..added.1.attributes.clone()
+                    },
+                    ..FlatModel::default()
+                })),
+                original: added.0,
+                attributes: added.1.attributes.clone(),
+                ..FlatModel::default()
+            })
+        } else {
+            Err(Error::FlatteningTypeError)
+        }
+    }
+}
+
+impl MapType {
+    pub fn flatten(&self, added: &Model) -> Result<FlatModel, Error> {
+        let m = self.model.as_ref().clone();
+
+        Ok(FlatModel {
+            type_: "map".to_string(),
+            original: m.original,
+            model: Some(Box::new(m)),
+            attributes: Attributes {
+                required: true,
+                ..added.attributes.clone()
+            },
+            ..FlatModel::default()
+        })
+    }
 }
 
 impl Attributes {
@@ -232,80 +523,28 @@ impl Attributes {
             nullable: false,
             required: true,
             validation: None,
+            reference: false,
             x: std::collections::HashMap::new(),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct FlattenedType {
-    pub name: Option<String>,
-    pub type_: String,
-    pub model: Option<Box<FlattenedType>>,
-    pub attributes: Attributes,
-}
-
-impl Serialize for FlattenedType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("FlattenedType", 8)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("type", &self.type_)?;
-        state.serialize_field("model", &self.model)?;
-        state.serialize_field("required", &self.attributes.required)?;
-        state.serialize_field("nullable", &self.attributes.nullable)?;
-        state.serialize_field("validation", &self.attributes.validation)?;
-        state.serialize_field("x", &self.attributes.x)?;
-        state.serialize_field("description", &self.attributes.description)?;
-        state.serialize_field("default", &self.attributes.default)?;
-        state.end()
-    }
-}
-
-impl FlattenedType {
-    pub fn default() -> Self {
-        Self {
-            model: None,
-            name: None,
-            attributes: Attributes::default(),
-            type_: "".to_string(),
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Clone, PartialEq)]
-pub struct AnyType {}
-
 impl AnyType {
-    pub fn model(schema: &Map<String, Value>, scope: &mut SchemaScope) -> super::Model {
+    pub fn model(schema: &Map<String, Value>, scope: &mut SchemaScope) -> Model {
         log::debug!("{}: {:?} may be invalid json schema", scope, schema);
 
-        super::Model::AnyType(Self {})
+        Model::new(ModelType::AnyType(Self {}))
     }
 
-    pub fn flatten(
-        &self,
-        _container: &mut ModelContainer,
-        _scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        Ok(FlattenedType {
+    pub fn flatten(&self, added: &Model) -> Result<FlatModel, Error> {
+        Ok(FlatModel {
             name: None,
             type_: "any".to_string(),
             model: None,
-            attributes: Attributes::default(),
+            attributes: added.attributes.clone(),
+            ..FlatModel::default()
         })
     }
-}
-
-#[derive(Debug, Serialize, Clone)]
-pub struct RegexpType {
-    #[serde(rename = "name")]
-    pub name: String,
-
-    #[serde(rename = "pattern")]
-    pub pattern: String,
 }
 
 impl PartialEq for RegexpType {
@@ -314,72 +553,44 @@ impl PartialEq for RegexpType {
     }
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
-pub struct WrapperType {
-    #[serde(rename = "name")]
-    pub name: String,
-
-    #[serde(rename = "models")]
-    pub models: Vec<FlattenedType>,
-
-    #[serde(rename = "attributes")]
-    pub attributes: Option<Attributes>,
-}
-
 impl WrapperType {
-    pub fn flatten(
-        &self,
-        container: &mut ModelContainer,
-        scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        container.add(scope, super::Model::WrapperType(self.clone()));
-
-        Ok(FlattenedType {
-            name: None,
-            type_: "wrapper".to_string(),
-            model: Some(Box::new(FlattenedType {
-                name: Some(self.name.to_string()),
+    pub fn flatten(&self, added: (Option<u32>, &Model)) -> Result<FlatModel, Error> {
+        if let ModelType::WrapperType(linked) = added.1.inner() {
+            Ok(FlatModel {
+                name: None,
                 type_: "wrapper".to_string(),
-                model: None,
-                ..FlattenedType::default()
-            })),
-            attributes: Attributes::default(),
-        })
+                model: Some(Box::new(FlatModel {
+                    name: Some(linked.name.to_string()),
+                    type_: "wrapper".to_string(),
+                    model: None,
+                    ..FlatModel::default()
+                })),
+                attributes: added.1.attributes.clone(),
+                original: added.0,
+                ..FlatModel::default()
+            })
+        } else {
+            Err(Error::FlatteningTypeError)
+        }
     }
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
-pub struct NullableOptionalWrapperType {
-    #[serde(rename = "name")]
-    pub name: String,
-
-    #[serde(rename = "model")]
-    pub model: FlattenedType,
-
-    #[serde(rename = "attributes")]
-    pub attributes: Option<Attributes>,
-}
-
 impl NullableOptionalWrapperType {
-    pub fn flatten(
-        &self,
-        container: &mut ModelContainer,
-        scope: &mut SchemaScope,
-    ) -> Result<FlattenedType, Error> {
-        container.add(
-            scope,
-            super::Model::NullableOptionalWrapperType(self.clone()),
-        );
+    pub fn flatten(&self, added: (Option<u32>, &Model)) -> Result<FlatModel, Error> {
+        if let ModelType::NullableOptionalWrapperType(linked) = added.1.inner() {
+            let mut flat = linked.model.clone();
+            flat.name = Some(linked.name.clone());
 
-        let mut flat = self.model.clone();
-        flat.name = Some(self.name.clone());
-
-        Ok(FlattenedType {
-            name: self.model.name.clone(),
-            type_: "wrapper".to_string(),
-            model: Some(Box::new(flat)),
-            ..FlattenedType::default()
-        })
+            Ok(FlatModel {
+                name: linked.model.name.clone(),
+                type_: "wrapper".to_string(),
+                model: Some(Box::new(flat)),
+                original: added.0,
+                ..FlatModel::default()
+            })
+        } else {
+            Err(Error::FlatteningTypeError)
+        }
     }
 }
 
@@ -396,11 +607,7 @@ impl PrimitiveType {
             .map(Some)
             .unwrap();
 
-        PrimitiveType {
-            name,
-            type_,
-            ..PrimitiveType::default()
-        }
+        PrimitiveType { name, type_ }
     }
 }
 

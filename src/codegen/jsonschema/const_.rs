@@ -1,6 +1,9 @@
 use serde_json::{Map, Value};
 
-use super::{types::ConstType, JsonSchemaExtractOptions, Model, ModelContainer};
+use super::{
+    types::{ConstType, Model, ModelType},
+    JsonSchemaExtractOptions, ModelContainer,
+};
 use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
 
 pub fn from_const(
@@ -9,29 +12,27 @@ pub fn from_const(
     scope: &mut SchemaScope,
     _resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
-) -> Result<super::Model, Error> {
+) -> Result<Model, Error> {
     let name = super::title::extract_title(&schema, scope, options)?;
 
     match schema.get("const") {
-        Some(Value::String(v)) => Ok(Model::ConstType(ConstType {
+        Some(Value::String(v)) => Ok(Model::new(ModelType::ConstType(ConstType {
             type_: "string".to_string(),
             name,
             value: v.clone(),
-            ..Default::default()
-        })),
-        Some(Value::Number(n)) => Ok(Model::ConstType(ConstType {
+        }))),
+        Some(Value::Number(n)) => Ok(Model::new(ModelType::ConstType(ConstType {
             type_: "number".to_string(),
             name,
             value: n.to_string(),
-            ..Default::default()
-        })),
+        }))),
         _ => Err(Error::SchemaInvalidProperty("const".to_string())),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::codegen::jsonschema::{types::FlattenedType, Model};
+    use crate::codegen::jsonschema::types::{FlatModel, Model};
 
     use super::*;
     use serde_json::json;
@@ -56,12 +57,11 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::ConstType(ConstType {
+            Model::new(ModelType::ConstType(ConstType {
                 name: "TestName".to_string(),
                 type_: "string".to_string(),
                 value: "mysecretvalue".to_string(),
-                ..ConstType::default()
-            })
+            }))
         );
     }
 
@@ -86,25 +86,25 @@ mod tests {
 
         assert_eq!(
             result,
-            Model::ConstType(ConstType {
+            Model::new(ModelType::ConstType(ConstType {
                 name: "TestName".to_string(),
                 type_: "number".to_string(),
                 value: "1232".to_string(),
-                ..ConstType::default()
-            })
+            }))
         );
 
         assert_eq!(
             result.flatten(&mut container, &mut scope).unwrap(),
-            FlattenedType {
+            FlatModel {
                 name: Some("TestName".to_string()),
                 type_: "const".to_string(),
-                model: Some(Box::new(FlattenedType {
+                model: Some(Box::new(FlatModel {
                     name: Some("1232".to_string()),
                     type_: "number".to_string(),
-                    ..FlattenedType::default()
+                    ..FlatModel::default()
                 })),
-                ..FlattenedType::default()
+                original: Some(0),
+                ..FlatModel::default()
             }
         );
     }

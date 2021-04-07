@@ -28,13 +28,13 @@ where
     if s.contains("=~") {
         let pos = s.find("=~").unwrap();
 
-        return Ok((s[..pos].parse()?, serde_json::from_str(&s[pos + 2..])?));
+        Ok((s[..pos].parse()?, serde_json::from_str(&s[pos + 2..])?))
     } else {
         let pos = s
             .find('=')
             .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{}`", s))?;
 
-        return Ok((s[..pos].parse()?, serde_json::to_value(&s[pos + 1..])?));
+        Ok((s[..pos].parse()?, serde_json::to_value(&s[pos + 1..])?))
     }
 }
 

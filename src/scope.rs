@@ -1,6 +1,7 @@
 use std::fmt;
 
 use regex::Regex;
+use serde::Serialize;
 
 use crate::error::Error;
 
@@ -13,6 +14,14 @@ pub enum SchemaNamingStrategy {
 pub struct SchemaScope {
     scope: Vec<SchemaScopeType>,
     naming_strategy: SchemaNamingStrategy,
+    spaces: Vec<Space>,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub enum Space {
+    Tag(String),
+    Operation(String),
+    Id(String),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -169,6 +178,7 @@ impl SchemaScope {
     pub fn default() -> Self {
         Self {
             scope: vec![],
+            spaces: vec![],
             naming_strategy: SchemaNamingStrategy::Default,
         }
     }
@@ -243,6 +253,30 @@ impl SchemaScope {
         self
     }
 
+    pub fn add_spaces(&mut self, spaces: &mut Vec<Space>) -> &mut Self {
+        self.spaces.append(spaces);
+        self
+    }
+
+    pub fn add_space(&mut self, space: Space) -> &mut Self {
+        self.spaces.push(space);
+        self
+    }
+
+    pub fn clear_spaces(&mut self) -> &mut Self {
+        self.spaces.clear();
+        self
+    }
+
+    pub fn pop_space(&mut self) -> &mut Self {
+        self.spaces.pop();
+        self
+    }
+
+    pub fn get_spaces(&mut self) -> Vec<Space> {
+        self.spaces.clone()
+    }
+
     pub fn namer(&mut self) -> BasicNamer {
         BasicNamer {
             parts: self.scope.clone(),
@@ -284,6 +318,21 @@ impl SchemaScope {
 
         if let Some(SchemaScopeType::Form(form)) = self.scope.get(self.scope.len() - 2) {
             form == "oneOf"
+        } else {
+            false
+        }
+    }
+
+    pub fn recurse(&self) -> bool {
+        if let Some(SchemaScopeType::Reference(reference)) = self.scope.last() {
+            self.scope
+                .iter()
+                .filter(|r| match r {
+                    SchemaScopeType::Reference(r) => r == reference,
+                    _ => false,
+                })
+                .count()
+                == 2
         } else {
             false
         }

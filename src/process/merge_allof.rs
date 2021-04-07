@@ -46,26 +46,33 @@ fn process_merge(
                 return log::warn!("allOf needs to be not empty array");
             }
 
-            log::info!("{}.allOf", scope);
+            let first = if size == 1 {
+                log::warn!("allOf with one element, skipping");
+                schemas.get_mut(0).unwrap().clone()
+            } else {
+                log::info!("{}.allOf", scope);
 
-            let mut first = resolver
-                .resolve(schemas.get_mut(0).unwrap(), scope, |v, ss| {
-                    let mut node = v.clone();
-                    process_node(&mut node, options, ss, resolver);
-                    Ok(node)
-                })
-                .unwrap();
-
-            for n in 1..size {
-                let value = resolver
-                    .resolve(schemas.get_mut(n).unwrap(), scope, |v, ss| {
+                let mut first = resolver
+                    .resolve(schemas.get_mut(0).unwrap(), scope, |v, ss| {
                         let mut node = v.clone();
                         process_node(&mut node, options, ss, resolver);
                         Ok(node)
                     })
                     .unwrap();
-                merge_values(&mut first, value, options);
-            }
+
+                for n in 1..size {
+                    let value = resolver
+                        .resolve(schemas.get_mut(n).unwrap(), scope, |v, ss| {
+                            let mut node = v.clone();
+                            process_node(&mut node, options, ss, resolver);
+                            Ok(node)
+                        })
+                        .unwrap();
+                    merge_values(&mut first, value, options);
+                }
+
+                first
+            };
 
             // todo: leave_invalid_properties vs
             root.as_object_mut().unwrap().remove("allOf");

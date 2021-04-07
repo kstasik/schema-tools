@@ -1,8 +1,6 @@
 use super::{
-    types::FlattenedType,
-    types::NullableOptionalWrapperType,
-    types::{AnyType, ObjectType},
-    JsonSchemaExtractOptions, Model, ModelContainer,
+    types::{AnyType, FlatModel, Model, ModelType, NullableOptionalWrapperType, ObjectType},
+    JsonSchemaExtractOptions, ModelContainer,
 };
 use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
 use serde_json::{Map, Value};
@@ -55,32 +53,33 @@ pub fn from_object_with_properties(
 
                     Ok(model)
                 })
-                .collect::<Result<Vec<FlattenedType>, Error>>()?;
+                .collect::<Result<Vec<FlatModel>, Error>>()?;
 
             scope.pop();
 
-            Ok(Model::ObjectType(ObjectType {
+            Ok(Model::new(ModelType::ObjectType(ObjectType {
                 name,
                 properties,
-                ..ObjectType::default()
-            }))
+            })))
         }
         _ => Err(Error::SchemaInvalidProperty("properties".to_string())),
     }
 }
+
 fn convert_to_nullable_optional_wrapper(
-    mut model: FlattenedType,
+    mut model: FlatModel,
     container: &mut ModelContainer,
     scope: &mut SchemaScope,
-) -> Result<FlattenedType, Error> {
+) -> Result<FlatModel, Error> {
     model.attributes.required = true;
     model.attributes.nullable = false;
 
-    let wrapper = Model::NullableOptionalWrapperType(NullableOptionalWrapperType {
-        model,
-        name: scope.namer().decorate(vec!["optional".to_string()]),
-        ..NullableOptionalWrapperType::default()
-    });
+    let wrapper = Model::new(ModelType::NullableOptionalWrapperType(
+        NullableOptionalWrapperType {
+            model,
+            name: scope.namer().decorate(vec!["optional".to_string()]),
+        },
+    ));
 
     wrapper.flatten(container, scope)
 }
@@ -103,7 +102,7 @@ pub fn from_object(
 
 #[cfg(test)]
 mod tests {
-    use crate::codegen::jsonschema::{types::Attributes, Model};
+    use crate::codegen::jsonschema::types::Attributes;
 
     use super::*;
     use serde_json::json;
@@ -134,26 +133,25 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::ObjectType(ObjectType {
+            Model::new(ModelType::ObjectType(ObjectType {
                 name: "TestName".to_string(),
                 properties: vec![
-                    FlattenedType {
+                    FlatModel {
                         name: Some("a".to_string()),
                         type_: "string".to_string(),
-                        ..FlattenedType::default()
+                        ..FlatModel::default()
                     },
-                    FlattenedType {
+                    FlatModel {
                         name: Some("b".to_string()),
                         type_: "number".to_string(),
                         attributes: Attributes {
                             required: false,
                             ..Attributes::default()
                         },
-                        ..FlattenedType::default()
+                        ..FlatModel::default()
                     }
-                ],
-                ..ObjectType::default()
-            })
+                ]
+            }))
         );
     }
 
@@ -186,31 +184,31 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::ObjectType(ObjectType {
+            Model::new(ModelType::ObjectType(ObjectType {
                 name: "MySchema".to_string(),
                 properties: vec![
-                    FlattenedType {
+                    FlatModel {
                         name: Some("property1".to_string()),
                         type_: "string".to_string(),
                         attributes: Attributes {
                             required: true,
                             ..Attributes::default()
                         },
-                        ..FlattenedType::default()
+                        ..FlatModel::default()
                     },
-                    FlattenedType {
+                    FlatModel {
                         name: Some("property2".to_string()),
                         type_: "wrapper".to_string(),
-                        model: Some(Box::new(FlattenedType {
+                        model: Some(Box::new(FlatModel {
                             name: Some("TestNameProperty2Optional".to_string()),
                             type_: "number".to_string(),
-                            ..FlattenedType::default()
+                            ..FlatModel::default()
                         })),
-                        ..FlattenedType::default()
+                        original: Some(0),
+                        ..FlatModel::default()
                     }
                 ],
-                ..ObjectType::default()
-            })
+            }))
         );
 
         scope.form("properties");
@@ -220,15 +218,16 @@ mod tests {
 
         assert_eq!(
             wrapper,
-            &Model::NullableOptionalWrapperType(NullableOptionalWrapperType {
-                name: "TestNameProperty2Optional".to_string(),
-                model: FlattenedType {
-                    name: Some("property2".to_string()),
-                    type_: "number".to_string(),
-                    ..FlattenedType::default()
-                },
-                ..NullableOptionalWrapperType::default()
-            })
+            &Model::new(ModelType::NullableOptionalWrapperType(
+                NullableOptionalWrapperType {
+                    name: "TestNameProperty2Optional".to_string(),
+                    model: FlatModel {
+                        name: Some("property2".to_string()),
+                        type_: "number".to_string(),
+                        ..FlatModel::default()
+                    }
+                }
+            ))
         );
     }
 }
