@@ -50,6 +50,7 @@ impl ModelContainer {
         }
     }
 
+    #[allow(clippy::map_entry)]
     pub fn add(
         &mut self,
         scope: &mut SchemaScope,
