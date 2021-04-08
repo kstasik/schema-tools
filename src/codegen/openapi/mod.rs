@@ -1,6 +1,10 @@
 use crate::{
-    error::Error, process::name::endpoint, resolver::SchemaResolver, schema::Schema,
-    scope::SchemaScope, tools,
+    error::Error,
+    process::name::endpoint,
+    resolver::SchemaResolver,
+    schema::Schema,
+    scope::{SchemaScope, Space},
+    tools,
 };
 use serde::Serialize;
 use serde_json::Map;
@@ -54,7 +58,7 @@ impl Endpoint {
 #[derive(Debug, Serialize, Clone)]
 pub struct MediaModel {
     #[serde(rename = "model")]
-    pub model: crate::codegen::jsonschema::types::FlattenedType,
+    pub model: crate::codegen::jsonschema::types::FlatModel,
 
     #[serde(rename = "content_type")]
     pub content_type: String,
@@ -221,6 +225,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
         |node, parts, scope| {
             if let [path, method] = parts {
                 log::trace!("{}", scope);
+
                 let endpoint = new_endpoint(
                     node,
                     path,
@@ -240,7 +245,9 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
         },
     )?;
 
+    tags.sort();
     tags.dedup();
+
     Ok(Openapi {
         models: mcontainer,
         endpoints: econtainer.endpoints,
@@ -296,6 +303,8 @@ fn new_endpoint(
                 .unwrap_or_else(Vec::new);
 
             scope.glue(&operation);
+            scope.add_spaces(&mut tags.clone().into_iter().map(Space::Tag).collect());
+            scope.add_spaces(&mut vec![Space::Operation(operation.clone())]);
 
             let endpoint = Endpoint {
                 security,
@@ -309,6 +318,7 @@ fn new_endpoint(
                 parameters: parameters::extract(data, scope, mcontainer, resolver, options)?,
             };
 
+            scope.clear_spaces();
             scope.pop();
 
             Ok(endpoint)

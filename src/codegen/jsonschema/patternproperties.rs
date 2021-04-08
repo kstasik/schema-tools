@@ -1,8 +1,8 @@
 use serde_json::{Map, Value};
 
 use super::{
-    types::{AnyType, FlattenedType},
-    JsonSchemaExtractOptions, Model, ModelContainer,
+    types::{AnyType, FlatModel, Model, ModelType},
+    JsonSchemaExtractOptions, ModelContainer,
 };
 use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
 
@@ -12,7 +12,7 @@ pub fn from_pattern_properties(
     scope: &mut SchemaScope,
     resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
-) -> Result<super::Model, Error> {
+) -> Result<Model, Error> {
     let name = super::title::extract_title(&schema, scope, options)?;
 
     match schema.get("patternProperties") {
@@ -50,12 +50,12 @@ pub fn from_pattern_properties(
                 }
             };
 
-            Ok(Model::FlattenedType(FlattenedType {
+            Ok(Model::new(ModelType::FlatModel(FlatModel {
                 name: Some(name),
                 type_: "map".to_string(),
                 model: Some(Box::new(model)),
-                ..FlattenedType::default()
-            }))
+                ..FlatModel::default()
+            })))
         }
         _ => Err(Error::SchemaInvalidProperty(
             "patternProperties".to_string(),
@@ -65,7 +65,7 @@ pub fn from_pattern_properties(
 
 #[cfg(test)]
 mod tests {
-    use crate::codegen::jsonschema::Model;
+    use crate::codegen::jsonschema::types::Model;
 
     use super::*;
     use serde_json::json;
@@ -93,16 +93,16 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::FlattenedType(FlattenedType {
+            Model::new(ModelType::FlatModel(FlatModel {
                 name: Some("TestName".to_string()),
                 type_: "map".to_string(),
-                model: Some(Box::new(FlattenedType {
+                model: Some(Box::new(FlatModel {
                     name: Some("TestName".to_string()),
                     type_: "string".to_string(),
-                    ..FlattenedType::default()
+                    ..FlatModel::default()
                 })),
-                ..FlattenedType::default()
-            })
+                ..FlatModel::default()
+            }))
         );
     }
 
@@ -129,16 +129,16 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::FlattenedType(FlattenedType {
+            Model::new(ModelType::FlatModel(FlatModel {
                 name: Some("TestName".to_string()),
                 type_: "map".to_string(),
-                model: Some(Box::new(FlattenedType {
+                model: Some(Box::new(FlatModel {
                     name: None,
                     type_: "any".to_string(),
-                    ..FlattenedType::default()
+                    ..FlatModel::default()
                 })),
-                ..FlattenedType::default()
-            })
+                ..FlatModel::default()
+            }))
         );
     }
 }

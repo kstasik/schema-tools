@@ -16,148 +16,16 @@ pub mod required;
 pub mod title;
 pub mod types;
 
-use crate::{error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope, tools};
-
-#[derive(Debug, Serialize, Clone, PartialEq)]
-pub enum Model {
-    // common types
-    #[serde(rename = "primitive")]
-    PrimitiveType(types::PrimitiveType),
-
-    #[serde(rename = "object")]
-    ObjectType(types::ObjectType),
-
-    #[serde(rename = "array")]
-    ArrayType(types::ArrayType),
-
-    #[serde(rename = "enum")]
-    EnumType(types::EnumType),
-
-    #[serde(rename = "const")]
-    ConstType(types::ConstType),
-
-    #[serde(rename = "any")]
-    AnyType(types::AnyType),
-
-    // abstract types
-    #[serde(rename = "wrapper")]
-    WrapperType(types::WrapperType),
-
-    #[serde(rename = "optional")]
-    NullableOptionalWrapperType(types::NullableOptionalWrapperType),
-
-    #[serde(rename = "map")]
-    MapType(types::MapType),
-
-    // flat type
-    #[serde(skip_serializing)]
-    FlattenedType(types::FlattenedType),
-}
-
-impl Model {
-    pub fn flatten(
-        &self,
-        container: &mut ModelContainer,
-        scope: &mut SchemaScope,
-    ) -> Result<types::FlattenedType, Error> {
-        match self {
-            Self::ObjectType(o) => o.flatten(container, scope),
-            Self::ArrayType(a) => a.flatten(container, scope),
-            Self::PrimitiveType(p) => p.flatten(container, scope),
-            Self::EnumType(e) => e.flatten(container, scope),
-            Self::ConstType(c) => c.flatten(container, scope),
-            Self::AnyType(a) => a.flatten(container, scope),
-            Self::WrapperType(w) => w.flatten(container, scope),
-            Self::NullableOptionalWrapperType(s) => s.flatten(container, scope),
-            Self::MapType(s) => s.flatten(container, scope),
-            Self::FlattenedType(f) => Ok(f.clone()),
-        }
-    }
-
-    pub fn name(&self) -> Result<&str, Error> {
-        match self {
-            Self::ObjectType(o) => Ok(&o.name),
-            Self::EnumType(e) => Ok(&e.name),
-            Self::ConstType(c) => Ok(&c.name),
-            Self::WrapperType(w) => Ok(&w.name),
-            Self::NullableOptionalWrapperType(s) => Ok(&s.name),
-            Self::PrimitiveType(p) => {
-                if let Some(s) = &p.name {
-                    Ok(&s)
-                } else {
-                    Err(Error::CodegenCannotNameModelError(format!(
-                        "primitive: {:?}",
-                        self
-                    )))
-                }
-            }
-            Self::ArrayType(p) => {
-                if let Some(s) = &p.name {
-                    Ok(&s)
-                } else {
-                    Err(Error::CodegenCannotNameModelError(format!(
-                        "array: {:?}",
-                        self
-                    )))
-                }
-            }
-            Self::MapType(p) => {
-                if let Some(s) = &p.name {
-                    Ok(&s)
-                } else {
-                    Err(Error::CodegenCannotNameModelError(format!(
-                        "map: {:?}",
-                        self
-                    )))
-                }
-            }
-            _ => Err(Error::CodegenCannotNameModelError(format!(
-                "unknown: {:?}",
-                self
-            ))),
-        }
-    }
-
-    pub fn rename(self, name: String) -> Model {
-        // todo: all models could have name ...
-        match self {
-            Self::ObjectType(mut o) => {
-                o.name = name;
-                Self::ObjectType(o)
-            }
-            Self::EnumType(mut e) => {
-                e.name = name;
-                Self::EnumType(e)
-            }
-            Self::ConstType(mut c) => {
-                c.name = name;
-                Self::ConstType(c)
-            }
-            Self::WrapperType(mut w) => {
-                w.name = name;
-                Self::WrapperType(w)
-            }
-            Self::NullableOptionalWrapperType(mut s) => {
-                s.name = name;
-                Self::NullableOptionalWrapperType(s)
-            }
-            Self::PrimitiveType(mut p) => {
-                p.name = Some(name);
-                Self::PrimitiveType(p)
-            }
-            Self::ArrayType(mut p) => {
-                p.name = Some(name);
-                Self::ArrayType(p)
-            }
-            _ => panic!("Unsupported rename: {}", name),
-        }
-    }
-}
+use crate::{
+    error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope, scope::Space, tools,
+};
 
 #[derive(Clone)]
 pub struct ModelContainer {
-    pub regexps: Vec<types::RegexpType>,
-    pub models: HashMap<String, Model>,
+    regexps: Vec<types::RegexpType>,
+    models: Vec<types::Model>,
+    mapping: HashMap<String, u32>,
+    any: types::Model,
 }
 
 impl Serialize for ModelContainer {
@@ -165,11 +33,9 @@ impl Serialize for ModelContainer {
     where
         S: serde::Serializer,
     {
-        let list = self.models.iter().map(|(_, v)| v).collect::<Vec<_>>();
-
         let mut state = serializer.serialize_struct("container", 2)?;
         state.serialize_field("regexps", &self.regexps)?;
-        state.serialize_field("models", &list)?;
+        state.serialize_field("models", &self.models)?;
         state.end()
     }
 }
@@ -177,41 +43,83 @@ impl Serialize for ModelContainer {
 impl ModelContainer {
     pub fn default() -> Self {
         Self {
-            models: HashMap::new(),
             regexps: vec![],
+            models: vec![],
+            mapping: HashMap::new(),
+            any: types::Model::new(types::ModelType::AnyType(types::AnyType {})),
         }
     }
 
-    pub fn add(&mut self, scope: &mut SchemaScope, model: Model) {
-        if let Model::AnyType(_) = model {
+    #[allow(clippy::map_entry)]
+    pub fn add(
+        &mut self,
+        scope: &mut SchemaScope,
+        model: types::Model,
+    ) -> (Option<u32>, &types::Model) {
+        if let types::ModelType::AnyType(_) = model.inner() {
             log::error!("{}: trying to save anyType as model", scope);
-            return;
+            return (None, &self.any);
         }
 
-        if !self.exists(&model) {
-            let key = scope.path();
+        let key = scope.path();
+        if self.mapping.contains_key(&key) {
+            let id = self.mapping.get(&key).unwrap();
+            let model = self.models.get(*id as usize).unwrap();
 
-            if !self.models.contains_key(&key) {
-                let name = model.name().unwrap();
+            (Some(*id), model)
+        } else if self.exists(&model) {
+            let id = self.models.iter().position(|s| *s == model).unwrap();
+            let model = self.models.get(id).unwrap();
+            (Some(id as u32), model)
+        } else {
+            let name = model.name().unwrap();
 
-                if self.models.values().any(|c| c.name().unwrap() == name) {
-                    let new_name = tools::bump_suffix_number(name);
-                    log::warn!("{}: conflict, renaming to: {}", scope, new_name);
+            if self.models.iter().any(|c| c.name().unwrap() == name) {
+                let new_name = tools::bump_suffix_number(name);
+                log::warn!(
+                    "{}: absolute: {}, conflict, renaming to: {}",
+                    scope,
+                    key,
+                    new_name
+                );
 
-                    return self.add(scope, model.rename(new_name));
-                }
+                self.add(scope, model.rename(new_name))
+            } else if let Some(index) = self.mapping.get(&key) {
+                (Some(*index), self.models.get(*index as usize).unwrap())
+            } else {
+                self.mapping.insert(key, self.models.len() as u32);
+                self.models.push(model);
+
+                let id = self.models.len() - 1;
+                let model = self.models.get(id).unwrap();
+                (Some(id as u32), model)
+            }
+        }
+    }
+
+    pub fn exists(&mut self, model: &types::Model) -> bool {
+        self.models.iter().any(|s| s == model)
+    }
+
+    pub fn resolve(&mut self, scope: &mut SchemaScope) -> Option<&types::Model> {
+        if let Some(index) = self.mapping.get(&scope.path()) {
+            let ids = {
+                let s = self.models.get(*index as usize).unwrap();
+                let mut x = s.children(self);
+                x.push(*index);
+                x
+            };
+
+            for a in ids {
+                let m = self.models.get_mut(a as usize).unwrap();
+                println!("{}, {:?}", a, m);
+                m.add_spaces(scope);
             }
 
-            self.models.entry(key).or_insert(model);
+            Some(self.models.get(*index as usize).unwrap())
+        } else {
+            None
         }
-    }
-
-    pub fn exists(&mut self, model: &Model) -> bool {
-        self.models.values().any(|s| s == model)
-    }
-
-    pub fn resolve(&mut self, scope: &mut SchemaScope) -> Option<&Model> {
-        self.models.get(&scope.path())
     }
 
     pub fn upsert_regexp(&mut self, regexp: types::RegexpType) -> types::RegexpType {
@@ -272,10 +180,16 @@ pub fn extract_type(
     scope: &mut SchemaScope,
     resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
-) -> Result<Model, Error> {
+) -> Result<types::Model, Error> {
     resolver.resolve(node, scope, |node, scope| {
         if let Some(model) = container.resolve(scope) {
             return Ok(model.clone());
+        } else if scope.recurse() {
+            log::warn!("{}: circular refs not implemented yet", scope);
+
+            return Ok(types::Model::new(types::ModelType::AnyType(
+                types::AnyType {},
+            )));
         }
 
         match node {
@@ -285,8 +199,18 @@ pub fn extract_type(
                     s
                 })?;
 
-                // todo: deal with infinite references
                 log::trace!("{}", scope);
+
+                let has_id = schema
+                    .get("$id")
+                    .map(|v| match v {
+                        Value::String(s) => {
+                            scope.add_space(Space::Id(s.clone()));
+                            true
+                        }
+                        _ => false,
+                    })
+                    .unwrap_or(false);
 
                 let result = match schema.get("type") {
                     Some(model_type) => {
@@ -308,8 +232,10 @@ pub fn extract_type(
 
                                         // todo: additionalProperties for tuple like types
                                     }
-                                    _ => Ok(Model::PrimitiveType(types::PrimitiveType::from(
-                                        schema, scope, resolver, options,
+                                    _ => Ok(types::Model::new(types::ModelType::PrimitiveType(
+                                        types::PrimitiveType::from(
+                                            schema, scope, resolver, options,
+                                        ),
                                     ))),
                                 }?;
 
@@ -344,7 +270,20 @@ pub fn extract_type(
 
                 scope.pop();
 
-                Ok(add_validation_and_nullable(result?, &schema, container))
+                let with_spaces = result.map(|mut s| {
+                    s.add_spaces(scope);
+                    s
+                });
+
+                if has_id {
+                    scope.pop_space();
+                }
+
+                Ok(add_validation_and_nullable(
+                    with_spaces?,
+                    &schema,
+                    container,
+                ))
             }
             _ => {
                 log::error!("{}: Schema is not an object", scope);
@@ -355,29 +294,15 @@ pub fn extract_type(
     })
 }
 
-#[macro_use]
-macro_rules! add_attributes {
-    ($m:ident, $a:ident, $( $y:ident ),*) => (
-        match $m {
-            $(Model::$y(mut p) => {
-                p.attributes = Some($a);
-                Model::$y(p)
-            },)+
-            // patternProperties uses FlattenedType, AnyType when incorrect schema
-            Model::FlattenedType(_) | Model::AnyType(_) => $m,
-            _ => {
-                log::warn!("additing validation to unsupported type");
-                $m
-            }
-        }
-    )
-}
-
 fn add_validation_and_nullable(
-    model: Model,
+    model: types::Model,
     schema: &Map<String, Value>,
     mcontainer: &mut ModelContainer,
-) -> Model {
+) -> types::Model {
+    if model.attributes.validation.is_some() {
+        return model;
+    }
+
     let properties = [
         "format",
         "maximum",
@@ -442,7 +367,9 @@ fn add_validation_and_nullable(
 
     let default = schema.get("default").cloned();
 
-    let attributes = types::Attributes {
+    let mut mmodel = model;
+
+    mmodel.attributes = types::Attributes {
         description,
         default,
         nullable,
@@ -451,15 +378,7 @@ fn add_validation_and_nullable(
         ..types::Attributes::default()
     };
 
-    add_attributes!(
-        model,
-        attributes,
-        PrimitiveType,
-        ArrayType,
-        ObjectType,
-        EnumType,
-        WrapperType
-    )
+    mmodel
 }
 
 fn simplify_type(node: &Map<String, Value>) -> Value {
@@ -513,6 +432,60 @@ fn simplify_type(node: &Map<String, Value>) -> Value {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn test_nullable_one_of_should_inherit_additionals_from_detected_type() {
+        let schema = Schema::from_json(json!({
+            "definitions": {
+                "def2": {
+                    "type": "string",
+                    "format": "decimal",
+                    "x-test": "sssss",
+                }
+            },
+            "title": "MySecretName",
+            "oneOf": [
+                {
+                    "type": "null"
+                },
+                {
+                    "$ref": "#/definitions/def2"
+                }
+            ]
+        }));
+
+        let mut mcontainer = ModelContainer::default();
+        let options = JsonSchemaExtractOptions::default();
+
+        let result = extract_type(
+            schema.get_body(),
+            &mut mcontainer,
+            &mut SchemaScope::default(),
+            &SchemaResolver::new(&schema),
+            &options,
+        )
+        .unwrap();
+
+        assert_eq!(
+            types::Model::new(types::ModelType::PrimitiveType(types::PrimitiveType {
+                name: Some("MySecretName".to_string()),
+                type_: "string".to_string()
+            }))
+            .with_attributes(&types::Attributes {
+                nullable: true,
+                validation: Some(
+                    vec![("format".to_string(), serde_json::json!("decimal")),]
+                        .into_iter()
+                        .collect::<std::collections::HashMap<String, Value>>()
+                ),
+                x: vec![("test".to_string(), serde_json::json!("sssss"))]
+                    .into_iter()
+                    .collect::<std::collections::HashMap<String, Value>>(),
+                ..types::Attributes::default()
+            }),
+            result
+        );
+    }
 
     #[test]
     fn test_should_simplify_type_one_of() {

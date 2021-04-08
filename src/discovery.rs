@@ -47,12 +47,11 @@ impl Discovery {
             };
 
             let prefix = realpath.to_string_lossy();
-
             for entry in WalkDir::new(realpath.clone())
-                .follow_links(true)
+                .follow_links(false)
                 .into_iter()
                 .filter_map(|e| e.ok())
-                .filter(|d| d.file_type().is_file())
+                .filter(|d| d.file_type().is_file() || d.file_type().is_symlink())
             {
                 let relative = entry
                     .path()
@@ -64,13 +63,18 @@ impl Discovery {
                     continue;
                 }
 
+                let path = if entry.path_is_symlink() {
+                    fs::read_link(entry.path()).map_err(Error::DiscoverySymlinkError)?
+                } else {
+                    entry.clone().into_path()
+                };
+
                 if relative.ends_with(".j2") {
-                    let content =
-                        fs::read_to_string(entry.path()).map_err(Error::DiscoveryReadFile)?;
+                    let content = fs::read_to_string(path).map_err(Error::DiscoveryReadFile)?;
                     templates.insert(relative.to_string(), content);
                 } else {
                     // full path
-                    files.insert(relative.to_string(), entry.into_path());
+                    files.insert(relative.to_string(), path);
                 }
             }
         }

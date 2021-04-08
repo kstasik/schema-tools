@@ -1,7 +1,9 @@
-use super::{types::WrapperType, JsonSchemaExtractOptions, ModelContainer};
+use super::{
+    types::{Model, ModelType, WrapperType},
+    JsonSchemaExtractOptions, ModelContainer,
+};
 use serde_json::{Map, Value};
 
-use super::Model;
 use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
 
 pub fn from_oneof(
@@ -15,7 +17,14 @@ pub fn from_oneof(
         Some(one_of) => match one_of {
             Value::Array(variants) => {
                 if let Some(converted) = simplify_one_of(variants, scope, resolver) {
-                    return super::extract_type(&converted, container, scope, resolver, options);
+                    return super::extract_type(&converted, container, scope, resolver, options)
+                        .map(|m| {
+                            super::add_validation_and_nullable(
+                                m,
+                                &converted.as_object().unwrap(),
+                                container,
+                            )
+                        });
                 }
 
                 scope.form("oneOf");
@@ -59,11 +68,10 @@ pub fn from_oneof(
                 scope.pop();
 
                 // todo: wrapper to only flattened
-                Ok(Model::WrapperType(WrapperType {
+                Ok(Model::new(ModelType::WrapperType(WrapperType {
                     name: scope.namer().decorate(vec!["Variant".to_string()]),
                     models: models?,
-                    ..WrapperType::default()
-                }))
+                })))
             }
             _ => Err(Error::SchemaInvalidProperty("oneOf".to_string())),
         },
@@ -72,7 +80,7 @@ pub fn from_oneof(
 }
 
 fn get_const_property(model: &Model) -> Option<(String, String)> {
-    if let Model::ObjectType(object) = model {
+    if let ModelType::ObjectType(object) = model.inner() {
         let property = if object.properties.len() == 1 {
             object
                 .properties
@@ -130,7 +138,7 @@ fn simplify_one_of(
 mod tests {
     use std::collections::HashMap;
 
-    use crate::codegen::jsonschema::types::{Attributes, FlattenedType};
+    use crate::codegen::jsonschema::types::{Attributes, FlatModel};
 
     use super::*;
     use serde_json::json;
@@ -160,16 +168,16 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::WrapperType(WrapperType {
+            Model::new(ModelType::WrapperType(WrapperType {
                 name: "TestNameVariant".to_string(),
                 models: vec![
-                    FlattenedType {
+                    FlatModel {
                         name: Some("Variant0".to_string()),
                         type_: "object".to_string(),
-                        model: Some(Box::new(FlattenedType {
+                        model: Some(Box::new(FlatModel {
                             name: Some("A".to_string()),
                             type_: "A".to_string(),
-                            ..FlattenedType::default()
+                            ..FlatModel::default()
                         })),
                         attributes: Attributes {
                             x: [
@@ -179,17 +187,19 @@ mod tests {
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
+                            reference: true,
                             ..Attributes::default()
                         },
-                        ..FlattenedType::default()
+                        original: Some(0),
+                        ..FlatModel::default()
                     },
-                    FlattenedType {
+                    FlatModel {
                         name: Some("Variant1".to_string()),
                         type_: "object".to_string(),
-                        model: Some(Box::new(FlattenedType {
+                        model: Some(Box::new(FlatModel {
                             name: Some("B".to_string()),
                             type_: "B".to_string(),
-                            ..FlattenedType::default()
+                            ..FlatModel::default()
                         })),
                         attributes: Attributes {
                             x: [
@@ -199,13 +209,14 @@ mod tests {
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
+                            reference: true,
                             ..Attributes::default()
                         },
-                        ..FlattenedType::default()
+                        original: Some(1),
+                        ..FlatModel::default()
                     }
                 ],
-                ..WrapperType::default()
-            })
+            }))
         );
     }
 
@@ -234,16 +245,16 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::WrapperType(WrapperType {
+            Model::new(ModelType::WrapperType(WrapperType {
                 name: "TestNameVariant".to_string(),
                 models: vec![
-                    FlattenedType {
+                    FlatModel {
                         name: Some("Variant0".to_string()),
                         type_: "object".to_string(),
-                        model: Some(Box::new(FlattenedType {
+                        model: Some(Box::new(FlatModel {
                             name: Some("A".to_string()),
                             type_: "A".to_string(),
-                            ..FlattenedType::default()
+                            ..FlatModel::default()
                         })),
                         attributes: Attributes {
                             x: [
@@ -253,17 +264,19 @@ mod tests {
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
+                            reference: true,
                             ..Attributes::default()
                         },
-                        ..FlattenedType::default()
+                        original: Some(1),
+                        ..FlatModel::default()
                     },
-                    FlattenedType {
+                    FlatModel {
                         name: Some("Variant1".to_string()),
                         type_: "object".to_string(),
-                        model: Some(Box::new(FlattenedType {
+                        model: Some(Box::new(FlatModel {
                             name: Some("B".to_string()),
                             type_: "B".to_string(),
-                            ..FlattenedType::default()
+                            ..FlatModel::default()
                         })),
                         attributes: Attributes {
                             x: [
@@ -273,13 +286,15 @@ mod tests {
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
+                            reference: true,
                             ..Attributes::default()
                         },
-                        ..FlattenedType::default()
+                        original: Some(3),
+                        ..FlatModel::default()
                     }
                 ],
                 ..WrapperType::default()
-            })
+            }))
         );
     }
 
@@ -302,22 +317,22 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::WrapperType(WrapperType {
+            Model::new(ModelType::WrapperType(WrapperType {
                 name: "TestNameVariant".to_string(),
                 models: vec![
-                    FlattenedType {
+                    FlatModel {
                         name: Some("Variant0".to_string()),
                         type_: "string".to_string(),
-                        ..FlattenedType::default()
+                        ..FlatModel::default()
                     },
-                    FlattenedType {
+                    FlatModel {
                         name: Some("Variant1".to_string()),
                         type_: "number".to_string(),
-                        ..FlattenedType::default()
+                        ..FlatModel::default()
                     }
                 ],
                 ..WrapperType::default()
-            })
+            }))
         );
     }
 }

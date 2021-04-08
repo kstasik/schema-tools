@@ -1,4 +1,7 @@
-use super::{types::ArrayType, JsonSchemaExtractOptions, Model, ModelContainer};
+use super::{
+    types::{ArrayType, Model, ModelType},
+    JsonSchemaExtractOptions, ModelContainer,
+};
 use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
 use serde_json::{Map, Value};
 
@@ -18,11 +21,10 @@ pub fn from_array(
                     .and_then(|s| s.flatten(container, scope));
                 scope.pop();
 
-                Ok(Model::ArrayType(ArrayType {
+                Ok(Model::new(ModelType::ArrayType(ArrayType {
                     model: Box::new(model?),
                     name: name.map(Some)?,
-                    ..ArrayType::default()
-                }))
+                })))
             }
             Value::Array(_) => {
                 // todo: tuple validation
@@ -36,7 +38,7 @@ pub fn from_array(
 
 #[cfg(test)]
 mod tests {
-    use crate::codegen::jsonschema::types::FlattenedType;
+    use crate::codegen::jsonschema::types::FlatModel;
 
     use super::*;
     use serde_json::json;
@@ -60,15 +62,14 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::ArrayType(ArrayType {
+            Model::new(ModelType::ArrayType(ArrayType {
                 name: Some("TestName".to_string()),
-                model: Box::new(FlattenedType {
+                model: Box::new(FlatModel {
                     name: Some("TestName".to_string()),
                     type_: "number".to_string(),
-                    ..FlattenedType::default()
+                    ..FlatModel::default()
                 }),
-                ..ArrayType::default()
-            })
+            }))
         );
     }
 }

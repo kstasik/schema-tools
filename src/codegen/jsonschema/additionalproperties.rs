@@ -1,7 +1,10 @@
 use serde_json::Map;
 use serde_json::Value;
 
-use super::{types::MapType, JsonSchemaExtractOptions, Model, ModelContainer};
+use super::{
+    types::{MapType, Model, ModelType},
+    JsonSchemaExtractOptions, ModelContainer,
+};
 use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
 
 pub fn from_object_with_additional_properties(
@@ -22,11 +25,10 @@ pub fn from_object_with_additional_properties(
                     .and_then(|s| s.flatten(container, scope));
                 scope.pop();
 
-                Ok(Model::MapType(MapType {
+                Ok(Model::new(ModelType::MapType(MapType {
                     name: Some(name),
                     model: Box::new(model?),
-                    ..MapType::default()
-                }))
+                })))
             }
             Value::Bool(_) => Err(Error::SchemaInvalidProperty(
                 // todo: bool support maybe as a flag
@@ -45,7 +47,7 @@ pub fn from_object_with_additional_properties(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::codegen::jsonschema::types::FlattenedType;
+    use crate::codegen::jsonschema::types::FlatModel;
     use serde_json::json;
 
     #[test]
@@ -67,15 +69,14 @@ mod tests {
 
         assert_eq!(
             result.unwrap(),
-            Model::MapType(MapType {
+            Model::new(ModelType::MapType(MapType {
                 name: Some("TestName".to_string()),
-                model: Box::new(FlattenedType {
+                model: Box::new(FlatModel {
                     name: Some("TestName".to_string()),
                     type_: "string".to_string(),
-                    ..FlattenedType::default()
-                }),
-                ..MapType::default()
-            })
+                    ..FlatModel::default()
+                })
+            }))
         );
     }
 }

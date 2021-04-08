@@ -1,6 +1,9 @@
 use serde_json::{Map, Value};
 
-use super::{types::EnumType, JsonSchemaExtractOptions, Model};
+use super::{
+    types::{EnumType, Model, ModelType},
+    JsonSchemaExtractOptions,
+};
 use crate::scope::SchemaScope;
 
 pub fn convert_to_enum(
@@ -13,14 +16,14 @@ pub fn convert_to_enum(
         Some(value) => match value {
             Value::Array(values) => {
                 // enum model generated only for primitive types
-                if let Model::PrimitiveType(primitive) = model {
+                if let ModelType::PrimitiveType(primitive) = model.inner() {
                     log::trace!("{}: processing enum", scope);
 
                     let name = scope.namer().simple();
                     if name.is_err() {
                         log::error!("Cannot resolve name of enum");
 
-                        return Model::PrimitiveType(primitive);
+                        return Model::new(ModelType::PrimitiveType(primitive.clone()));
                     }
 
                     let mut partitioned: (Vec<String>, Vec<f64>) = (vec![], vec![]);
@@ -37,14 +40,13 @@ pub fn convert_to_enum(
                     }
 
                     if !partitioned.0.is_empty() {
-                        Model::EnumType(EnumType {
+                        Model::new(ModelType::EnumType(EnumType {
                             name: name.unwrap(),
                             type_: "string".to_string(),
                             variants: partitioned.0.to_vec(),
-                            ..EnumType::default()
-                        })
+                        }))
                     } else if !partitioned.1.is_empty() {
-                        Model::EnumType(EnumType {
+                        Model::new(ModelType::EnumType(EnumType {
                             name: name.unwrap(),
                             type_: "number".to_string(),
                             variants: partitioned
@@ -52,11 +54,10 @@ pub fn convert_to_enum(
                                 .iter()
                                 .map(|f| f.to_string())
                                 .collect::<Vec<String>>(),
-                            ..EnumType::default()
-                        })
+                        }))
                     } else {
                         log::error!("{}: enum discarded", scope);
-                        Model::PrimitiveType(primitive)
+                        Model::new(ModelType::PrimitiveType(primitive.clone()))
                     }
                 } else {
                     log::warn!("{}: enum ignored because of complex type", scope);
@@ -84,23 +85,21 @@ mod tests {
         let schema = json!({"enum": ["a", "b"]});
         let mut scope = SchemaScope::default();
         let options = JsonSchemaExtractOptions::default();
-        let model = Model::PrimitiveType(PrimitiveType {
+        let model = Model::new(ModelType::PrimitiveType(PrimitiveType {
             name: None,
             type_: "string".to_string(),
-            ..PrimitiveType::default()
-        });
+        }));
 
         scope.entity("TestName");
         let result = convert_to_enum(model, schema.as_object().unwrap(), &mut scope, &options);
 
         assert_eq!(
             result,
-            Model::EnumType(EnumType {
+            Model::new(ModelType::EnumType(EnumType {
                 variants: vec!["a".to_string(), "b".to_string()],
                 name: "TestName".to_string(),
                 type_: "string".to_string(),
-                ..EnumType::default()
-            })
+            }))
         );
     }
 
@@ -109,11 +108,10 @@ mod tests {
         let schema = json!({"enum": [{"a":"b"}, true]});
         let mut scope = SchemaScope::default();
         let options = JsonSchemaExtractOptions::default();
-        let model = Model::PrimitiveType(PrimitiveType {
+        let model = Model::new(ModelType::PrimitiveType(PrimitiveType {
             name: None,
             type_: "string".to_string(),
-            ..PrimitiveType::default()
-        });
+        }));
 
         scope.entity("TestName");
         let result = convert_to_enum(
