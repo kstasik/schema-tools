@@ -177,10 +177,6 @@ mod tests {
                         model: Some(Box::new(FlatModel {
                             name: Some("A".to_string()),
                             type_: "A".to_string(),
-                            attributes: Attributes {
-                                reference: true,
-                                ..Attributes::default()
-                            },
                             ..FlatModel::default()
                         })),
                         attributes: Attributes {
@@ -191,6 +187,7 @@ mod tests {
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
+                            reference: true,
                             ..Attributes::default()
                         },
                         original: Some(0),
@@ -202,10 +199,6 @@ mod tests {
                         model: Some(Box::new(FlatModel {
                             name: Some("B".to_string()),
                             type_: "B".to_string(),
-                            attributes: Attributes {
-                                reference: true,
-                                ..Attributes::default()
-                            },
                             ..FlatModel::default()
                         })),
                         attributes: Attributes {
@@ -216,6 +209,7 @@ mod tests {
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
+                            reference: true,
                             ..Attributes::default()
                         },
                         original: Some(1),
@@ -260,10 +254,6 @@ mod tests {
                         model: Some(Box::new(FlatModel {
                             name: Some("A".to_string()),
                             type_: "A".to_string(),
-                            attributes: Attributes {
-                                reference: true,
-                                ..Attributes::default()
-                            },
                             ..FlatModel::default()
                         })),
                         attributes: Attributes {
@@ -274,6 +264,7 @@ mod tests {
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
+                            reference: true,
                             ..Attributes::default()
                         },
                         original: Some(1),
@@ -285,10 +276,6 @@ mod tests {
                         model: Some(Box::new(FlatModel {
                             name: Some("B".to_string()),
                             type_: "B".to_string(),
-                            attributes: Attributes {
-                                reference: true,
-                                ..Attributes::default()
-                            },
                             ..FlatModel::default()
                         })),
                         attributes: Attributes {
@@ -299,6 +286,7 @@ mod tests {
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
+                            reference: true,
                             ..Attributes::default()
                         },
                         original: Some(3),

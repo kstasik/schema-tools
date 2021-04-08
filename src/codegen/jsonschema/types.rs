@@ -410,12 +410,12 @@ impl ObjectType {
                 model: Some(Box::new(FlatModel {
                     type_: linked.name.clone(),
                     name: Some(linked.name.clone()),
-                    attributes: Attributes {
-                        reference: true,
-                        ..added.1.attributes.clone()
-                    },
                     ..FlatModel::default()
                 })),
+                attributes: Attributes {
+                    reference: true,
+                    ..added.1.attributes.clone()
+                },
                 original: added.0,
                 ..FlatModel::default()
             })
