@@ -27,7 +27,7 @@ pub fn create_container(options: &[(String, serde_json::Value)]) -> CodegenConta
 }
 
 pub fn format(data: &str) -> Result<HashMap<&str, Value>, Error> {
-    let kv_pairs: Vec<Result<(&str, Value), Error>> = data
+    let (values, errors): (Vec<_>, Vec<_>) = data
         .split(',')
         .filter(|s| !s.is_empty())
         .map(|s| {
@@ -49,10 +49,7 @@ pub fn format(data: &str) -> Result<HashMap<&str, Value>, Error> {
                 ))),
             }
         })
-        .collect();
-
-    let (values, errors): (Vec<_>, Vec<_>) =
-        kv_pairs.into_iter().partition(|result| result.is_ok());
+        .partition(|result| result.is_ok());
 
     if !errors.is_empty() {
         return Err(Error::CodegenFileHeaderParseError(format!(
