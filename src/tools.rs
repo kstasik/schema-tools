@@ -164,7 +164,7 @@ impl<'a> Iterator for ArgumentsExtractor<'a> {
         let mut out = String::new();
         let mut escaped = false;
         let mut quote_char = None;
-        while let Some(c) = self.chars.next() {
+        for c in &mut self.chars {
             if escaped {
                 out.push(c);
                 escaped = false;

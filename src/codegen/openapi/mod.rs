@@ -48,6 +48,7 @@ pub struct Endpoint {
     requestbody: Option<requestbody::RequestBody>,
     parameters: parameters::Parameters,
     responses: responses::Responses,
+    x: std::collections::HashMap<String, Value>,
 }
 
 impl Endpoint {
@@ -302,6 +303,14 @@ fn new_endpoint(
                 .map_or(Ok(None), |v| v.map(Some))?
                 .unwrap_or_else(Vec::new);
 
+            let x = data
+                .iter()
+                .filter_map(|(key, val)| {
+                    key.strip_prefix("x-")
+                        .map(|stripped| (stripped.to_string(), val.clone()))
+                })
+                .collect::<std::collections::HashMap<String, Value>>();
+
             scope.glue(&operation);
             scope.add_spaces(&mut tags.clone().into_iter().map(Space::Tag).collect());
             scope.add_spaces(&mut vec![Space::Operation(operation.clone())]);
@@ -316,6 +325,7 @@ fn new_endpoint(
                 responses: responses::extract(data, scope, mcontainer, resolver, options)?,
                 requestbody: requestbody::extract(data, scope, mcontainer, resolver, options)?,
                 parameters: parameters::extract(data, scope, mcontainer, resolver, options)?,
+                x,
             };
 
             scope.clear_spaces();
