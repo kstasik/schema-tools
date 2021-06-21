@@ -39,13 +39,13 @@ Main differences in approach between other solutions like `openapi-generator`:
 To validate openapi specification:
 
 ```
-schematools validate openapi -f openapi.yaml
+schematools validate openapi openapi.yaml
 ```
 
 To validate json schema definition:
 
 ```
-schematools validate openapi -f schema.yaml
+schematools validate openapi schema.yaml
 ```
 
 Both commands return non-zero exit code in case of failure. Error reporting is not very clear but it shows the place where json schema is not met. TODO: resolve this [issue](https://github.com/Stranger6667/jsonschema-rs/issues?q=is%3Aissue+is%3Aopen+error)
@@ -55,9 +55,9 @@ Both commands return non-zero exit code in case of failure. Error reporting is n
 Common CLI arguments:
 
 ```
--f <file>                      Path to json/yaml file with openapi specification
--o, --output <output>          Returned format [default: json] [possible values: json,  yaml]
---to-file <to-file>        Path of output file, default output to stdout
+<file>                      Path to json/yaml file with openapi specification
+-o, --output <output>       Returned format [default: json] [possible values: json,  yaml]
+--to-file <to-file>         Path of output file, default output to stdout
 ```
 
 ### Naming
@@ -65,7 +65,7 @@ Common CLI arguments:
 If your openapi specification follows `RESTFUL` openapi rules you can create missing json-schema titles or try to rename operationId of existing endpoint:
 
 ```
-schematools process name -f schema.yaml
+schematools process name schema.yaml
 ```
 
 Additional options are:
@@ -80,7 +80,7 @@ Additional options are:
 To replace all occurences of `$ref` in openapi you may type:
 
 ```
-schematools process dereference -f schema.yaml
+schematools process dereference schema.yaml
 ```
 
 You should hardly ever perform full dereference of openapi. It partially dereference schema you may use following options:
@@ -100,7 +100,7 @@ You should hardly ever perform full dereference of openapi. It partially derefer
 To merge `allOf`s into objects type:
 
 ```
-schematools process merge-all-of -f openapi.yaml
+schematools process merge-all-of openapi.yaml
 ```
 
 It's useful to perform such thing before code generation taking into account that json schema is more represntation of validation not data structure itself. In many languages unions are a complicated thing but if you are using allOfs to extract common parts of structs it's a functionality which may be very helpful for you.
@@ -110,13 +110,13 @@ It's useful to perform such thing before code generation taking into account tha
 If openapi you received seems broken you may fix it and create [json-patch](http://jsonpatch.com/) file:
 
 ```
-schematools process patch -f <file> create <original-file> 
+schematools process patch <file> create <original-file> 
 ```
 
 Then you can apply such patch to original openapi file during processing:
 
 ```
-schematools process patch -f <file> apply <patch-file> 
+schematools process patch <file> apply <patch-file> 
 ```
 
 ### Merge openapi and bump
@@ -124,7 +124,7 @@ schematools process patch -f <file> apply <patch-file>
 If you microservice is splitted to more than one service (and is exposed under same ingress) you may find it useful to create one openapi definition:
 
 ```
-schematools process merge-openapi -f <file> --with <with>
+schematools process merge-openapi <file> --with <with>
 ```
 
 Some useful options which may be needed for versioning merged openapi:
@@ -137,7 +137,7 @@ Some useful options which may be needed for versioning merged openapi:
 To bump merged openapi version you may use this command:
 
 ```
-schematools process bump-openapi -f <file> --original <previous-version-file>
+schematools process bump-openapi <file> --original <previous-version-file>
 ```
 
 It should correctly change version of openapi according to all sub-openapi semversions.
@@ -146,16 +146,16 @@ It should correctly change version of openapi according to all sub-openapi semve
 
 Code generation itself is performed by processing templates directory. Before it is done all data from openapi/json-schema files has to be extracted and processed. There are two ways of performing codegen:
 
-- `schematools codegen json-schema -f json-schema.json [...]` is used to process json schema file. It needs additional attribute `--base-name <base-name>` if title of json schema is missing. One json-schema doesnt mean that result of such codegeneration run will be exactly one struct/object/class - in case of complex json schemas it will be many models.
-- `schematools codegen openapi -f openapi.json [...]` is used to process openapi specification - endpoints and models extraction.
+- `schematools codegen json-schema json-schema.json [...]` is used to process json schema file. It needs additional attribute `--base-name <base-name>` if title of json schema is missing. One json-schema doesnt mean that result of such codegeneration run will be exactly one struct/object/class - in case of complex json schemas it will be many models.
+- `schematools codegen openapi openapi.json [...]` is used to process openapi specification - endpoints and models extraction.
 
 Simple usage:
 
 ```
-schema-tools codegen openapi -f openapi.json --template templates/  --target-dir pkg/client/
+schema-tools codegen openapi openapi.json --template templates/  --target-dir pkg/client/
 ```
 
-- `-f openapi.json` - openapi specification file
+- `openapi.json` - openapi specification file
 - `--template templates/` - directory with jinja2 files
 - `--target-dir pkg/client/` - where code should be generated
 
@@ -202,13 +202,13 @@ For more information how to write template files please refer to [Tera docs](htt
 Codegen allows to defined multiple `--template` options.
 
 ```
-schematools codegen -f openapi.json --template dir1/ --template2 dir2/ --target-dir output/
+schematools codegen openapi.json --template dir1/ --template2 dir2/ --target-dir output/
 ```
 
 Files from all directories are loaded one by one and in case of conflicts they are overwritten. There is also option to point to registry which currently may be only a **git repository**:
 
 ```
-schematools codegen -f openapi.json --template REGISTRY::dir1/ --template2 dir2/ --target-dir output/
+schematools codegen openapi.json --template REGISTRY::dir1/ --template2 dir2/ --target-dir output/
 ```
 
 ### Codegen ready to use templates
@@ -221,10 +221,10 @@ This is the whole point of this tool. It wraps all existing functionalities toge
 
 ```
 schematools chain -vvvv \
-   -c 'process merge-all-of --leave-invalid-properties -f https://domain.com/openapi/orders/api.yaml' \
-   -c 'process name -f - --resource-method-version --overwrite' \
-   -c 'validate openapi -f - --continue-on-error' \
-   -c 'codegen openapi -f - \
+   -c 'process merge-all-of --leave-invalid-properties https://domain.com/openapi/orders/api.yaml' \
+   -c 'process name - --resource-method-version --overwrite' \
+   -c 'validate openapi - --continue-on-error' \
+   -c 'codegen openapi - \
         --template codegen/client/ \
         --format "gofmt -w" \
         --target-dir pkg/client/ \
@@ -232,14 +232,14 @@ schematools chain -vvvv \
         -o clientName=OrdersClient'
 ```
 
-All commands take same arguments as they were executed separately. The only difference is that the first execution has to take real schema file as `-f` argument. The next executions should take `-f -` to use previously generated schema file.
+All commands take same arguments as they were executed separately. The only difference is that the first execution has to take real schema file as `-f` argument. The next executions should take `-` to use previously generated schema file.
 
 ```
 schematools chain -vvvv \
-   -c 'process merge-all-of --leave-invalid-properties -f specifications/api.yaml' \
-   -c 'process name -f - --resource-method-version --overwrite' \
-   -c 'validate openapi -f - ' 
-   -c 'codegen openapi -f - \
+   -c 'process merge-all-of --leave-invalid-properties specifications/api.yaml' \
+   -c 'process name - --resource-method-version --overwrite' \
+   -c 'validate openapi - ' 
+   -c 'codegen openapi - \
         --template codegen/server/ \
         --format "gofmt -w" \
         --target-dir internal/http/ \
@@ -250,11 +250,11 @@ There is an option to dump processed schema to a file during chaining using `out
 
 ```
 schematools chain -vvvv \
-   -c 'process merge-all-of --leave-invalid-properties -f specifications/api.yaml' \
-   -c 'process name -f - --resource-method-version --overwrite' \
-   -c 'validate openapi -f - ' \
+   -c 'process merge-all-of --leave-invalid-properties specifications/api.yaml' \
+   -c 'process name - --resource-method-version --overwrite' \
+   -c 'validate openapi - ' \
    -c 'output --to-file=test.json -o json' \
-   -c 'codegen openapi -f - \
+   -c 'codegen openapi - \
         --template codegen/server/ \
         --format "gofmt -w" \
         --target-dir internal/http/ \
@@ -268,10 +268,10 @@ There is an option to treat a separate git repository as source of templates:
 ```
 schematools chain -vvvv \
    -c 'registry add common git://github.com/kstasik/schema-tools --tag v0.0.1' \
-   -c 'process merge-all-of --leave-invalid-properties -f clients/client1.yaml' \
-   -c 'process name -f - --resource-method-version --overwrite' \
-   -c 'validate openapi -f - --continue-on-error' \
-   -c 'codegen openapi -f - --template common::resources/openapi/ --target-dir pkg/client1/ -o namespace=client1 -o clientName=Client1'
+   -c 'process merge-all-of --leave-invalid-properties clients/client1.yaml' \
+   -c 'process name - --resource-method-version --overwrite' \
+   -c 'validate openapi - --continue-on-error' \
+   -c 'codegen openapi - --template common::resources/openapi/ --target-dir pkg/client1/ -o namespace=client1 -o clientName=Client1'
 ```
 
 To target such registry you simply use: `--template REGISTRY_NAME::path/`
@@ -285,41 +285,41 @@ schematool chain -vv \
   # 0. Register external repository with templates and fix it to tag
   -c 'registry add default https://codegen-templates/templates.git --tag v0.5.0' \
   # 1. Load local openapi specification from file and dereference
-  -c 'process dereference -f spec/api.yaml --skip-root-internal-references --create-internal-references' \
+  -c 'process dereference spec/api.yaml --skip-root-internal-references --create-internal-references' \
   # 1. Convert allOf to structs
-  -c 'process merge-all-of -f - --leave-invalid-properties' \
+  -c 'process merge-all-of - --leave-invalid-properties' \
   # 1. Overwrite titles of schemas and operationIds of endpoints in openapi
-  -c 'process name -f - --overwrite --resource-method-version' \
+  -c 'process name - --overwrite --resource-method-version' \
   # 1. Perform validation of our openapi specification - interrupt build on error
-  -c 'validate openapi -f - ' \
+  -c 'validate openapi - ' \
   # 1. Create models and routers
-  -c 'codegen openapi -f - --template default::rust-actix-server/ --format "rustfmt --edition 2018" --target-dir src/app/ -o name=ShippingApp'  \
+  -c 'codegen openapi - --template default::rust-actix-server/ --format "rustfmt --edition 2018" --target-dir src/app/ -o name=ShippingApp'  \
   \
   # 2. Load remote openapi definition of external service
-  -c 'process dereference -f https://schemas.com/openapi/orders/v0.1.0.json --skip-root-internal-references' \
+  -c 'process dereference https://schemas.com/openapi/orders/v0.1.0.json --skip-root-internal-references' \
   # 2. Convert allOf to structs
-  -c 'process merge-all-of -f - --leave-invalid-properties' \
+  -c 'process merge-all-of - --leave-invalid-properties' \
   # 2. Overwrite titles of schemas and operationIds of endpoints in openapi because it follow restful standards
-  -c 'process name -f - --overwrite --resource-method-version' \
+  -c 'process name - --overwrite --resource-method-version' \
   # 2. Patch openapi specification because it has an error and we don't want to wait for a fix to be published by other project
-  -c 'patch -f - apply specs/fixes/orders.yaml' \
+  -c 'patch - apply specs/fixes/orders.yaml' \
   # 2. Validate openapi definition but continue on failure because it's an external client not owned by project
-  -c 'validate openapi -f - --continue-on-error' \
+  -c 'validate openapi - --continue-on-error' \
   # 2. Create client
-  -c "codegen openapi -f - --optional-and-nullable-as-models --template default::rust-reqwest-http/ --format 'rustfmt --edition 2018' \
+  -c "codegen openapi - --optional-and-nullable-as-models --template default::rust-reqwest-http/ --format 'rustfmt --edition 2018' \
     -o 'usedEndpoints=~[\"ordersListV3\",\"ordersCreateV3\"]' \
     --target-dir src/clients/ -o name=OrdersClient" \
   \
   # 3. Load remote openapi definition of external service
-  -c 'process dereference -f https://schemas.com/openapi/users/v0.1.0.json --skip-root-internal-references' \
+  -c 'process dereference https://schemas.com/openapi/users/v0.1.0.json --skip-root-internal-references' \
   # 3. Convert allOf to structs
-  -c 'process merge-all-of -f - --leave-invalid-properties' \
+  -c 'process merge-all-of - --leave-invalid-properties' \
   # 3. Overwrite titles of schemas and operationIds of endpoints in openapi because it follow restful standards
-  -c 'process name -f - --overwrite --resource-method-version' \
+  -c 'process name - --overwrite --resource-method-version' \
   # 3. Validate openapi definition but continue on failure because it's an external client not owned by project
-  -c 'validate openapi -f - --continue-on-error' \
+  -c 'validate openapi - --continue-on-error' \
   # 3. Create client
-  -c "codegen openapi -f - --optional-and-nullable-as-models --template default::rust-reqwest-http/ --format 'rustfmt --edition 2018' \
+  -c "codegen openapi - --optional-and-nullable-as-models --template default::rust-reqwest-http/ --format 'rustfmt --edition 2018' \
     -o 'usedEndpoints=~[\"usersListV3\",\"usersCreateV3\"]' \
     --target-dir src/clients/ -o name=UsersClient"
 ```

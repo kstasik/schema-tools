@@ -56,7 +56,7 @@ impl DereferencerOptions {
             .schemas
             .insert(original.get_url().to_string(), original);
 
-        process_node(&mut root, &self, &mut context);
+        process_node(&mut root, self, &mut context);
     }
 }
 

@@ -13,7 +13,7 @@ pub fn from_pattern_properties(
     resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
 ) -> Result<Model, Error> {
-    let name = super::title::extract_title(&schema, scope, options)?;
+    let name = super::title::extract_title(schema, scope, options)?;
 
     match schema.get("patternProperties") {
         Some(Value::Object(map)) => {

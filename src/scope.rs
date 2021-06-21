@@ -84,6 +84,12 @@ impl BasicNamer {
                     SchemaScopeType::Index(i) => Some(format!("Option{}", i + 1)),
                     _ => None,
                 }
+            } else if form == "allOf" {
+                let last = self.parts.last().unwrap();
+                match last {
+                    SchemaScopeType::Index(i) => Some(format!("Partial{}", i + 1)),
+                    _ => None,
+                }
             } else {
                 None
             }

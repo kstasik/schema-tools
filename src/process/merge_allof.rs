@@ -1,16 +1,22 @@
 use serde_json::Value;
 
-use crate::{resolver::SchemaResolver, schema::Schema, scope::SchemaScope};
+use crate::{resolver::SchemaResolver, schema::Schema, scope::SchemaScope, tools};
 
 pub struct Merger;
 
 pub struct MergerOptions {
     pub leave_invalid_properties: bool,
+    pub filter: tools::Filter,
 }
 
 impl MergerOptions {
     pub fn with_leave_invalid_properties(&mut self, value: bool) -> &mut Self {
         self.leave_invalid_properties = value;
+        self
+    }
+
+    pub fn with_filter(&mut self, value: tools::Filter) -> &mut Self {
+        self.filter = value;
         self
     }
 
@@ -20,7 +26,7 @@ impl MergerOptions {
         let mut root = schema.get_body_mut();
         let mut scope = SchemaScope::default();
 
-        process_node(&mut root, &self, &mut scope, resolver);
+        process_node(&mut root, self, &mut scope, resolver);
     }
 }
 
@@ -28,6 +34,7 @@ impl Merger {
     pub fn options() -> MergerOptions {
         MergerOptions {
             leave_invalid_properties: false,
+            filter: tools::Filter::default(),
         }
     }
 }
@@ -38,6 +45,10 @@ fn process_merge(
     scope: &mut SchemaScope,
     resolver: &SchemaResolver,
 ) {
+    if !options.filter.check(root) {
+        return log::info!("allOf skipped because of filter");
+    }
+
     match root.as_object_mut().unwrap().get_mut("allOf").unwrap() {
         Value::Array(schemas) => {
             let size = schemas.len();

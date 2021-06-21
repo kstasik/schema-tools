@@ -40,7 +40,7 @@ enum Command {
 
 #[derive(Clap, Debug)]
 struct OpenapiOpts {
-    #[clap(short, about = "Path to json/yaml file of openapi specification")]
+    #[clap(about = "Path to json/yaml file of openapi specification")]
     file: String,
 
     #[clap(long, about = "Should continue on error")]
@@ -52,7 +52,7 @@ struct OpenapiOpts {
 
 #[derive(Clap, Debug)]
 struct JsonSchemaOpts {
-    #[clap(short, about = "Path to json/yaml file representing json-schema")]
+    #[clap(about = "Path to json/yaml file representing json-schema")]
     file: String,
 
     #[clap(long, about = "Should continue on error")]
@@ -74,8 +74,8 @@ impl GetSchemaCommand for Opts {
 impl Opts {
     pub fn run(&self, schema: &mut Schema) -> Result<(), Error> {
         match &self.command {
-            Command::Openapi(_) => validate::validate_openapi(&schema),
-            Command::JsonSchema(_) => validate::validate_jsonschema(&schema),
+            Command::Openapi(_) => validate::validate_openapi(schema),
+            Command::JsonSchema(_) => validate::validate_jsonschema(schema),
         }
         .map(|r| {
             log::info!("\x1b[0;32mSuccessful validation!\x1b[0m");

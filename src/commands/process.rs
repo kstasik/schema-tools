@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use crate::commands::GetSchemaCommand;
+use crate::tools;
 use clap::Clap;
 use std::str::FromStr;
 
@@ -69,7 +70,7 @@ pub enum Command {
 
 #[derive(Clap, Debug)]
 pub struct MergeOpenapiOpts {
-    #[clap(short, about = "Path to json/yaml file")]
+    #[clap(about = "Path to json/yaml file")]
     pub file: String,
 
     #[clap(long, about = "Openapi file to merge with")]
@@ -93,7 +94,7 @@ pub struct MergeOpenapiOpts {
 
 #[derive(Clap, Debug)]
 pub struct BumpOpenapiOpts {
-    #[clap(short, about = "Path to json/yaml file")]
+    #[clap(about = "Path to json/yaml file")]
     pub file: String,
 
     #[clap(long, about = "Path to previos version of openapi specification")]
@@ -111,11 +112,18 @@ pub struct BumpOpenapiOpts {
 
 #[derive(Clap, Debug)]
 pub struct MergeAllOfOpts {
-    #[clap(short, about = "Path to json/yaml file")]
+    #[clap(about = "Path to json/yaml file")]
     pub file: String,
 
     #[clap(long, about = "Leave invalid properties on allOf level")]
     leave_invalid_properties: bool,
+
+    #[clap(
+        long,
+        about = "Filters to be applied on each root.allOf element",
+        required = false
+    )]
+    filter: Vec<String>,
 
     #[clap(flatten)]
     output: crate::commands::Output,
@@ -126,7 +134,7 @@ pub struct MergeAllOfOpts {
 
 #[derive(Clap, Debug)]
 pub struct DereferenceOpts {
-    #[clap(short, about = "Path to json/yaml file")]
+    #[clap(about = "Path to json/yaml file")]
     pub file: String,
 
     #[clap(long, about = "Leaves internal references intact in root schema file")]
@@ -150,7 +158,7 @@ pub struct DereferenceOpts {
 
 #[derive(Clap, Debug)]
 pub struct NameOpts {
-    #[clap(short, about = "Path to json/yaml file with openapi specification")]
+    #[clap(about = "Path to json/yaml file with openapi specification")]
     file: String,
 
     #[clap(
@@ -177,7 +185,7 @@ pub struct NameOpts {
 
 #[derive(Clap, Debug)]
 pub struct PatchOpts {
-    #[clap(short, about = "Path to json/yaml file with schema")]
+    #[clap(about = "Path to json/yaml file with schema")]
     file: String,
 
     #[clap(subcommand)]
@@ -209,6 +217,7 @@ impl Opts {
             Command::MergeAllOf(opts) => {
                 merge_allof::Merger::options()
                     .with_leave_invalid_properties(opts.leave_invalid_properties)
+                    .with_filter(tools::Filter::new(&opts.filter)?)
                     .process(schema);
                 Ok(())
             }

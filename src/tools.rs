@@ -1,4 +1,4 @@
-use std::str::Chars;
+use std::str::{Chars, FromStr};
 
 use crate::error::Error;
 use crate::scope::SchemaScope;
@@ -254,6 +254,129 @@ pub fn bump_suffix_number(phrase: &str) -> String {
         let new_phrase = phrase[..phrase.len() - result.len()].to_string();
         let sum = result.iter().rev().fold(0, |acc, elem| acc * 10 + elem) + 1;
         new_phrase + &sum.to_string()
+    }
+}
+
+#[derive(Default)]
+pub struct Filter {
+    conditions: Vec<ConditionSet>,
+}
+
+pub struct ConditionSet {
+    conditions: Vec<Condition>,
+}
+
+impl FromStr for ConditionSet {
+    type Err = Error;
+
+    fn from_str(data: &str) -> Result<Self, Self::Err> {
+        Ok(Self {
+            conditions: data
+                .split(',')
+                .map(|s| Condition::from_str(s))
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+}
+
+impl ConditionSet {
+    pub fn check(&self, data: &Value) -> bool {
+        self.conditions
+            .iter()
+            .map(|c| c.check(data))
+            .all(|result| result)
+    }
+}
+
+struct Condition {
+    pub field: String, // json pointer
+    pub operator: ConditionOperator,
+    pub value: Value, // Value
+}
+
+impl FromStr for Condition {
+    type Err = Error;
+
+    fn from_str(data: &str) -> Result<Self, Self::Err> {
+        let operator = ConditionOperator::from_str(data)?;
+
+        if let [field, value] = data.split(&operator.to_string()).collect::<Vec<_>>()[..] {
+            Ok(Self {
+                field: format!("/{}", field.replace(".", "/")),
+                value: serde_json::from_str(value).unwrap(),
+                operator,
+            })
+        } else {
+            Err(Error::IncorrectFilterError(data.to_string()))
+        }
+    }
+}
+
+impl Condition {
+    pub fn check(&self, data: &Value) -> bool {
+        match data.pointer(&self.field) {
+            Some(retrieved) => match self.operator {
+                ConditionOperator::Eq | ConditionOperator::Eqq => retrieved == &self.value,
+                ConditionOperator::Neq => retrieved != &self.value,
+            },
+            None => self.operator == ConditionOperator::Neq,
+        }
+    }
+}
+
+#[derive(PartialEq)]
+enum ConditionOperator {
+    Eq,
+    Eqq,
+    Neq,
+}
+
+impl ToString for ConditionOperator {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Eq => "=",
+            Self::Eqq => "==",
+            Self::Neq => "!=",
+        }
+        .to_string()
+    }
+}
+
+impl FromStr for ConditionOperator {
+    type Err = Error;
+
+    fn from_str(data: &str) -> Result<ConditionOperator, Self::Err> {
+        if data.contains("==") {
+            Ok(Self::Eqq)
+        } else if data.contains("!=") {
+            Ok(Self::Neq)
+        } else if data.contains('=') {
+            Ok(Self::Eq)
+        } else {
+            Err(Error::IncorrectFilterError(data.to_string()))
+        }
+    }
+}
+
+impl Filter {
+    pub fn new(filters: &[String]) -> Result<Self, Error> {
+        Ok(Self {
+            conditions: filters
+                .iter()
+                .map(|s| ConditionSet::from_str(s))
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+
+    pub fn check(&self, data: &Value) -> bool {
+        if self.conditions.is_empty() {
+            return true;
+        }
+
+        self.conditions
+            .iter()
+            .map(|c| c.check(data))
+            .any(|result| result)
     }
 }
 
