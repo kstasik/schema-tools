@@ -16,8 +16,8 @@ pub fn from_array(
         Some(items) => match items {
             Value::Object(_) => {
                 scope.form("items");
-                let name = super::title::extract_title(&schema, scope, options);
-                let model = super::extract_type(&items, container, scope, resolver, options)
+                let name = super::title::extract_title(schema, scope, options);
+                let model = super::extract_type(items, container, scope, resolver, options)
                     .and_then(|s| s.flatten(container, scope));
                 scope.pop();
 

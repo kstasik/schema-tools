@@ -23,7 +23,7 @@ fn process_node(url: &Url, data: &mut Value) {
     match data {
         Value::Object(ref mut map) => {
             if let Some(Value::String(reference)) = map.get_mut("$ref") {
-                if Url::parse(&reference) == Err(url::ParseError::RelativeUrlWithoutBase) {
+                if Url::parse(reference) == Err(url::ParseError::RelativeUrlWithoutBase) {
                     let mut prefix = url.clone();
 
                     if let [path, fragment] =

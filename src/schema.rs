@@ -1,6 +1,6 @@
 use serde::Deserialize;
 use serde_json::Value;
-use std::{fs, iter::FromIterator, path::PathBuf};
+use std::{fs, path::PathBuf};
 use url::Url;
 
 use crate::error::Error;
@@ -82,7 +82,7 @@ impl<'a> Schema {
                     extension: extension.unwrap_or("").to_string(),
                 }),
                 1 => Ok(docs.remove(0)),
-                _ => Ok(serde_json::Value::from_iter(docs.into_iter())),
+                _ => Ok(docs.into_iter().collect::<Value>()),
             }?
         } else {
             serde_json::from_str(response.as_ref()).map_err(|_| Error::SchemaLoadIncorrectType {

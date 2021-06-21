@@ -74,8 +74,8 @@ impl GetSchemaCommand for Opts {
 impl Opts {
     pub fn run(&self, schema: &mut Schema) -> Result<(), Error> {
         match &self.command {
-            Command::Openapi(_) => validate::validate_openapi(&schema),
-            Command::JsonSchema(_) => validate::validate_jsonschema(&schema),
+            Command::Openapi(_) => validate::validate_openapi(schema),
+            Command::JsonSchema(_) => validate::validate_jsonschema(schema),
         }
         .map(|r| {
             log::info!("\x1b[0;32mSuccessful validation!\x1b[0m");

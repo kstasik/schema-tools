@@ -21,7 +21,7 @@ pub fn from_oneof(
                         .map(|m| {
                             super::add_validation_and_nullable(
                                 m,
-                                &converted.as_object().unwrap(),
+                                converted.as_object().unwrap(),
                                 container,
                             )
                         });

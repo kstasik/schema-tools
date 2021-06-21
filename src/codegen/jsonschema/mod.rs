@@ -214,7 +214,7 @@ pub fn extract_type(
 
         match node {
             Value::Object(schema) => {
-                title::extract_title(&schema, scope, options).map(|s| {
+                title::extract_title(schema, scope, options).map(|s| {
                     scope.entity(&s);
                     s
                 })?;
@@ -300,11 +300,7 @@ pub fn extract_type(
                     scope.pop_space();
                 }
 
-                Ok(add_validation_and_nullable(
-                    with_spaces?,
-                    &schema,
-                    container,
-                ))
+                Ok(add_validation_and_nullable(with_spaces?, schema, container))
             }
             _ => {
                 log::error!("{}: Schema is not an object", scope);

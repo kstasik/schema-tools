@@ -13,7 +13,7 @@ pub fn from_const(
     _resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
 ) -> Result<Model, Error> {
-    let name = super::title::extract_title(&schema, scope, options)?;
+    let name = super::title::extract_title(schema, scope, options)?;
 
     match schema.get("const") {
         Some(Value::String(v)) => Ok(Model::new(ModelType::ConstType(ConstType {

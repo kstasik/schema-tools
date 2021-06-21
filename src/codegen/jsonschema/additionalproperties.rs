@@ -14,7 +14,7 @@ pub fn from_object_with_additional_properties(
     resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
 ) -> Result<Model, Error> {
-    let name = super::title::extract_title(&schema, scope, options)?;
+    let name = super::title::extract_title(schema, scope, options)?;
 
     match schema.get("additionalProperties") {
         Some(value) => match value {

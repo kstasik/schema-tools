@@ -31,7 +31,7 @@ impl Endpoint {
         let mut parts = path.split('/').collect::<Vec<&str>>();
         let mut version = None;
 
-        if VERSION.is_match(&parts.first().unwrap()) {
+        if VERSION.is_match(parts.first().unwrap()) {
             version = Some(parts.first().unwrap().to_string());
             parts = parts.drain(1..).collect(); // shift vectors
         }

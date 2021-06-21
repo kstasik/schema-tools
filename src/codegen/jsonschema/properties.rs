@@ -12,8 +12,8 @@ pub fn from_object_with_properties(
     resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
 ) -> Result<Model, Error> {
-    let name = super::title::extract_title(&schema, scope, options)?;
-    let required = super::required::extract_required(&schema, scope);
+    let name = super::title::extract_title(schema, scope, options)?;
+    let required = super::required::extract_required(schema, scope);
 
     match schema.get("properties") {
         Some(Value::Object(props)) => {

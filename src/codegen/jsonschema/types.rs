@@ -301,7 +301,7 @@ impl Model {
             ModelType::NullableOptionalWrapperType(s) => Ok(&s.name),
             ModelType::PrimitiveType(p) => {
                 if let Some(s) = &p.name {
-                    Ok(&s)
+                    Ok(s)
                 } else {
                     Err(Error::CodegenCannotNameModelError(format!(
                         "primitive: {:?}",
@@ -311,7 +311,7 @@ impl Model {
             }
             ModelType::ArrayType(p) => {
                 if let Some(s) = &p.name {
-                    Ok(&s)
+                    Ok(s)
                 } else {
                     Err(Error::CodegenCannotNameModelError(format!(
                         "array: {:?}",
@@ -321,7 +321,7 @@ impl Model {
             }
             ModelType::MapType(p) => {
                 if let Some(s) = &p.name {
-                    Ok(&s)
+                    Ok(s)
                 } else {
                     Err(Error::CodegenCannotNameModelError(format!(
                         "map: {:?}",
@@ -618,7 +618,7 @@ impl PrimitiveType {
     ) -> Self {
         let type_ = schema.get("type").unwrap().as_str().unwrap().to_string();
 
-        let name = title::extract_title(&schema, scope, options)
+        let name = title::extract_title(schema, scope, options)
             .map(Some)
             .unwrap();
 

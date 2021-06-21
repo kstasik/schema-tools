@@ -195,7 +195,7 @@ impl Templates {
                 Template::Endpoints(_) => Some(TemplateType::Endpoints),
                 _ => None,
             })
-            .filter(|f| types.contains(&f))
+            .filter(|f| types.contains(f))
             .count()
             > 0
     }
@@ -222,7 +222,7 @@ impl Template {
                 return Err(Error::CodegenFileSkipped);
             }
 
-            let params = super::format(&first_line.trim_matches(&['{', '}', '#', ' '] as &[_]))?;
+            let params = super::format(first_line.trim_matches(&['{', '}', '#', ' '] as &[_]))?;
 
             params
                 .get("type")
@@ -283,12 +283,12 @@ impl EndpointsTemplate {
 
         let condition = config
             .get("if")
-            .map(|s| Condition::from(&s.as_str().unwrap()))
+            .map(|s| Condition::from(s.as_str().unwrap()))
             .map_or(Ok(None), |v| v.map(Some))?;
 
         let group_by = config
             .get("group_by")
-            .map(|s| GroupBy::from(&s.as_str().unwrap()))
+            .map(|s| GroupBy::from(s.as_str().unwrap()))
             .unwrap_or_else(|| Ok(GroupBy::default()))?;
 
         Ok(Template::Endpoints(Self {
@@ -362,7 +362,7 @@ impl TagsTemplate {
 
         let condition = config
             .get("if")
-            .map(|s| Condition::from(&s.as_str().unwrap()))
+            .map(|s| Condition::from(s.as_str().unwrap()))
             .map_or(Ok(None), |v| v.map(Some))?;
 
         Ok(Template::Tags(Self {
@@ -437,7 +437,7 @@ impl ModelsTemplate {
 
         let condition = config
             .get("if")
-            .map(|s| Condition::from(&s.as_str().unwrap()))
+            .map(|s| Condition::from(s.as_str().unwrap()))
             .map_or(Ok(None), |v| v.map(Some))?;
 
         Ok(Template::Models(Self {

@@ -26,7 +26,7 @@ impl MergerOptions {
         let mut root = schema.get_body_mut();
         let mut scope = SchemaScope::default();
 
-        process_node(&mut root, &self, &mut scope, resolver);
+        process_node(&mut root, self, &mut scope, resolver);
     }
 }
 
