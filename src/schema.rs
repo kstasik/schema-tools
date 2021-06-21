@@ -1,8 +1,10 @@
+use serde::Deserialize;
 use serde_json::Value;
-use std::{fs, path::PathBuf};
+use std::{fs, iter::FromIterator, path::PathBuf};
 use url::Url;
 
 use crate::error::Error;
+use crate::process;
 
 #[derive(Debug, Clone)]
 pub struct Schema {
@@ -68,11 +70,20 @@ impl<'a> Schema {
             .contains("yaml")
             || is_yaml_extension
         {
-            serde_yaml::from_str(response.as_ref()).map_err(|_| Error::SchemaLoadIncorrectType {
-                url: url.to_string(),
-                content_type: content_type.unwrap_or_else(|| "".to_string()),
-                extension: extension.unwrap_or("").to_string(),
-            })?
+            let mut docs = serde_yaml::Deserializer::from_str(response.as_ref())
+                .into_iter()
+                .map(|d| Value::deserialize(d).map_err(Error::DeserializeYamlError))
+                .collect::<Result<Vec<_>, _>>()?;
+
+            match docs.len() {
+                0 => Err(Error::SchemaLoadIncorrectType {
+                    url: url.to_string(),
+                    content_type: content_type.unwrap_or_else(|| "".to_string()),
+                    extension: extension.unwrap_or("").to_string(),
+                }),
+                1 => Ok(docs.remove(0)),
+                _ => Ok(serde_json::Value::from_iter(docs.into_iter())),
+            }?
         } else {
             serde_json::from_str(response.as_ref()).map_err(|_| Error::SchemaLoadIncorrectType {
                 url: url.to_string(),
@@ -82,6 +93,23 @@ impl<'a> Schema {
         };
 
         Ok(Schema { body, url })
+    }
+
+    pub fn load_urls(urls: Vec<Url>) -> Result<Schema, Error> {
+        if urls.len() == 1 {
+            return Self::load_url(urls.first().unwrap().clone());
+        }
+
+        let mut bodies: Vec<Value> = Vec::with_capacity(urls.len());
+        for url in urls {
+            let data = Self::load_url(url.clone())?.body;
+            bodies.push(process::rel_to_absolute_refs(&url, data));
+        }
+
+        Ok(Schema {
+            body: serde_json::json!(bodies),
+            url: Url::parse("schema://inline").unwrap(),
+        })
     }
 
     pub fn from_json(body: Value) -> Schema {

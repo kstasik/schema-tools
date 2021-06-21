@@ -40,7 +40,7 @@ enum Command {
 
 #[derive(Clap, Debug)]
 struct OpenapiOpts {
-    #[clap(short, about = "Path to json/yaml file of openapi specification")]
+    #[clap(about = "Path to json/yaml file of openapi specification")]
     file: String,
 
     #[clap(long, about = "Should continue on error")]
@@ -52,7 +52,7 @@ struct OpenapiOpts {
 
 #[derive(Clap, Debug)]
 struct JsonSchemaOpts {
-    #[clap(short, about = "Path to json/yaml file representing json-schema")]
+    #[clap(about = "Path to json/yaml file representing json-schema")]
     file: String,
 
     #[clap(long, about = "Should continue on error")]

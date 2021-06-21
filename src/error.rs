@@ -2,6 +2,12 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Cannot deserialize yaml document: {0}")]
+    DeserializeYamlError(serde_yaml::Error),
+
+    #[error("Filter {0} is incorrect")]
+    IncorrectFilterError(String),
+
     #[error("Please provide revision, branch or tag")]
     RegistryMissingRevTagBranch,
 

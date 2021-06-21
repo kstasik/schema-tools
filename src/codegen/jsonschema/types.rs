@@ -176,6 +176,21 @@ pub struct WrapperType {
 
     #[serde(rename = "models")]
     pub models: Vec<FlatModel>,
+
+    #[serde(rename = "kind")]
+    pub kind: WrapperTypeKind,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub enum WrapperTypeKind {
+    AllOf,
+    OneOf,
+}
+
+impl Default for WrapperTypeKind {
+    fn default() -> Self {
+        Self::OneOf
+    }
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]

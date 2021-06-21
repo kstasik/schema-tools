@@ -71,6 +71,7 @@ pub fn from_oneof(
                 Ok(Model::new(ModelType::WrapperType(WrapperType {
                     name: scope.namer().decorate(vec!["Variant".to_string()]),
                     models: models?,
+                    ..WrapperType::default()
                 })))
             }
             _ => Err(Error::SchemaInvalidProperty("oneOf".to_string())),
@@ -216,6 +217,7 @@ mod tests {
                         ..FlatModel::default()
                     }
                 ],
+                ..WrapperType::default()
             }))
         );
     }

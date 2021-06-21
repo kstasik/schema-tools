@@ -6,6 +6,7 @@ use serde::{ser::SerializeStruct, Serialize};
 use serde_json::{Map, Value};
 
 pub mod additionalproperties;
+pub mod allof;
 pub mod const_;
 pub mod enum_;
 pub mod items;
@@ -112,7 +113,6 @@ impl ModelContainer {
 
             for a in ids {
                 let m = self.models.get_mut(a as usize).unwrap();
-                println!("{}, {:?}", a, m);
                 m.add_spaces(scope);
             }
 
@@ -143,6 +143,7 @@ pub struct JsonSchemaExtractOptions {
     pub nested_arrays_as_models: bool,
     pub optional_and_nullable_as_models: bool,
     pub base_name: Option<String>,
+    pub allow_list: bool,
 }
 
 pub fn extract(
@@ -151,13 +152,32 @@ pub fn extract(
 ) -> Result<ModelContainer, Error> {
     let mut mcontainer = ModelContainer::default();
 
-    add_types(
-        schema.get_body(),
-        &mut mcontainer,
-        &mut SchemaScope::default(),
-        &SchemaResolver::new(schema),
-        &options,
-    )?;
+    if options.allow_list && schema.get_body().is_array() {
+        let list = schema.get_body().as_array().unwrap();
+        let scope = &mut SchemaScope::default();
+
+        for (i, body) in list.iter().enumerate() {
+            scope.index(i);
+
+            add_types(
+                body,
+                &mut mcontainer,
+                scope,
+                &SchemaResolver::new(schema),
+                &options,
+            )?;
+
+            scope.pop();
+        }
+    } else {
+        add_types(
+            schema.get_body(),
+            &mut mcontainer,
+            &mut SchemaScope::default(),
+            &SchemaResolver::new(schema),
+            &options,
+        )?;
+    }
 
     Ok(mcontainer)
 }
@@ -257,6 +277,7 @@ pub fn extract_type(
                         }
                     }
                     None => oneof::from_oneof(schema, container, scope, resolver, options)
+                        .or_else(|_| allof::from_allof(schema, container, scope, resolver, options))
                         .or_else(|_| {
                             patternproperties::from_pattern_properties(
                                 schema, container, scope, resolver, options,

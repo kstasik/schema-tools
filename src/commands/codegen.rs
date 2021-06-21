@@ -42,8 +42,11 @@ pub enum Command {
 
 #[derive(Clap, Debug)]
 pub struct JsonSchemaOpts {
-    #[clap(short, about = "Path to json/yaml file with json-schema specification")]
-    pub file: String,
+    #[clap(
+        about = "Path to json/yaml file with json-schema specification",
+        multiple_values = true
+    )]
+    pub file: Vec<String>,
 
     #[clap(
         long,
@@ -85,7 +88,7 @@ pub struct JsonSchemaOpts {
 
 #[derive(Clap, Debug)]
 pub struct OpenapiOpts {
-    #[clap(short, about = "Path to json/yaml file with openapi specification")]
+    #[clap(about = "Path to json/yaml file with openapi specification")]
     pub file: String,
 
     #[clap(
@@ -126,7 +129,15 @@ pub struct OpenapiOpts {
 impl GetSchemaCommand for Opts {
     fn get_schema(&self) -> Result<Schema, Error> {
         match &self.command {
-            Command::JsonSchema(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::JsonSchema(opts) => {
+                let urls = opts
+                    .file
+                    .iter()
+                    .map(|s| path_to_url(s.clone()))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                Schema::load_urls(urls)
+            }
             Command::Openapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
         }
     }
@@ -149,6 +160,7 @@ impl Opts {
                         optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
                         nested_arrays_as_models: opts.nested_arrays_as_models,
                         base_name: opts.base_name.clone(),
+                        allow_list: true,
                     },
                 )?;
 
