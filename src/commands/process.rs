@@ -112,8 +112,8 @@ pub struct BumpOpenapiOpts {
 
 #[derive(Clap, Debug)]
 pub struct MergeAllOfOpts {
-    #[clap(about = "Path to json/yaml file")]
-    pub file: String,
+    #[clap(about = "Path to json/yaml file", multiple_values = true)]
+    pub file: Vec<String>,
 
     #[clap(long, about = "Leave invalid properties on allOf level")]
     leave_invalid_properties: bool,
@@ -134,8 +134,8 @@ pub struct MergeAllOfOpts {
 
 #[derive(Clap, Debug)]
 pub struct DereferenceOpts {
-    #[clap(about = "Path to json/yaml file")]
-    pub file: String,
+    #[clap(about = "Path to json/yaml file", multiple_values = true)]
+    pub file: Vec<String>,
 
     #[clap(long, about = "Leaves internal references intact in root schema file")]
     skip_root_internal_references: bool,
@@ -201,10 +201,26 @@ pub struct PatchOpts {
 impl GetSchemaCommand for Opts {
     fn get_schema(&self) -> Result<Schema, Error> {
         match &self.command {
-            Command::MergeAllOf(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::MergeAllOf(opts) => {
+                let urls = opts
+                    .file
+                    .iter()
+                    .map(|s| path_to_url(s.clone()))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                Schema::load_urls(urls)
+            }
             Command::MergeOpenapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::BumpOpenapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
-            Command::Dereference(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::Dereference(opts) => {
+                let urls = opts
+                    .file
+                    .iter()
+                    .map(|s| path_to_url(s.clone()))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                Schema::load_urls(urls)
+            }
             Command::Name(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
             Command::Patch(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
         }
