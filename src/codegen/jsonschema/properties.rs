@@ -60,6 +60,13 @@ pub fn from_object_with_properties(
             Ok(Model::new(ModelType::ObjectType(ObjectType {
                 name,
                 properties,
+                additional: schema
+                    .get("additionalProperties")
+                    .map(|f| match f {
+                        Value::Bool(f) => *f,
+                        _ => true,
+                    })
+                    .unwrap_or(true),
             })))
         }
         _ => Err(Error::SchemaInvalidProperty("properties".to_string())),
@@ -108,6 +115,106 @@ mod tests {
     use serde_json::json;
 
     #[test]
+    fn test_should_convert_to_object_with_additional_properties() {
+        let schema = json!({
+            "required": ["a"],
+            "properties": {
+                "a": { "type": "string"},
+                "b": { "type": "number"}
+            },
+            "additionalProperties": true,
+        });
+
+        let mut container = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        scope.entity("TestName");
+        let result = from_object_with_properties(
+            schema.as_object().unwrap(),
+            &mut container,
+            &mut scope,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(
+            result.unwrap(),
+            Model::new(ModelType::ObjectType(ObjectType {
+                name: "TestName".to_string(),
+                properties: vec![
+                    FlatModel {
+                        name: Some("a".to_string()),
+                        type_: "string".to_string(),
+                        ..FlatModel::default()
+                    },
+                    FlatModel {
+                        name: Some("b".to_string()),
+                        type_: "number".to_string(),
+                        attributes: Attributes {
+                            required: false,
+                            ..Attributes::default()
+                        },
+                        ..FlatModel::default()
+                    }
+                ],
+                additional: true,
+            }))
+        );
+    }
+
+    #[test]
+    fn test_should_convert_to_object_without_additional_properties() {
+        let schema = json!({
+            "required": ["a"],
+            "properties": {
+                "a": { "type": "string"},
+                "b": { "type": "number"}
+            },
+            "additionalProperties": false,
+        });
+
+        let mut container = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        scope.entity("TestName");
+        let result = from_object_with_properties(
+            schema.as_object().unwrap(),
+            &mut container,
+            &mut scope,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(
+            result.unwrap(),
+            Model::new(ModelType::ObjectType(ObjectType {
+                name: "TestName".to_string(),
+                properties: vec![
+                    FlatModel {
+                        name: Some("a".to_string()),
+                        type_: "string".to_string(),
+                        ..FlatModel::default()
+                    },
+                    FlatModel {
+                        name: Some("b".to_string()),
+                        type_: "number".to_string(),
+                        attributes: Attributes {
+                            required: false,
+                            ..Attributes::default()
+                        },
+                        ..FlatModel::default()
+                    }
+                ],
+                additional: false,
+            }))
+        );
+    }
+
+    #[test]
     fn test_should_convert_to_object() {
         let schema = json!({
             "required": ["a"],
@@ -150,7 +257,8 @@ mod tests {
                         },
                         ..FlatModel::default()
                     }
-                ]
+                ],
+                additional: true,
             }))
         );
     }
@@ -208,6 +316,7 @@ mod tests {
                         ..FlatModel::default()
                     }
                 ],
+                additional: true,
             }))
         );
 

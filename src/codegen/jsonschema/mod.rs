@@ -144,6 +144,7 @@ pub struct JsonSchemaExtractOptions {
     pub optional_and_nullable_as_models: bool,
     pub base_name: Option<String>,
     pub allow_list: bool,
+    pub keep_schema: tools::Filter,
 }
 
 pub fn extract(
@@ -299,8 +300,12 @@ pub fn extract_type(
                 if has_id {
                     scope.pop_space();
                 }
-
-                Ok(add_validation_and_nullable(with_spaces?, schema, container))
+                Ok(add_validation_and_nullable(
+                    with_spaces?,
+                    schema,
+                    container,
+                    options.keep_schema.check(node, false),
+                ))
             }
             _ => {
                 log::error!("{}: Schema is not an object", scope);
@@ -315,6 +320,7 @@ fn add_validation_and_nullable(
     model: types::Model,
     schema: &Map<String, Value>,
     mcontainer: &mut ModelContainer,
+    keep_schema: bool,
 ) -> types::Model {
     if model.attributes.validation.is_some() {
         return model;
@@ -392,6 +398,11 @@ fn add_validation_and_nullable(
         nullable,
         validation,
         x,
+        schema: if keep_schema {
+            Some(Value::Object(schema.clone()))
+        } else {
+            None
+        },
         ..types::Attributes::default()
     };
 

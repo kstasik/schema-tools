@@ -116,6 +116,7 @@ pub struct PrimitiveType {
 pub struct ObjectType {
     pub name: String,
     pub properties: Vec<FlatModel>,
+    pub additional: bool,
 }
 
 #[derive(Debug, Serialize, Clone, PartialEq, Default)]
@@ -221,6 +222,9 @@ pub struct Attributes {
 
     #[serde(rename = "validation")]
     pub validation: Option<std::collections::HashMap<String, Value>>,
+
+    #[serde(rename = "schema")]
+    pub schema: Option<Value>,
 
     #[serde(rename = "x")]
     pub x: std::collections::HashMap<String, Value>,
@@ -539,6 +543,7 @@ impl Attributes {
             required: true,
             validation: None,
             reference: false,
+            schema: None,
             x: std::collections::HashMap::new(),
         }
     }
