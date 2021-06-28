@@ -368,9 +368,9 @@ impl Filter {
         })
     }
 
-    pub fn check(&self, data: &Value) -> bool {
+    pub fn check(&self, data: &Value, default: bool) -> bool {
         if self.conditions.is_empty() {
-            return true;
+            return default;
         }
 
         self.conditions

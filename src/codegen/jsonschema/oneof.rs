@@ -23,6 +23,7 @@ pub fn from_oneof(
                                 m,
                                 converted.as_object().unwrap(),
                                 container,
+                                options.keep_schema.check(one_of, false),
                             )
                         });
                 }

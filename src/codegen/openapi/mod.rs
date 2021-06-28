@@ -21,6 +21,7 @@ pub struct OpenapiExtractOptions {
     pub wrappers: bool,
     pub nested_arrays_as_models: bool,
     pub optional_and_nullable_as_models: bool,
+    pub keep_schema: tools::Filter,
 }
 #[derive(Default)]
 pub struct EndpointContainer {
@@ -109,6 +110,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
     let resolver = &SchemaResolver::new(schema);
     let options = &JsonSchemaExtractOptions {
         optional_and_nullable_as_models: options.optional_and_nullable_as_models,
+        keep_schema: options.keep_schema,
         ..Default::default()
     };
 

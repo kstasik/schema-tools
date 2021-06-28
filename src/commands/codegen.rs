@@ -54,6 +54,13 @@ pub struct JsonSchemaOpts {
     )]
     pub wrappers: bool,
 
+    #[clap(
+        long,
+        about = "Keep schema condition (allows access to original json schema in selected nodes)",
+        required = false
+    )]
+    keep_schema: Vec<String>,
+
     #[clap(long, about = "Treat optional an nullable fields as models")]
     pub optional_and_nullable_as_models: bool,
 
@@ -102,6 +109,13 @@ pub struct OpenapiOpts {
 
     #[clap(long, about = "Treat nested arrays as models")]
     pub nested_arrays_as_models: bool,
+
+    #[clap(
+        long,
+        about = "Keep schema condition (allows access to original json schema in selected nodes)",
+        required = false
+    )]
+    keep_schema: Vec<String>,
 
     #[clap(
         long,
@@ -161,6 +175,7 @@ impl Opts {
                         nested_arrays_as_models: opts.nested_arrays_as_models,
                         base_name: opts.base_name.clone(),
                         allow_list: true,
+                        keep_schema: crate::tools::Filter::new(&opts.keep_schema)?,
                     },
                 )?;
 
@@ -182,6 +197,7 @@ impl Opts {
                         wrappers: opts.wrappers,
                         optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
                         nested_arrays_as_models: opts.nested_arrays_as_models,
+                        keep_schema: crate::tools::Filter::new(&opts.keep_schema)?,
                     },
                 )?;
 

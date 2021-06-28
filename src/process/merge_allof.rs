@@ -45,7 +45,7 @@ fn process_merge(
     scope: &mut SchemaScope,
     resolver: &SchemaResolver,
 ) {
-    if !options.filter.check(root) {
+    if !options.filter.check(root, true) {
         return log::info!("allOf skipped because of filter");
     }
 
