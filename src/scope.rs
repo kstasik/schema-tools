@@ -167,7 +167,9 @@ impl BasicNamer {
 
         let t = result
             .chars()
-            .filter(|c| c.is_ascii_alphabetic() || c.is_ascii_alphanumeric())
+            .filter(|c| {
+                c.is_ascii_alphabetic() || c.is_ascii_alphanumeric() || c.is_ascii_whitespace()
+            })
             .collect::<String>();
 
         let result: Vec<String> = t
