@@ -27,3 +27,4 @@ Inflector = "*"
 
 [dev-dependencies]
 test-case = "1"
+testing_logger = "0.1.1"

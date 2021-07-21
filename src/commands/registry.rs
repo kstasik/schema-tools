@@ -43,6 +43,9 @@ struct AddOpts {
 
     #[clap(long, about = "Git revision")]
     rev: Option<String>,
+
+    #[clap(long, parse(from_occurrences), about = "Clean templates")]
+    clean: i32,
 }
 
 impl Opts {
@@ -59,7 +62,7 @@ impl Opts {
                     Err(Error::RegistryMissingRevTagBranch)
                 }?;
 
-                let registry = discover_git(&opts.uri, checkout)?;
+                let registry = discover_git(&opts.uri, checkout, opts.clean > 0)?;
                 discovery.register(opts.name.clone(), registry);
             }
         }
