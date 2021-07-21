@@ -44,8 +44,8 @@ struct AddOpts {
     #[clap(long, about = "Git revision")]
     rev: Option<String>,
 
-    #[clap(long, parse(from_occurrences), about = "Clean templates")]
-    clean: i32,
+    #[clap(long, about = "Skip cache during checkout")]
+    no_cache: bool,
 }
 
 impl Opts {
@@ -62,7 +62,7 @@ impl Opts {
                     Err(Error::RegistryMissingRevTagBranch)
                 }?;
 
-                let registry = discover_git(&opts.uri, checkout, opts.clean > 0)?;
+                let registry = discover_git(&opts.uri, checkout, opts.no_cache)?;
                 discovery.register(opts.name.clone(), registry);
             }
         }

@@ -106,7 +106,7 @@ impl Registry {
 pub fn discover_git(
     repository: &str,
     source: GitCheckoutType,
-    clean: bool,
+    no_cache: bool,
 ) -> Result<Registry, Error> {
     let mut directory = std::env::temp_dir();
     let mut refspecs: Vec<String> = vec![];
@@ -134,7 +134,7 @@ pub fn discover_git(
     directory.push("schema-tools");
     directory.push(format!("{:x}", digest));
 
-    if directory.exists() && clean {
+    if directory.exists() && no_cache {
         fs::remove_dir_all(directory.as_path()).map_err(Error::DiscoveryCleanRegistryError)?;
     } else if directory.exists() {
         log::debug!("already exists: {:?}", directory);
