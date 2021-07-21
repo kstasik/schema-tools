@@ -20,6 +20,9 @@ pub enum Error {
     #[error("Discovery symlink error: {0}")]
     DiscoverySymlinkError(std::io::Error),
 
+    #[error("Discovery clean registry error: {0}")]
+    DiscoveryCleanRegistryError(std::io::Error),
+
     #[error("Git url format should match git://repository#(branch|tag)?(#directory) pattern")]
     DiscoveryInvalidGitUrl,
 

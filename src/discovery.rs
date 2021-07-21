@@ -103,7 +103,11 @@ impl Registry {
     }
 }
 
-pub fn discover_git(repository: &str, source: GitCheckoutType) -> Result<Registry, Error> {
+pub fn discover_git(
+    repository: &str,
+    source: GitCheckoutType,
+    no_cache: bool,
+) -> Result<Registry, Error> {
     let mut directory = std::env::temp_dir();
     let mut refspecs: Vec<String> = vec![];
 
@@ -130,7 +134,9 @@ pub fn discover_git(repository: &str, source: GitCheckoutType) -> Result<Registr
     directory.push("schema-tools");
     directory.push(format!("{:x}", digest));
 
-    if directory.exists() {
+    if directory.exists() && no_cache {
+        fs::remove_dir_all(directory.as_path()).map_err(Error::DiscoveryCleanRegistryError)?;
+    } else if directory.exists() {
         log::debug!("already exists: {:?}", directory);
         return Ok(Registry { path: directory });
     }
@@ -166,6 +172,7 @@ mod tests {
         let registry = discover_git(
             "git://github.com/kstasik/schema-tools.git",
             GitCheckoutType::Rev("a279f3b54bc7b03af83162fbf027eb781db1e046".to_string()),
+            false,
         )
         .unwrap();
         discovery.register("testing".to_string(), registry);
@@ -194,6 +201,7 @@ mod tests {
         let registry = discover_git(
             "git://github.com/kstasik/schema-tools.git",
             GitCheckoutType::Rev("a279f3b54bc7b03af83162fbf027eb781db1e046".to_string()),
+            false,
         )
         .unwrap();
         discovery.register("testing".to_string(), registry);
@@ -219,6 +227,7 @@ mod tests {
         let registry = discover_git(
             "git://github.com/kstasik/schema-tools.git",
             GitCheckoutType::Rev("a279f3b54bc7b03af83162fbf027eb781db1e046".to_string()),
+            false,
         )
         .unwrap();
         discovery.register("testing".to_string(), registry);
@@ -248,6 +257,7 @@ mod tests {
         let registry = discover_git(
             "git://github.com/kstasik/schema-tools.git",
             GitCheckoutType::Rev("a279f3b54bc7b03af83162fbf027eb781db1e046".to_string()),
+            false,
         )
         .unwrap();
 
@@ -262,6 +272,7 @@ mod tests {
         let registry = discover_git(
             "git://github.com/kstasik/schema-tools.git",
             GitCheckoutType::Branch("bugfix/title-conflict".to_string()),
+            false,
         )
         .unwrap();
 
@@ -301,6 +312,7 @@ test-case = "1""#;
         let registry = discover_git(
             "git://github.com/kstasik/schema-tools.git",
             GitCheckoutType::Tag("v0.0.1".to_string()),
+            false,
         )
         .unwrap();
 
@@ -329,5 +341,53 @@ reqwest = { version = ">= 0.10", features = ["blocking"] }
 test-case = "1""#;
 
         assert_eq!(data, expected);
+    }
+
+    #[test]
+    fn test_discover_git_tag_return_already_existing_registry() {
+        testing_logger::setup();
+
+        discover_git(
+            "git://github.com/kstasik/schema-tools.git",
+            GitCheckoutType::Tag("v0.0.2".to_string()),
+            true,
+        )
+        .unwrap();
+        discover_git(
+            "git://github.com/kstasik/schema-tools.git",
+            GitCheckoutType::Tag("v0.0.2".to_string()),
+            false,
+        )
+        .unwrap();
+
+        testing_logger::validate(|captured_logs| {
+            assert_eq!(captured_logs.len(), 2);
+            assert!(captured_logs[0].body.contains("checking out:"));
+            assert!(captured_logs[1].body.contains("already exists:"));
+        });
+    }
+
+    #[test]
+    fn test_discover_git_tag_clean_existing_registry() {
+        testing_logger::setup();
+
+        discover_git(
+            "git://github.com/kstasik/schema-tools.git",
+            GitCheckoutType::Tag("v0.0.3".to_string()),
+            true,
+        )
+        .unwrap();
+        discover_git(
+            "git://github.com/kstasik/schema-tools.git",
+            GitCheckoutType::Tag("v0.0.3".to_string()),
+            true,
+        )
+        .unwrap();
+
+        testing_logger::validate(|captured_logs| {
+            assert_eq!(captured_logs.len(), 2);
+            assert!(captured_logs[0].body.contains("checking out:"));
+            assert!(captured_logs[1].body.contains("checking out:"));
+        });
     }
 }

@@ -43,6 +43,9 @@ struct AddOpts {
 
     #[clap(long, about = "Git revision")]
     rev: Option<String>,
+
+    #[clap(long, about = "Skip cache during checkout")]
+    no_cache: bool,
 }
 
 impl Opts {
@@ -59,7 +62,7 @@ impl Opts {
                     Err(Error::RegistryMissingRevTagBranch)
                 }?;
 
-                let registry = discover_git(&opts.uri, checkout)?;
+                let registry = discover_git(&opts.uri, checkout, opts.no_cache)?;
                 discovery.register(opts.name.clone(), registry);
             }
         }
