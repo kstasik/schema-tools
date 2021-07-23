@@ -374,7 +374,7 @@ fn add_validation_and_nullable(
     let nullable = schema
         .get("nullable")
         .map(|v| v.as_bool().unwrap_or(false))
-        .unwrap_or(false);
+        .unwrap_or_else(|| model.attributes.nullable);
 
     let validation = if !result.is_empty() {
         Some(result)
