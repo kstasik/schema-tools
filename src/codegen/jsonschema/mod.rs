@@ -590,4 +590,70 @@ mod tests {
 
         assert_eq!(true, result.is_ok());
     }
+
+    #[test]
+    fn test_nullable_after_resolving_reference() {
+        let schema = Schema::from_json(json!({
+            "definitions": {
+                "def2": {
+                    "title": "Testing",
+                    "type": "object",
+                    "required": ["property1"],
+                    "properties": {
+                        "property1": {"type": "string"}
+                    }
+                },
+            },
+            "title": "MySecretName",
+            "type": "object",
+            "properties": {
+                "xxxx": {
+                    "$ref": "#/definitions/def2"
+                },
+                "yyyy": {
+                    "oneOf": [
+                        {"type": "null"},
+                        {"$ref": "#/definitions/def2"}
+                    ]
+                }
+            }
+        }));
+
+        let options = JsonSchemaExtractOptions::default();
+        let result = extract(&schema, options);
+
+        assert_eq!(true, result.is_ok());
+
+        let container = result.unwrap();
+        let value = serde_json::to_value(container).unwrap();
+
+        assert_eq!(
+            value
+                .pointer("/models/1/object/properties/0/nullable")
+                .map(|v| v.as_bool().unwrap())
+                .unwrap(),
+            false
+        );
+        assert_eq!(
+            value
+                .pointer("/models/1/object/properties/0/model/name")
+                .map(|v| v.as_str().unwrap())
+                .unwrap(),
+            "Testing"
+        );
+        assert_eq!(
+            value
+                .pointer("/models/1/object/properties/1/nullable")
+                .map(|v| v.as_bool().unwrap())
+                .unwrap(),
+            true
+        );
+        assert_eq!(
+            value
+                .pointer("/models/1/object/properties/1/model/name")
+                .map(|v| v.as_str().unwrap())
+                .unwrap(),
+            "Testing"
+        );
+    }
 }

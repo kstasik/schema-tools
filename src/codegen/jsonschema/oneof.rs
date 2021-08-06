@@ -4,7 +4,10 @@ use super::{
 };
 use serde_json::{Map, Value};
 
-use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
+use crate::{
+    codegen::jsonschema::types::Attributes, error::Error, resolver::SchemaResolver,
+    scope::SchemaScope,
+};
 
 pub fn from_oneof(
     schema: &Map<String, Value>,
@@ -16,16 +19,10 @@ pub fn from_oneof(
     match schema.get("oneOf") {
         Some(one_of) => match one_of {
             Value::Array(variants) => {
-                if let Some(converted) = simplify_one_of(variants, scope, resolver) {
-                    return super::extract_type(&converted, container, scope, resolver, options)
-                        .map(|m| {
-                            super::add_validation_and_nullable(
-                                m,
-                                converted.as_object().unwrap(),
-                                container,
-                                options.keep_schema.check(one_of, false),
-                            )
-                        });
+                if let Some(converted) =
+                    simplify_one_of(variants, container, scope, resolver, options)
+                {
+                    return converted;
                 }
 
                 scope.form("oneOf");
@@ -109,9 +106,11 @@ fn get_const_property(model: &Model) -> Option<(String, String)> {
 
 fn simplify_one_of(
     variants: &[Value],
+    container: &mut ModelContainer,
     scope: &mut SchemaScope,
     resolver: &SchemaResolver,
-) -> Option<Value> {
+    options: &JsonSchemaExtractOptions,
+) -> Option<Result<Model, Error>> {
     let null_type = serde_json::json!({"type":"null"});
 
     if variants.len() != 2 || !variants.contains(&null_type) {
@@ -123,14 +122,24 @@ fn simplify_one_of(
     element.map(|option| {
         resolver
             .resolve(option, scope, |node, scope| {
-                let mut new_node = node.clone();
-
                 log::info!("{}: mapping oneOf with null to simple type", scope);
-                new_node
-                    .as_object_mut()
-                    .unwrap()
-                    .insert("nullable".to_string(), Value::Bool(true));
-                Ok(new_node)
+
+                Ok(
+                    super::extract_type(node, container, scope, resolver, options).map(|m| {
+                        let attributes = Attributes {
+                            nullable: true,
+                            ..m.attributes.clone()
+                        };
+
+                        super::add_validation_and_nullable(
+                            m,
+                            node.as_object().unwrap(),
+                            container,
+                            options.keep_schema.check(node, false),
+                        )
+                        .with_attributes(&attributes)
+                    }),
+                )
             })
             .unwrap()
     })
@@ -140,7 +149,7 @@ fn simplify_one_of(
 mod tests {
     use std::collections::HashMap;
 
-    use crate::codegen::jsonschema::types::{Attributes, FlatModel};
+    use crate::codegen::jsonschema::types::{Attributes, FlatModel, ObjectType};
 
     use super::*;
     use serde_json::json;
@@ -298,6 +307,46 @@ mod tests {
                 ],
                 ..WrapperType::default()
             }))
+        );
+    }
+
+    #[test]
+    fn test_should_convert_to_nullable_object() {
+        let schema = json!({"oneOf": [{"type":"null"},{"type": "object","required":"test","properties":{"test":{"type":"string"}}}]});
+        let mut container = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        scope.entity("TestName");
+        let result = from_oneof(
+            schema.as_object().unwrap(),
+            &mut container,
+            &mut scope,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(
+            result.unwrap(),
+            Model::new(ModelType::ObjectType(ObjectType {
+                name: "TestName".to_string(),
+                properties: vec![FlatModel {
+                    name: Some("test".to_string()),
+                    type_: "string".to_string(),
+                    attributes: Attributes {
+                        required: false,
+                        ..Attributes::default()
+                    },
+                    ..FlatModel::default()
+                },],
+                additional: true,
+                ..ObjectType::default()
+            }))
+            .with_attributes(&Attributes {
+                nullable: true,
+                ..Attributes::default()
+            })
         );
     }
 
