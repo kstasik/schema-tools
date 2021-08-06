@@ -5,7 +5,7 @@ use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope, scope::S
 
 use super::{title, JsonSchemaExtractOptions, ModelContainer};
 
-#[derive(Debug, Serialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Model {
     #[serde(flatten)]
     inner: ModelType,
@@ -13,6 +13,12 @@ pub struct Model {
     pub attributes: Attributes,
 
     pub spaces: SpacesContainer,
+}
+
+impl PartialEq for Model {
+    fn eq(&self, other: &Self) -> bool {
+        self.inner == other.inner && self.spaces == other.spaces
+    }
 }
 
 impl Model {
@@ -284,7 +290,7 @@ impl Model {
         }
         .map(|mut s| {
             s.spaces = self.spaces.clone();
-            s
+            s.customize_attributes(&self.attributes)
         })
     }
 
@@ -406,6 +412,13 @@ impl FlatModel {
             attributes: Attributes::default(),
             spaces: SpacesContainer::default(),
         }
+    }
+
+    // Modifies customizable attributes when refered type is resolved
+    pub fn customize_attributes(mut self, attributes: &Attributes) -> Self {
+        self.attributes.required = attributes.required;
+        self.attributes.nullable = attributes.nullable;
+        self
     }
 }
 
