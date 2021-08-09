@@ -143,7 +143,9 @@ fn merge_values(a: &mut Value, b: Value, options: &MergerOptions) {
         (a @ &mut Value::Array(_), Value::Array(b)) => {
             let a = a.as_array_mut().unwrap();
             for v in b {
-                a.push(v);
+                if !a.contains(&v) {
+                    a.push(v);
+                }
             }
         }
         (a, b) => *a = b,
