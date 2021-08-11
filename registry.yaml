@@ -1,1 +1,7 @@
-entries: []
+entries:
+  - name: schema-tools
+    version: 0.0.37
+    os: darwin
+    arch: amd64
+    url: https://github.com/kstasik/schema-tools/releases/download/v0.0.37/schematools-darwin-amd64.tar.gz
+    checksum: sha256-048017444e91f833aa59dd35f00d66b75cbdd942ccbe26b685e88841ec6def20
