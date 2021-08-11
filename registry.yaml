@@ -4,4 +4,4 @@ entries:
     os: darwin
     arch: amd64
     url: https://github.com/kstasik/schema-tools/releases/download/v0.0.37/schematools-darwin-amd64.tar.gz
-    checksum: sha256-048017444e91f833aa59dd35f00d66b75cbdd942ccbe26b685e88841ec6def20
+    checksum: sha256-fcc6bbdc934de08442c6bacb082b3a3ab4875c5d5ab0f11837553269d5b1d1d9
