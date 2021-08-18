@@ -253,11 +253,16 @@ pub fn extract_type(
 
                                         // todo: additionalProperties for tuple like types
                                     }
-                                    _ => Ok(types::Model::new(types::ModelType::PrimitiveType(
-                                        types::PrimitiveType::from(
-                                            schema, scope, resolver, options,
-                                        ),
-                                    ))),
+                                    _ => const_::from_const(
+                                        schema, container, scope, resolver, options,
+                                    )
+                                    .or_else(|_| {
+                                        Ok(types::Model::new(types::ModelType::PrimitiveType(
+                                            types::PrimitiveType::from(
+                                                schema, scope, resolver, options,
+                                            ),
+                                        )))
+                                    }),
                                 }?;
 
                                 // enum is mostly used for validation
