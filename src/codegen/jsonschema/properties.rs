@@ -2,7 +2,10 @@ use super::{
     types::{AnyType, FlatModel, Model, ModelType, NullableOptionalWrapperType, ObjectType},
     JsonSchemaExtractOptions, ModelContainer,
 };
-use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
+use crate::{
+    codegen::jsonschema::types::Attributes, error::Error, resolver::SchemaResolver,
+    scope::SchemaScope,
+};
 use serde_json::{Map, Value};
 
 pub fn from_object_with_properties(
@@ -86,7 +89,12 @@ fn convert_to_nullable_optional_wrapper(
             model,
             name: scope.namer().decorate(vec!["optional".to_string()]),
         },
-    ));
+    ))
+    .with_attributes(&Attributes {
+        required: false,
+        nullable: false,
+        ..Attributes::default()
+    });
 
     wrapper.flatten(container, scope)
 }
@@ -313,6 +321,11 @@ mod tests {
                             ..FlatModel::default()
                         })),
                         original: Some(0),
+                        attributes: Attributes {
+                            required: false,
+                            nullable: false,
+                            ..Attributes::default()
+                        },
                         ..FlatModel::default()
                     }
                 ],
