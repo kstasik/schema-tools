@@ -96,11 +96,6 @@ pub fn pluralize(word: String) -> String {
     word
 }
 
-// todo: ...
-pub fn normalize(method: &str) -> String {
-    method.replace("-", "")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

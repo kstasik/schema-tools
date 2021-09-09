@@ -1,6 +1,7 @@
-use super::word::{is_plurar, normalize, pluralize, singularize};
+use super::word::{is_plurar, pluralize, singularize};
 
 use crate::error::Error;
+use inflector::Inflector;
 use regex::Regex;
 
 pub struct Endpoint {
@@ -86,7 +87,7 @@ impl Endpoint {
 
         let mut resources: Vec<String> = vec![];
         for (i, resource) in self.resources.iter().enumerate() {
-            let processed = normalize(&resource.clone());
+            let processed = resource.clone().to_camel_case();
 
             resources.push(
                 {
@@ -116,20 +117,9 @@ impl Endpoint {
         // camelcase
         parts
             .into_iter()
-            .enumerate()
-            .map(|(i, mut s)| {
-                if i == 0 {
-                    return s;
-                }
-
-                if let Some(first) = s.get_mut(0..1) {
-                    first.make_ascii_uppercase();
-                }
-
-                s
-            })
             .collect::<Vec<String>>()
-            .join("")
+            .join(" ")
+            .to_camel_case()
     }
 }
 
@@ -150,7 +140,7 @@ mod tests {
     #[test_case( "get".to_string(), "v2/users/{id}".to_string(), "v2GetUser".to_string(); "endpoint name test 10" )]
     #[test_case( "get".to_string(), "v1/users/{id}/status".to_string(), "v1GetUserStatus".to_string(); "endpoint name test 11" )]
     #[test_case( "post".to_string(), "users/{id}/groups".to_string(), "createUserGroup".to_string(); "endpoint name test 12" )]
-    #[test_case( "get".to_string(), "user-groups/{id}".to_string(), "getUsergroup".to_string(); "endpoint name test 13" )]
+    #[test_case( "get".to_string(), "user-groups/{id}".to_string(), "getUserGroup".to_string(); "endpoint name test 13" )]
     #[test_case( "get".to_string(), "v1/users/{id}/statuses".to_string(), "v1ListUserStatuses".to_string(); "endpoint name test 14" )]
     fn test_operation_name(method: String, path: String, expected: String) {
         assert_eq!(
@@ -168,7 +158,7 @@ mod tests {
         );
     }
 
-    #[test_case( "get".to_string(), "user-groups/{id}".to_string(), "usergroupGet".to_string(); "endpoint name reverse test 1" )]
+    #[test_case( "get".to_string(), "user-groups/{id}".to_string(), "userGroupGet".to_string(); "endpoint name reverse test 1" )]
     #[test_case( "get".to_string(), "v1/users/{id}/statuses".to_string(), "userStatusesListV1".to_string(); "endpoint name reverse test 2" )]
     fn test_operation_name_reverse(method: String, path: String, expected: String) {
         assert_eq!(
