@@ -9,7 +9,10 @@ use crate::{
     scope::{SchemaScope, Space},
 };
 
-use super::{parameters, requestbody, responses, security};
+use super::{
+    parameters::{self, Parameters},
+    requestbody, responses, security,
+};
 
 #[derive(Serialize, Clone)]
 pub struct Endpoint {
@@ -32,8 +35,60 @@ impl Endpoint {
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn new_endpoint(
+pub fn extract_endpoints(
     node: &Value,
+    path: &str,
+    scope: &mut SchemaScope,
+    mcontainer: &mut ModelContainer,
+    scontainer: &mut security::SecuritySchemes,
+    resolver: &SchemaResolver,
+    options: &JsonSchemaExtractOptions,
+) -> Result<Vec<Endpoint>, Error> {
+    resolver.resolve(node, scope, |node, scope| match node {
+        Value::Object(details) => {
+            scope.any("parameters");
+            let parameters = if details.contains_key("parameters") {
+                Some(parameters::extract(
+                    details, scope, mcontainer, resolver, options,
+                )?)
+            } else {
+                None
+            };
+            scope.pop();
+
+            let mut endpoints = vec![];
+            for method in &[
+                "get", "put", "post", "delete", "options", "head", "patch", "trace",
+            ] {
+                if let Some(method_details) = details.get(*method) {
+                    scope.any(method);
+                    endpoints.push(new_endpoint(
+                        method_details,
+                        parameters.as_ref(),
+                        path,
+                        method,
+                        scope,
+                        mcontainer,
+                        scontainer,
+                        resolver,
+                        options,
+                    )?);
+                    scope.pop();
+                }
+            }
+
+            Ok(endpoints)
+        }
+        _ => Err(Error::EndpointsValidation {
+            path: path.to_string(),
+        }),
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn new_endpoint(
+    node: &Value,
+    parameters: Option<&Parameters>,
     path: &str,
     method: &str,
     scope: &mut SchemaScope,
@@ -89,6 +144,12 @@ pub fn new_endpoint(
             scope.add_spaces(&mut tags.clone().into_iter().map(Space::Tag).collect());
             scope.add_spaces(&mut vec![Space::Operation(operation.clone())]);
 
+            let mut endpoint_parameters =
+                parameters::extract(data, scope, mcontainer, resolver, options)?;
+            if let Some(shared) = parameters {
+                endpoint_parameters.merge(shared)
+            }
+
             let endpoint = Endpoint {
                 security,
                 description,
@@ -98,7 +159,7 @@ pub fn new_endpoint(
                 tags,
                 responses: responses::extract(data, scope, mcontainer, resolver, options)?,
                 requestbody: requestbody::extract(data, scope, mcontainer, resolver, options)?,
-                parameters: parameters::extract(data, scope, mcontainer, resolver, options)?,
+                parameters: endpoint_parameters,
                 x,
             };
 
@@ -108,5 +169,78 @@ pub fn new_endpoint(
             Ok(endpoint)
         }
         _ => Err(Error::CodegenInvalidEndpointFormat),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_extract_of_parameters() {
+        let schema = json!({
+            "parameters": [{
+                "in": "path",
+                "name": "userId",
+                "description": "userId",
+                "required": true,
+                "schema": { "type": "string" }
+            }],
+            "post": {
+                "summary": "Save something",
+                "description": "Testing",
+                "responses": {
+                    "200": {
+                        "description": "Success response",
+                        "content": { "application/json": { "schema" : {"type": "string"} } }
+                    }
+                }
+            },
+            "get": {
+                "summary": "Get something",
+                "description": "Testing 2",
+                "parameters": [{
+                    "in": "query",
+                    "name": "testId",
+                    "description": "testId",
+                    "required": false,
+                    "schema": { "type": "string" }
+                }],
+                "responses": {
+                    "200": {
+                        "description": "Success response",
+                        "content": { "application/json": { "schema" : {"type": "string"} } }
+                    }
+                }
+            }
+        });
+
+        let mut mcontainer = ModelContainer::default();
+        let mut scontainer = super::security::SecuritySchemes::new();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        let result = extract_endpoints(
+            &schema,
+            "/users/{userId}",
+            &mut scope,
+            &mut mcontainer,
+            &mut scontainer,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(result.is_ok(), true);
+        let endpoints = result.unwrap();
+
+        let post_endpoint = endpoints.iter().find(|e| e.method == "post").unwrap();
+        assert_eq!(post_endpoint.parameters.all.len(), 1);
+
+        let get_endpoint = endpoints.iter().find(|e| e.method == "get").unwrap();
+        assert_eq!(get_endpoint.parameters.all.len(), 2);
+        assert_eq!(get_endpoint.parameters.query.len(), 1);
+        assert_eq!(get_endpoint.parameters.path.len(), 1);
     }
 }

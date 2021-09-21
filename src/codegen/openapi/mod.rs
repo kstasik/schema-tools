@@ -1,10 +1,4 @@
-use crate::{
-    error::Error,
-    resolver::SchemaResolver,
-    schema::Schema,
-    scope::{SchemaScope, Space},
-    tools,
-};
+use crate::{error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope, tools};
 use serde::Serialize;
 use serde_json::Map;
 use serde_json::Value;
@@ -205,15 +199,14 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
     tools::each_node(
         root,
         &mut scope,
-        "path:paths/any:*/any:*",
+        "path:paths/any:*",
         |node, parts, scope| {
-            if let [path, method] = parts {
+            if let [path] = parts {
                 log::trace!("{}", scope);
 
-                let endpoint = endpoint::new_endpoint(
+                let endpoints = endpoint::extract_endpoints(
                     node,
                     path,
-                    method,
                     scope,
                     &mut mcontainer,
                     &mut scontainer,
@@ -221,8 +214,10 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
                     options,
                 )?;
 
-                tags.append(&mut endpoint.get_tags().clone());
-                econtainer.add(endpoint);
+                for endpoint in endpoints.into_iter() {
+                    tags.append(&mut endpoint.get_tags().clone());
+                    econtainer.add(endpoint);
+                }
             }
 
             Ok(())

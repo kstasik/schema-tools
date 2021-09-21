@@ -177,4 +177,10 @@ impl Parameters {
             _ => {}
         }
     }
+
+    pub fn merge(&mut self, parameters: &Parameters) {
+        for param in parameters.all.iter() {
+            self.add(param.clone());
+        }
+    }
 }
