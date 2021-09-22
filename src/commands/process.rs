@@ -157,6 +157,7 @@ pub struct DereferenceOpts {
 }
 
 #[derive(Clap, Debug)]
+#[allow(dead_code)]
 pub struct NameOpts {
     #[clap(about = "Path to json/yaml file with openapi specification")]
     file: String,

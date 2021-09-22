@@ -155,6 +155,9 @@ pub enum Error {
     #[error("Path to schema is invalid: {path}")]
     SchemaInvalidPath { path: String },
 
+    #[error("Endpoints format is invalid: {path}")]
+    EndpointsValidation { path: String },
+
     #[error("Endpoint format is invalid: {method} {path}")]
     EndpointValidation { method: String, path: String },
 

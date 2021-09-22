@@ -58,7 +58,7 @@ pub struct GroupBy {
 #[derive(Serialize)]
 pub struct TagContainer {
     tag: String,
-    endpoints: Vec<super::openapi::Endpoint>,
+    endpoints: Vec<super::openapi::endpoint::Endpoint>,
 }
 
 pub trait Group {
@@ -163,7 +163,10 @@ impl TagGroup {
             .collect::<Vec<_>>()
     }
 
-    pub fn filter(&self, endpoints: &[super::openapi::Endpoint]) -> Vec<super::openapi::Endpoint> {
+    pub fn filter(
+        &self,
+        endpoints: &[super::openapi::endpoint::Endpoint],
+    ) -> Vec<super::openapi::endpoint::Endpoint> {
         endpoints
             .iter()
             .filter(|e| e.get_tags().contains(&self.tag))

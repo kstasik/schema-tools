@@ -11,6 +11,7 @@ pub enum SchemaNamingStrategy {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct SchemaScope {
     scope: Vec<SchemaScopeType>,
     naming_strategy: SchemaNamingStrategy,
