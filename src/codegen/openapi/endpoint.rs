@@ -22,8 +22,8 @@ pub struct Endpoint {
     operation: String,
     description: Option<String>,
     tags: Vec<String>,
-    pub requestbody: Option<requestbody::RequestBody>,
     parameters: parameters::Parameters,
+    pub requestbody: Option<requestbody::RequestBody>,
     pub responses: responses::Responses,
     x: std::collections::HashMap<String, Value>,
 }
@@ -242,5 +242,74 @@ mod tests {
         assert_eq!(get_endpoint.parameters.all.len(), 2);
         assert_eq!(get_endpoint.parameters.query.len(), 1);
         assert_eq!(get_endpoint.parameters.path.len(), 1);
+    }
+
+    #[test]
+    fn test_responses() {
+        let schema = json!({
+            "get": {
+                "summary": "Get something",
+                "description": "Testing 2",
+                "parameters": [{
+                    "in": "query",
+                    "name": "testId",
+                    "description": "testId",
+                    "required": false,
+                    "schema": { "type": "string" }
+                }],
+                "responses": {
+                    "200": {
+                        "description": "Success response",
+                        "content": {
+                            "application/json": { "schema" : {"type": "string"} },
+                            "application/vnd.short+json": { "schema" : {"type": "object", "properties": { "test" : {"type": "string"}}} },
+                        },
+                    },
+                    "400": {
+                        "description": "Fail response",
+                        "content": {
+                            "application/json": { "schema" : {"type": "object", "properties": { "errorCode" : {"type": "number"}}} },
+                        },
+                    }
+                }
+            }
+        });
+
+        let mut mcontainer = ModelContainer::default();
+        let mut scontainer = super::security::SecuritySchemes::new();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        let result = extract_endpoints(
+            &schema,
+            "/users/{userId}",
+            &mut scope,
+            &mut mcontainer,
+            &mut scontainer,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(result.is_ok(), true);
+
+        let endpoints = result.unwrap();
+
+        let value = serde_json::to_value(&endpoints).unwrap();
+        let find = value.pointer("/0/responses/success/models").unwrap();
+
+        assert_eq!(
+            find.as_object()
+                .unwrap()
+                .get("all")
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+
+        // let serialized = serde_json::to_string_pretty(&endpoints).unwrap();
+        // println!("serialized: {}", serialized);
     }
 }

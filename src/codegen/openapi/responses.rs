@@ -25,8 +25,8 @@ pub struct Response {
     #[serde(rename = "statusCode")]
     pub status_code: u32,
 
-    #[serde(rename = "model")]
-    pub model: Option<super::MediaModelsContainer>,
+    #[serde(rename = "models")]
+    pub models: Option<super::MediaModelsContainer>,
 
     #[serde(rename = "description")]
     pub description: Option<String>,
@@ -161,7 +161,7 @@ pub fn extract_response(
                 .map_or(Ok(None), |v| v.map(Some))?;
 
             Ok(Response {
-                model: model?,
+                models: model?,
                 headers,
                 description,
                 status_code,
