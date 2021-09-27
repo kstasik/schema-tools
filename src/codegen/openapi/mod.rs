@@ -1,4 +1,5 @@
 use crate::{error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope, tools};
+use serde::ser::SerializeMap;
 use serde::Serialize;
 use serde_json::Map;
 use serde_json::Value;
@@ -44,7 +45,7 @@ pub struct MediaModel {
 #[derive(Debug, Clone)]
 pub struct MediaModelsContainer {
     pub list: Vec<MediaModel>,
-    pub content_type: String,
+    pub default_content_type: String,
 }
 
 impl Serialize for MediaModelsContainer {
@@ -52,16 +53,47 @@ impl Serialize for MediaModelsContainer {
     where
         S: serde::Serializer,
     {
-        let filtered = self
-            .list
-            .iter()
-            .filter(|f| f.content_type == self.content_type)
-            .collect::<Vec<_>>();
+        let mut models = self.list.clone();
+        models.dedup_by(|a, b| a.model == b.model);
 
-        if let Some(d) = filtered.first() {
-            serializer.serialize_newtype_struct("model", &d.model)
-        } else {
-            serializer.serialize_none()
+        // different serialization dependening on scenario
+        match models.len().cmp(&1) {
+            std::cmp::Ordering::Greater => {
+                let default = models
+                    .iter()
+                    .find(|m| m.content_type == self.default_content_type);
+                let with_names: Vec<_> = models
+                    .iter()
+                    .map(|s| {
+                        let mut v = serde_json::to_value(s).unwrap();
+
+                        let m = v.as_object_mut().unwrap();
+
+                        let re = regex::Regex::new(r"/vnd\.|\+").unwrap();
+                        let parts: Vec<&str> = re.split(&s.content_type).collect();
+
+                        m.insert(
+                            "vnd".to_string(),
+                            serde_json::to_value(parts.get(1)).unwrap(),
+                        );
+
+                        v
+                    })
+                    .collect();
+
+                let mut map = serializer.serialize_map(Some(2))?;
+
+                map.serialize_entry("default", &default)?;
+                map.serialize_entry("all", &with_names)?; // map models and add something to detect vnd types?
+                map.end()
+            }
+            std::cmp::Ordering::Equal => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("default", models.get(0).unwrap())?;
+                map.serialize_entry("all", &models)?;
+                map.end()
+            }
+            std::cmp::Ordering::Less => serializer.serialize_none(),
         }
     }
 }
@@ -274,7 +306,7 @@ pub fn get_content(
                     .collect::<Result<Vec<_>, _>>()
                     .map(|list| MediaModelsContainer {
                         list,
-                        content_type: "application/json".to_string(),
+                        default_content_type: "application/json".to_string(),
                     }),
             );
             scope.pop();
@@ -288,14 +320,14 @@ impl Openapi {
     pub fn set_content_type(mut self, content_type: &str) -> Self {
         self.endpoints.iter_mut().for_each(|f| {
             f.responses.all.iter_mut().for_each(|r| {
-                if let Some(ref mut c) = r.model {
-                    c.content_type = content_type.to_string();
+                if let Some(ref mut c) = r.models {
+                    c.default_content_type = content_type.to_string();
                 }
             });
 
             if let Some(ref mut rb) = f.requestbody {
-                if let Some(ref mut c) = rb.model {
-                    c.content_type = content_type.to_string();
+                if let Some(ref mut c) = rb.models {
+                    c.default_content_type = content_type.to_string();
                 }
             }
         });

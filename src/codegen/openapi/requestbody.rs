@@ -10,8 +10,8 @@ use serde_json::Value;
 
 #[derive(Debug, Serialize, Clone)]
 pub struct RequestBody {
-    #[serde(rename = "model")]
-    pub model: Option<super::MediaModelsContainer>,
+    #[serde(rename = "models")]
+    pub models: Option<super::MediaModelsContainer>,
 
     #[serde(rename = "required")]
     pub required: bool,
@@ -69,7 +69,7 @@ pub fn extract_requestbody(
             scope.reduce(2);
 
             Ok(Some(RequestBody {
-                model: model?,
+                models: model?,
                 description,
                 required,
             }))
