@@ -1,8 +1,10 @@
 use std::fmt::Display;
 
 use crate::commands::GetSchemaCommand;
+use crate::storage::SchemaStorage;
 use crate::tools;
 use clap::Clap;
+use reqwest::blocking::Client;
 use std::str::FromStr;
 
 use crate::error::Error;
@@ -200,7 +202,7 @@ pub struct PatchOpts {
 }
 
 impl GetSchemaCommand for Opts {
-    fn get_schema(&self) -> Result<Schema, Error> {
+    fn get_schema(&self, client: &Client) -> Result<Schema, Error> {
         match &self.command {
             Command::MergeAllOf(opts) => {
                 let urls = opts
@@ -211,8 +213,12 @@ impl GetSchemaCommand for Opts {
 
                 Schema::load_urls(urls)
             }
-            Command::MergeOpenapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
-            Command::BumpOpenapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::MergeOpenapi(opts) => {
+                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
+            }
+            Command::BumpOpenapi(opts) => {
+                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
+            }
             Command::Dereference(opts) => {
                 let urls = opts
                     .file
@@ -220,22 +226,26 @@ impl GetSchemaCommand for Opts {
                     .map(|s| path_to_url(s.clone()))
                     .collect::<Result<Vec<_>, _>>()?;
 
-                Schema::load_urls(urls)
+                Schema::load_urls_with_client(urls, client)
             }
-            Command::Name(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
-            Command::Patch(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::Name(opts) => {
+                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
+            }
+            Command::Patch(opts) => {
+                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
+            }
         }
     }
 }
 
 impl Opts {
-    pub fn run(&self, schema: &mut Schema) -> Result<(), Error> {
+    pub fn run(&self, schema: &mut Schema, storage: &SchemaStorage) -> Result<(), Error> {
         match &self.command {
             Command::MergeAllOf(opts) => {
                 merge_allof::Merger::options()
                     .with_leave_invalid_properties(opts.leave_invalid_properties)
                     .with_filter(tools::Filter::new(&opts.filter)?)
-                    .process(schema);
+                    .process(schema, storage);
                 Ok(())
             }
             Command::MergeOpenapi(opts) => {
@@ -258,7 +268,7 @@ impl Opts {
                     .with_skip_root_internal_references(opts.skip_root_internal_references)
                     .with_create_internal_references(opts.create_internal_references)
                     .with_skip_references(opts.skip_references.clone())
-                    .process(schema);
+                    .process(schema, storage);
                 Ok(())
             }
             Command::Name(opts) => {
@@ -278,48 +288,50 @@ impl Opts {
     }
 }
 
-pub fn execute(opts: Opts) -> Result<(), Error> {
-    let mut schema = opts.get_schema()?;
+pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
+    let mut schema = opts.get_schema(client)?;
+    let storage = &SchemaStorage::new(&schema, client);
 
+    // tood: ...
     match &opts.command {
         Command::MergeAllOf(o) => {
             o.verbose.start()?;
-            opts.run(&mut schema)?;
+            opts.run(&mut schema, storage)?; // todo: ...
             o.output.show(schema.get_body());
 
             Ok(())
         }
         Command::MergeOpenapi(o) => {
             o.verbose.start()?;
-            opts.run(&mut schema)?;
+            opts.run(&mut schema, storage)?;
             o.output.show(schema.get_body());
 
             Ok(())
         }
         Command::BumpOpenapi(o) => {
             o.verbose.start()?;
-            opts.run(&mut schema)?;
+            opts.run(&mut schema, storage)?;
             o.output.show(schema.get_body());
 
             Ok(())
         }
         Command::Dereference(o) => {
             o.verbose.start()?;
-            opts.run(&mut schema)?;
+            opts.run(&mut schema, storage)?;
             o.output.show(schema.get_body());
 
             Ok(())
         }
         Command::Name(o) => {
             o.verbose.start()?;
-            opts.run(&mut schema)?;
+            opts.run(&mut schema, storage)?;
             o.output.show(schema.get_body());
 
             Ok(())
         }
         Command::Patch(o) => {
             o.verbose.start()?;
-            opts.run(&mut schema)?;
+            opts.run(&mut schema, storage)?;
             o.output.show(schema.get_body());
 
             Ok(())

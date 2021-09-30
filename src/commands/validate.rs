@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use clap::Clap;
+use reqwest::blocking::Client;
 
 use crate::error::Error;
 use crate::schema::{path_to_url, Schema};
@@ -63,10 +64,14 @@ struct JsonSchemaOpts {
 }
 
 impl GetSchemaCommand for Opts {
-    fn get_schema(&self) -> Result<Schema, Error> {
+    fn get_schema(&self, client: &Client) -> Result<Schema, Error> {
         match &self.command {
-            Command::Openapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
-            Command::JsonSchema(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::Openapi(opts) => {
+                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
+            }
+            Command::JsonSchema(opts) => {
+                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
+            }
         }
     }
 }
@@ -100,8 +105,8 @@ impl Opts {
     }
 }
 
-pub fn execute(opts: Opts) -> Result<(), Error> {
-    let mut schema = opts.get_schema()?;
+pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
+    let mut schema = opts.get_schema(client)?;
 
     match &opts.command {
         Command::Openapi(o) => {

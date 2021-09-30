@@ -11,6 +11,7 @@ pub mod process;
 pub mod resolver;
 pub mod schema;
 pub mod scope;
+pub mod storage;
 pub mod tools;
 pub mod validate;
 
@@ -55,12 +56,13 @@ enum Command {
 
 fn main() {
     let opts: Opts = Opts::parse();
+    let client = reqwest::blocking::Client::new();
 
     let result = match opts.command {
-        Command::Process(opts) => commands::process::execute(opts),
-        Command::Codegen(opts) => commands::codegen::execute(opts),
-        Command::Validate(opts) => commands::validate::execute(opts),
-        Command::Chain(opts) => commands::chain::execute(opts),
+        Command::Process(opts) => commands::process::execute(opts, &client),
+        Command::Codegen(opts) => commands::codegen::execute(opts, &client),
+        Command::Validate(opts) => commands::validate::execute(opts, &client),
+        Command::Chain(opts) => commands::chain::execute(opts, &client),
     };
 
     std::process::exit(match result {

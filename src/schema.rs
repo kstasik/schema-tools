@@ -1,3 +1,4 @@
+use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::Value;
 use std::{fs, path::PathBuf};
@@ -14,6 +15,13 @@ pub struct Schema {
 
 impl<'a> Schema {
     pub fn load_url(url: Url) -> Result<Schema, Error> {
+        let client = reqwest::blocking::Client::new();
+        Self::load_url_with_client(url, &client)
+    }
+
+    pub fn load_url_with_client(url: Url, client: &Client) -> Result<Schema, Error> {
+        log::info!("loading: {}", url);
+
         let (content_type, response) = match url.scheme() {
             "file" => {
                 let content =
@@ -24,12 +32,14 @@ impl<'a> Schema {
                 Ok((None, content))
             }
             "http" | "https" => {
-                let response = reqwest::blocking::get(&url.to_string()).map_err(|error| {
-                    Error::SchemaHttpLoad {
-                        url: url.to_string(),
-                        reason: error.to_string(),
-                    }
-                })?;
+                let response =
+                    client
+                        .get(&url.to_string())
+                        .send()
+                        .map_err(|error| Error::SchemaHttpLoad {
+                            url: url.to_string(),
+                            reason: error.to_string(),
+                        })?;
 
                 let content_type = response
                     .headers()
@@ -96,13 +106,19 @@ impl<'a> Schema {
     }
 
     pub fn load_urls(urls: Vec<Url>) -> Result<Schema, Error> {
+        let client = reqwest::blocking::Client::new();
+
+        Self::load_urls_with_client(urls, &client)
+    }
+
+    pub fn load_urls_with_client(urls: Vec<Url>, client: &Client) -> Result<Schema, Error> {
         if urls.len() == 1 {
             return Self::load_url(urls.first().unwrap().clone());
         }
 
         let mut bodies: Vec<Value> = Vec::with_capacity(urls.len());
         for url in urls {
-            let data = Self::load_url(url.clone())?.body;
+            let data = Self::load_url_with_client(url.clone(), client)?.body;
             bodies.push(process::rel_to_absolute_refs(&url, data));
         }
 

@@ -1,10 +1,12 @@
 use codegen::jsonschema::JsonSchemaExtractOptions;
+use reqwest::blocking::Client;
 use serde_json::Value;
-use std::fmt::Display;
+use std::{fmt::Display, time::Instant};
 
 use crate::{
     discovery::Discovery,
     schema::{path_to_url, Schema},
+    storage::SchemaStorage,
 };
 use clap::Clap;
 
@@ -141,7 +143,7 @@ pub struct OpenapiOpts {
 }
 
 impl GetSchemaCommand for Opts {
-    fn get_schema(&self) -> Result<Schema, Error> {
+    fn get_schema(&self, client: &Client) -> Result<Schema, Error> {
         match &self.command {
             Command::JsonSchema(opts) => {
                 let urls = opts
@@ -150,25 +152,29 @@ impl GetSchemaCommand for Opts {
                     .map(|s| path_to_url(s.clone()))
                     .collect::<Result<Vec<_>, _>>()?;
 
-                Schema::load_urls(urls)
+                Schema::load_urls_with_client(urls, client)
             }
-            Command::Openapi(opts) => Schema::load_url(path_to_url(opts.file.clone())?),
+            Command::Openapi(opts) => {
+                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
+            }
         }
     }
 }
 
 impl Opts {
-    pub fn run(&self, schema: &mut Schema, discovery: &Discovery) -> Result<(), Error> {
+    pub fn run(
+        &self,
+        schema: &mut Schema,
+        discovery: &Discovery,
+        storage: &SchemaStorage,
+    ) -> Result<(), Error> {
         match &self.command {
             Command::JsonSchema(opts) => {
-                let renderer = codegen::renderer::create(
-                    discovery.resolve(&opts.template)?,
-                    &[codegen::templates::TemplateType::Models],
-                    codegen::create_container(&opts.options),
-                )?;
+                let timing_extraction = Instant::now();
 
                 let models = codegen::jsonschema::extract(
                     schema,
+                    storage,
                     JsonSchemaExtractOptions {
                         wrappers: opts.wrappers,
                         optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
@@ -179,9 +185,49 @@ impl Opts {
                     },
                 )?;
 
-                renderer.models(models, &opts.target_dir, &opts.format)
+                log::info!(
+                    "\x1b[1;4mextraction took: {:.2?}\x1b[0m",
+                    timing_extraction.elapsed()
+                );
+
+                let timing_rendering = Instant::now();
+
+                let renderer = codegen::renderer::create(
+                    discovery.resolve(&opts.template)?,
+                    &[codegen::templates::TemplateType::Models],
+                    codegen::create_container(&opts.options),
+                )?;
+
+                renderer.models(models, &opts.target_dir, &opts.format)?;
+
+                log::info!(
+                    "\x1b[1;4mrendering took: {:.2?}\x1b[0m",
+                    timing_rendering.elapsed()
+                );
+
+                Ok(())
             }
             Command::Openapi(opts) => {
+                let timing_extraction = Instant::now();
+
+                let openapi = codegen::openapi::extract(
+                    schema,
+                    storage,
+                    codegen::openapi::OpenapiExtractOptions {
+                        wrappers: opts.wrappers,
+                        optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
+                        nested_arrays_as_models: opts.nested_arrays_as_models,
+                        keep_schema: crate::tools::Filter::new(&opts.keep_schema)?,
+                    },
+                )?;
+
+                log::info!(
+                    "\x1b[1;4mextraction took: {:.2?}\x1b[0m",
+                    timing_extraction.elapsed()
+                );
+
+                let timing_rendering = Instant::now();
+
                 let renderer = codegen::renderer::create(
                     discovery.resolve(&opts.template)?,
                     &[
@@ -191,36 +237,34 @@ impl Opts {
                     codegen::create_container(&opts.options),
                 )?;
 
-                let openapi = codegen::openapi::extract(
-                    schema,
-                    codegen::openapi::OpenapiExtractOptions {
-                        wrappers: opts.wrappers,
-                        optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
-                        nested_arrays_as_models: opts.nested_arrays_as_models,
-                        keep_schema: crate::tools::Filter::new(&opts.keep_schema)?,
-                    },
-                )?;
+                renderer.openapi(openapi, &opts.target_dir, &opts.format)?;
 
-                renderer.openapi(openapi, &opts.target_dir, &opts.format)
+                log::info!(
+                    "\x1b[1;4mrendering took: {:.2?}\x1b[0m",
+                    timing_rendering.elapsed()
+                );
+
+                Ok(())
             }
         }
     }
 }
 
-pub fn execute(opts: Opts) -> Result<(), Error> {
-    let mut schema = opts.get_schema()?;
+pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
+    let mut schema = opts.get_schema(client)?;
+    let storage = &SchemaStorage::new(&schema, client);
     let discovery = Discovery::default();
 
     match &opts.command {
         Command::JsonSchema(o) => {
             o.verbose.start()?;
 
-            opts.run(&mut schema, &discovery)
+            opts.run(&mut schema, &discovery, storage)
         }
         Command::Openapi(o) => {
             o.verbose.start()?;
 
-            opts.run(&mut schema, &discovery)
+            opts.run(&mut schema, &discovery, storage)
         }
     }
 }

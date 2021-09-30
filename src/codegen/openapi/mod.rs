@@ -1,3 +1,4 @@
+use crate::storage::SchemaStorage;
 use crate::{error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope, tools};
 use serde::ser::SerializeMap;
 use serde::Serialize;
@@ -106,7 +107,11 @@ pub struct Openapi {
     pub tags: Vec<String>,
 }
 
-pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openapi, Error> {
+pub fn extract(
+    schema: &Schema,
+    storage: &SchemaStorage,
+    options: OpenapiExtractOptions,
+) -> Result<Openapi, Error> {
     let mut scope = SchemaScope::default();
     let mut mcontainer = ModelContainer::default();
     let mut econtainer = EndpointContainer::new();
@@ -114,7 +119,7 @@ pub fn extract(schema: &Schema, options: OpenapiExtractOptions) -> Result<Openap
     let mut tags: Vec<String> = vec![];
 
     let root = schema.get_body();
-    let resolver = &SchemaResolver::new(schema);
+    let resolver = &SchemaResolver::new(schema, storage);
     let options = &JsonSchemaExtractOptions {
         optional_and_nullable_as_models: options.optional_and_nullable_as_models,
         keep_schema: options.keep_schema,

@@ -1,5 +1,7 @@
 use clap::Clap;
+use reqwest::blocking::Client;
 
+use crate::storage::SchemaStorage;
 use crate::{discovery::Discovery, error::Error, schema::Schema};
 
 use super::process;
@@ -7,6 +9,7 @@ use super::registry;
 use super::validate;
 use super::{codegen, GetSchemaCommand};
 use std::fmt::Display;
+use std::time::Instant;
 #[derive(Clap, Debug)]
 pub struct OutputOpts {
     #[clap(flatten)]
@@ -71,17 +74,18 @@ pub struct Opts {
     verbose: crate::commands::Verbosity,
 }
 
-pub fn execute(opts: Opts) -> Result<(), Error> {
+pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
     opts.verbose.start()?;
 
     let mut schemas: Vec<(Schema, Vec<ChainCommandOption>)> = vec![];
     let mut discovery = Discovery::default();
 
+    let timing_load = Instant::now();
     for command in opts.commands {
         let schema = match &command {
-            ChainCommandOption::Codegen(c) => c.get_schema(),
-            ChainCommandOption::Process(c) => c.get_schema(),
-            ChainCommandOption::Validate(c) => c.get_schema(),
+            ChainCommandOption::Codegen(c) => c.get_schema(client),
+            ChainCommandOption::Process(c) => c.get_schema(client),
+            ChainCommandOption::Validate(c) => c.get_schema(client),
             ChainCommandOption::Registry(c) => {
                 c.run(&mut discovery)?;
 
@@ -107,22 +111,52 @@ pub fn execute(opts: Opts) -> Result<(), Error> {
         }
     }
 
+    log::info!(
+        "\x1b[1;4mloading registry and root schemas: {:.2?}\x1b[0m",
+        timing_load.elapsed()
+    );
+
+    // create resolver
+    let timing_resolve = Instant::now();
+
+    let storage =
+        SchemaStorage::new_multi(&schemas.iter().map(|(s, _)| s).collect::<Vec<_>>(), client);
+
+    log::info!(
+        "\x1b[1;4mresolving schema dependencies took: {:.2?}\x1b[0m",
+        timing_resolve.elapsed()
+    );
+
+    let processing_time = Instant::now();
     for (ref mut current, ref mut actions) in schemas {
         for cmd in actions {
-            log::info!("\x1b[1;35mCHAINING: {} {}\x1b[0m", cmd, current.get_url());
+            log::info!("\x1b[1;70mCHAINING: {} {}\x1b[0m", cmd, current.get_url());
+            let timing_step = Instant::now();
 
             match cmd {
-                ChainCommandOption::Codegen(c) => c.run(current, &discovery),
-                ChainCommandOption::Process(c) => c.run(current),
+                ChainCommandOption::Codegen(c) => c.run(current, &discovery, &storage),
+                ChainCommandOption::Process(c) => c.run(current, &storage),
                 ChainCommandOption::Validate(v) => v.run(current),
                 ChainCommandOption::Output(o) => {
                     o.output.show(current.get_body());
                     Ok(())
                 }
                 _ => Ok(()),
-            }?
+            }?;
+
+            log::info!(
+                "\x1b[1;4m{} took: {:.2?}\x1b[0m",
+                cmd,
+                timing_step.elapsed()
+            );
         }
     }
+
+    log::info!(
+        "\x1b[1;4mprocessing and rendering took: {:.2?}, total execution: {:.2?}\x1b[0m",
+        processing_time.elapsed(),
+        timing_load.elapsed()
+    );
 
     Ok(())
 }

@@ -273,7 +273,7 @@ impl FromStr for ConditionSet {
         Ok(Self {
             conditions: data
                 .split(',')
-                .map(|s| Condition::from_str(s))
+                .map(Condition::from_str)
                 .collect::<Result<Vec<_>, _>>()?,
         })
     }
