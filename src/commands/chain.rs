@@ -119,7 +119,7 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
     // create resolver
     let timing_resolve = Instant::now();
 
-    let storage =
+    let mut storage =
         SchemaStorage::new_multi(&schemas.iter().map(|(s, _)| s).collect::<Vec<_>>(), client);
 
     log::info!(
@@ -135,7 +135,12 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
 
             match cmd {
                 ChainCommandOption::Codegen(c) => c.run(current, &discovery, &storage),
-                ChainCommandOption::Process(c) => c.run(current, &storage),
+                ChainCommandOption::Process(c) => c.run(current, &storage).map(|result| {
+                    storage
+                        .schemas
+                        .insert(current.get_url().clone(), current.clone());
+                    result
+                }),
                 ChainCommandOption::Validate(v) => v.run(current),
                 ChainCommandOption::Output(o) => {
                     o.output.show(current.get_body());

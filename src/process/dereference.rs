@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::error::Error;
 use crate::resolver::SchemaResolver;
 use crate::schema::Schema;
@@ -12,6 +14,7 @@ pub struct Dereferencer;
 pub struct DereferencerContext {
     pub base: Url,
     pub scope: SchemaScope,
+    pub resolved: HashMap<String, String>,
     pub depth: i64,
 }
 
@@ -20,6 +23,7 @@ impl DereferencerContext {
         Self {
             base: base.clone(),
             scope: SchemaScope::default(),
+            resolved: HashMap::new(),
             depth: 0,
         }
     }
@@ -80,6 +84,7 @@ fn process_ref(
 
     match ref_to_url(&ctx.base, &reference) {
         Some(mut url) => {
+            let reference = url.to_string();
             url.set_fragment(None);
 
             if options.skip_root_internal_references && ctx.depth == 1 && ctx.base == url {
@@ -107,6 +112,19 @@ fn process_ref(
             {
                 Some(mut s) => {
                     log::debug!("{}.$ref", ctx.scope);
+
+                    // skip internal reference if already resolved
+                    if options.create_internal_references {
+                        if let Some(internal_path) = ctx.resolved.get(&reference) {
+                            log::debug!("{}: referencing to -> #{}", ctx.scope, internal_path);
+
+                            *root = serde_json::json!({ "$ref": format!("#{}", internal_path) });
+
+                            return;
+                        } else {
+                            ctx.resolved.insert(reference, ctx.scope.to_string());
+                        }
+                    }
 
                     process_node(&mut s, options, ctx, resolver);
 

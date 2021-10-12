@@ -122,7 +122,7 @@ fn simplify_one_of(
     element.map(|option| {
         resolver
             .resolve(option, scope, |node, scope| {
-                log::info!("{}: mapping oneOf with null to simple type", scope);
+                log::debug!("{}: mapping oneOf with null to simple type", scope);
 
                 Ok(
                     super::extract_type(node, container, scope, resolver, options).map(|m| {
