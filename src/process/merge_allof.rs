@@ -1,6 +1,8 @@
 use serde_json::Value;
 
-use crate::{resolver::SchemaResolver, schema::Schema, scope::SchemaScope, tools};
+use crate::{
+    resolver::SchemaResolver, schema::Schema, scope::SchemaScope, storage::SchemaStorage, tools,
+};
 
 pub struct Merger;
 
@@ -20,13 +22,13 @@ impl MergerOptions {
         self
     }
 
-    pub fn process(&self, schema: &mut Schema) {
-        let resolver = &SchemaResolver::new(&schema.clone());
+    pub fn process(&self, schema: &mut Schema, storage: &SchemaStorage) {
+        let resolver = SchemaResolver::new(schema, storage);
 
-        let mut root = schema.get_body_mut();
+        let root = schema.get_body_mut();
         let mut scope = SchemaScope::default();
 
-        process_node(&mut root, self, &mut scope, resolver);
+        process_node(root, self, &mut scope, &resolver);
     }
 }
 
@@ -61,7 +63,7 @@ fn process_merge(
                 log::warn!("allOf with one element, skipping");
                 schemas.get_mut(0).unwrap().clone()
             } else {
-                log::info!("{}.allOf", scope);
+                log::debug!("{}.allOf", scope);
 
                 let mut first = resolver
                     .resolve(schemas.get_mut(0).unwrap(), scope, |v, ss| {
@@ -122,9 +124,9 @@ fn process_node(
             }
         }
         Value::Array(a) => {
-            for (index, mut x) in a.iter_mut().enumerate() {
+            for (index, x) in a.iter_mut().enumerate() {
                 scope.index(index);
-                process_node(&mut x, options, scope, resolver);
+                process_node(x, options, scope, resolver);
                 scope.pop();
             }
         }
@@ -240,7 +242,10 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        Merger::options().process(&mut schema);
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&schema, &client);
+
+        Merger::options().process(&mut schema, &ss);
 
         assert_eq!(schema.get_body().to_string(), expected.to_string());
     }
@@ -291,7 +296,10 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        Merger::options().process(&mut schema);
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&schema, &client);
+
+        Merger::options().process(&mut schema, &ss);
 
         assert_eq!(schema.get_body().to_string(), expected.to_string());
     }
@@ -330,7 +338,10 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        Merger::options().process(&mut schema);
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&schema, &client);
+
+        Merger::options().process(&mut schema, &ss);
 
         assert_eq!(schema.get_body().to_string(), expected.to_string());
     }
@@ -379,7 +390,10 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        Merger::options().process(&mut schema);
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&schema, &client);
+
+        Merger::options().process(&mut schema, &ss);
 
         assert_eq!(schema.get_body().to_string(), expected.to_string());
     }
@@ -448,7 +462,10 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        Merger::options().process(&mut schema);
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&schema, &client);
+
+        Merger::options().process(&mut schema, &&ss);
 
         assert_eq!(schema.get_body().to_string(), expected.to_string());
     }
@@ -570,7 +587,10 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        Merger::options().process(&mut schema);
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&schema, &client);
+
+        Merger::options().process(&mut schema, &ss);
 
         assert_eq!(schema.get_body().to_string(), expected.to_string());
     }
@@ -611,7 +631,10 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        Merger::options().process(&mut schema);
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&schema, &client);
+
+        Merger::options().process(&mut schema, &ss);
 
         assert_eq!(schema.get_body().to_string(), expected.to_string());
     }

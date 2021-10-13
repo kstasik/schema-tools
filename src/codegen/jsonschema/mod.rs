@@ -18,7 +18,8 @@ pub mod title;
 pub mod types;
 
 use crate::{
-    error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope, scope::Space, tools,
+    error::Error, resolver::SchemaResolver, schema::Schema, scope::SchemaScope, scope::Space,
+    storage::SchemaStorage, tools,
 };
 
 #[derive(Clone)]
@@ -149,6 +150,7 @@ pub struct JsonSchemaExtractOptions {
 
 pub fn extract(
     schema: &Schema,
+    storage: &SchemaStorage,
     options: JsonSchemaExtractOptions,
 ) -> Result<ModelContainer, Error> {
     let mut mcontainer = ModelContainer::default();
@@ -157,6 +159,7 @@ pub fn extract(
         let list = schema.get_body().as_array().unwrap();
         let scope = &mut SchemaScope::default();
 
+        // todo: ... check resolve in multi
         for (i, body) in list.iter().enumerate() {
             scope.index(i);
 
@@ -164,7 +167,7 @@ pub fn extract(
                 body,
                 &mut mcontainer,
                 scope,
-                &SchemaResolver::new(schema),
+                &SchemaResolver::new(schema, storage),
                 &options,
             )?;
 
@@ -175,7 +178,7 @@ pub fn extract(
             schema.get_body(),
             &mut mcontainer,
             &mut SchemaScope::default(),
-            &SchemaResolver::new(schema),
+            &SchemaResolver::new(schema, storage),
             &options,
         )?;
     }
@@ -490,11 +493,12 @@ mod tests {
         let mut mcontainer = ModelContainer::default();
         let options = JsonSchemaExtractOptions::default();
 
+        let client = reqwest::blocking::Client::new();
         let result = extract_type(
             schema.get_body(),
             &mut mcontainer,
             &mut SchemaScope::default(),
-            &SchemaResolver::new(&schema),
+            &SchemaResolver::new(&schema, &SchemaStorage::new(&schema, &client)),
             &options,
         )
         .unwrap();
@@ -591,7 +595,9 @@ mod tests {
         }));
 
         let options = JsonSchemaExtractOptions::default();
-        let result = extract(&schema, options);
+
+        let client = reqwest::blocking::Client::new();
+        let result = extract(&schema, &SchemaStorage::new(&schema, &client), options);
 
         assert_eq!(true, result.is_ok());
     }
@@ -625,7 +631,9 @@ mod tests {
         }));
 
         let options = JsonSchemaExtractOptions::default();
-        let result = extract(&schema, options);
+
+        let client = reqwest::blocking::Client::new();
+        let result = extract(&schema, &SchemaStorage::new(&schema, &client), options);
 
         assert_eq!(true, result.is_ok());
 

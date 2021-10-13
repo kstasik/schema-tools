@@ -8,7 +8,7 @@ pub fn validate_openapi(schema: &Schema) -> Result<(), Error> {
     let value = schema.get_body();
 
     let result: Result<Value, _> =
-        from_slice(include_bytes!("../../resources/openapi/schema.json"));
+        from_slice(include_bytes!("../../resources/openapi/schema-3.0.x.json"));
     let spec = &result.unwrap();
 
     let specification = JSONSchema::options()

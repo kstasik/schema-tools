@@ -46,10 +46,10 @@ impl JsonSchemaNamerOptions {
     }
 
     pub fn process(&self, schema: &mut Schema) -> Result<(), Error> {
-        let mut root = schema.get_body_mut();
+        let root = schema.get_body_mut();
 
         name_schema(
-            &mut root,
+            root,
             &mut SchemaScope::new(self.naming_strategy.clone()),
             &NamerOptions {
                 overwrite: self.overwrite,
@@ -81,7 +81,7 @@ pub fn name_schema(
                 map.insert("title".to_string(), Value::String(t.clone()));
             }
 
-            log::trace!("{}", scope);
+            log::debug!("{}", scope);
 
             // properties
             if let Some(v) = map.get_mut("properties") {
@@ -136,9 +136,9 @@ pub fn name_schema(
             Ok(())
         }
         Value::Array(a) => {
-            for (index, mut x) in a.iter_mut().enumerate() {
+            for (index, x) in a.iter_mut().enumerate() {
                 scope.index(index);
-                name_schema(&mut x, scope, options)?;
+                name_schema(x, scope, options)?;
                 scope.pop();
             }
 
@@ -180,13 +180,13 @@ fn get_title(
         }
 
         let proposal = scope.namer().simple().map(|s| {
-            log::info!("{} -> {}", scope, &s);
+            log::debug!("{} -> {}", scope, &s);
             Some(s)
         })?;
 
         return Ok(proposal);
     } else if title.is_some() {
-        log::info!("{} -> leaving original", scope);
+        log::debug!("{} -> leaving original", scope);
     }
 
     Ok(title)

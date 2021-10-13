@@ -1,0 +1,13 @@
+{
+  "$id": "https://example.com/arrays.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Object",
+  "required": ["type", "name"],
+  "properties": {
+    "type": {
+      "$ref": "https://json.schemastore.org/schema-org-place.json"
+    },
+    "name": { "type": "string" }
+  }
+}

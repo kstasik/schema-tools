@@ -3,6 +3,7 @@ use std::io::prelude::*;
 
 use clap::Clap;
 use env_logger::Builder as LoggerBuilder;
+use reqwest::blocking::Client;
 use serde_json::Value;
 
 pub mod chain;
@@ -15,7 +16,7 @@ use crate::{error::Error, schema::Schema};
 
 static OUTPUT: &[&str] = &["json", "yaml"];
 pub trait GetSchemaCommand {
-    fn get_schema(&self) -> Result<Schema, Error>;
+    fn get_schema(&self, client: &Client) -> Result<Schema, Error>;
 }
 
 fn get_options<T>(
@@ -64,6 +65,7 @@ impl Verbosity {
                     _ => log::LevelFilter::Trace,
                 },
             )
+            .format_timestamp_nanos()
             .try_init()
             .map_err(|e| Error::LoggerStart(e.to_string()))?;
 

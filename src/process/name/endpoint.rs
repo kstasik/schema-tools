@@ -1,4 +1,4 @@
-use super::word::{is_plurar, pluralize, singularize};
+use super::word::{pluralize, singularize};
 
 use crate::error::Error;
 use inflector::Inflector;
@@ -69,10 +69,7 @@ impl Endpoint {
         parts.push(
             match self.method.as_str() {
                 "get" => {
-                    if self.resources.len() != self.identifiers.len()
-                        && !self.original.ends_with('}')
-                        && is_plurar(self.resources.last().unwrap().to_string())
-                    {
+                    if !self.original.ends_with('}') {
                         "list"
                     } else {
                         "get"
@@ -138,7 +135,7 @@ mod tests {
     #[test_case( "get".to_string(), "users/{id}".to_string(), "getUser".to_string(); "endpoint name test 8" )]
     #[test_case( "get".to_string(), "v2/users".to_string(), "v2ListUsers".to_string(); "endpoint name test 9" )]
     #[test_case( "get".to_string(), "v2/users/{id}".to_string(), "v2GetUser".to_string(); "endpoint name test 10" )]
-    #[test_case( "get".to_string(), "v1/users/{id}/status".to_string(), "v1GetUserStatus".to_string(); "endpoint name test 11" )]
+    #[test_case( "get".to_string(), "v1/users/{id}/status".to_string(), "v1ListUserStatus".to_string(); "endpoint name test 11" )]
     #[test_case( "post".to_string(), "users/{id}/groups".to_string(), "createUserGroup".to_string(); "endpoint name test 12" )]
     #[test_case( "get".to_string(), "user-groups/{id}".to_string(), "getUserGroup".to_string(); "endpoint name test 13" )]
     #[test_case( "get".to_string(), "v1/users/{id}/statuses".to_string(), "v1ListUserStatuses".to_string(); "endpoint name test 14" )]

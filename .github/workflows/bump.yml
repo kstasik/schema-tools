@@ -1,0 +1,40 @@
+name: Bump version
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.x']
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: '${{ secrets.PERSONAL_ACCESS_TOKEN }}'
+          fetch-depth: 0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python --version
+          python -m pip install -U commitizen
+      - name: Configure repo
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git pull origin master --tags
+      - name: Create bump
+        run: |
+          cz bump --yes --changelog
+      - name: Push changes
+        uses: Woile/github-push-action@master
+        with:
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          tags: "true"

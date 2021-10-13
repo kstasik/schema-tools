@@ -62,6 +62,8 @@ impl Opts {
                     Err(Error::RegistryMissingRevTagBranch)
                 }?;
 
+                log::info!("discovering: {}", opts.uri);
+
                 let registry = discover_git(&opts.uri, checkout, opts.no_cache)?;
                 discovery.register(opts.name.clone(), registry);
             }
