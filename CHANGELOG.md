@@ -1,3 +1,9 @@
+## v0.1.1 (2021-10-21)
+
+### Fix
+
+- ref->ref->ref issue during dereference
+
 ## v0.1.0 (2021-10-14)
 
 ### Fix
