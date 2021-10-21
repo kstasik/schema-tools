@@ -101,7 +101,7 @@ fn process_ref(
 
             // resolve
             match resolver
-                .resolve(root, &mut ctx.scope, |resolved, _| {
+                .resolve_once(root, &mut ctx.scope, |resolved, _| {
                     if root == resolved {
                         return Err(Error::NotImplemented);
                     }
@@ -297,6 +297,108 @@ mod tests {
                     }
                   }
                 }
+            }
+          }
+        });
+
+        assert_eq!(spec.get_body().to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_create_internal_references() {
+        let mut spec = spec_from_file("resources/test/json-schemas/20-local-reference.json");
+
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&spec, &client);
+
+        Dereferencer::options()
+            .with_create_internal_references(true)
+            .with_skip_root_internal_references(true)
+            .process(&mut spec, &ss);
+
+        let expected = json!({
+          "$id": "https://example.com/arrays.schema.json",
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "title": "Object",
+          "required": [
+            "type",
+            "name",
+            "xxxx"
+          ],
+          "$defs": {
+            "aaa": {
+              "type": "string",
+              "format": "decimal"
+            },
+            "optionalAaa": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "$ref": "#/$defs/aaa"
+                }
+              ]
+            }
+          },
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/optionalAaa"
+            },
+            "xxxx": {
+              "type": "object",
+              "required": [
+                "ooo"
+              ],
+              "properties": {
+                "ooo": {
+                  "$ref": "#/$defs/aaa"
+                },
+                "yyy": {
+                  "type": "object",
+                  "properties": {
+                    "prop1": {
+                      "$ref": "#/$defs/aaa"
+                    },
+                    "prop2": {
+                      "$ref": "#/$defs/optionalAaa"
+                    }
+                  }
+                },
+                "ntype": {
+                  "allOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "myType1": {
+                          "$ref": "#/$defs/aaa"
+                        },
+                        "myType2": {
+                          "$ref": "#/$defs/optionalAaa"
+                        },
+                        "myType3": {
+                          "$ref": "#/$defs/aaa"
+                        }
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "myType3": {
+                          "$ref": "#/$defs/optionalAaa"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "correctType": {
+                  "$ref": "#/$defs/aaa"
+                }
+              }
+            },
+            "name": {
+              "type": "string"
             }
           }
         });

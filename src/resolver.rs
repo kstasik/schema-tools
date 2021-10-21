@@ -75,6 +75,63 @@ impl<'a> SchemaResolver<'a> {
             None => f(node, scope),
         }
     }
+
+    pub fn resolve_once<F, T>(
+        &self,
+        node: &Value,
+        scope: &mut SchemaScope,
+        mut f: F,
+    ) -> Result<T, Error>
+    where
+        F: FnMut(&Value, &mut SchemaScope) -> Result<T, Error>,
+    {
+        if !node.is_object()
+            || node.as_object().unwrap().get("$ref").is_none()
+            || self.storage.is_none()
+        {
+            return f(node, scope);
+        }
+
+        match self.storage {
+            Some(storage) => match node.as_object().unwrap().get("$ref").unwrap() {
+                Value::String(reference) => {
+                    let mut url = super::storage::ref_to_url(&self.url, reference).unwrap();
+
+                    let copy = url.clone();
+                    let pointer = copy.fragment();
+
+                    url.set_fragment(None);
+                    let referenced_schema = storage.schemas.get(&url);
+
+                    match referenced_schema {
+                        Some(schema) => match pointer {
+                            Some(p) => {
+                                if let Some(s) = schema.get_body().pointer(p) {
+                                    scope.reference(p);
+                                    let result = f(s, scope);
+                                    scope.pop();
+                                    result
+                                } else {
+                                    log::error!("Cannot resolve: {}", p);
+                                    f(node, scope)
+                                }
+                            }
+                            None => f(schema.get_body(), scope),
+                        },
+                        None => {
+                            log::error!("Cannot find schema: {}", url);
+                            f(node, scope)
+                        }
+                    }
+                }
+                _ => {
+                    log::error!("Invalid reference");
+                    f(node, scope)
+                }
+            },
+            None => f(node, scope),
+        }
+    }
 }
 
 #[cfg(test)]
