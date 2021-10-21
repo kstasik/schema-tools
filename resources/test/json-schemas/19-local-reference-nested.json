@@ -1,0 +1,43 @@
+{
+  "$id": "https://example.com/arrays.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Object",
+  "required": ["type", "name"],
+  "$defs": {
+    "CustomType": {
+      "$ref": "21-local-reference-nested.json#/$defs/CustomType"
+    },
+    "OptionalCustomType": {
+      "oneOf": [
+        {"type": "null" },
+        {"$ref": "#/$defs/CustomType" }
+      ]
+    },
+    "ComplexType": {
+      "type": "object",
+      "properties": {
+        "prop1": { "$ref": "#/$defs/CustomType" },
+        "prop2": { "$ref": "#/$defs/OptionalCustomType" }
+      }
+    },
+    "OOType": {
+      "type": "object",
+      "properties": {
+        "myType1": { "$ref": "#/$defs/CustomType" },
+        "myType2": { "$ref": "#/$defs/OptionalCustomType" },
+        "myType3": { "$ref": "#/$defs/CustomType" }
+      }
+    },
+    "SecondType": {
+      "allOf": [
+        { "$ref": "#/$defs/OOType" },
+        {
+          "type": "object",
+          "properties": {
+            "myType3": { "$ref": "#/$defs/OptionalCustomType" }
+          }
+        }
+      ]
+    }
+  }}
