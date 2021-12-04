@@ -54,7 +54,7 @@ impl Renderer {
 
         for template in files {
             let files = match template {
-                super::templates::Template::Static(t) => t.copy(target_dir),
+                super::templates::Template::File(t) => t.copy(target_dir),
                 super::templates::Template::Models(t) => {
                     t.render(&self.tera, target_dir, &models, &self.container)
                 }
@@ -79,7 +79,10 @@ impl Renderer {
 
         for template in &self.templates.list {
             files.push(match template {
-                super::templates::Template::Static(t) => t.copy(target_dir),
+                super::templates::Template::File(t) => t.copy(target_dir),
+                super::templates::Template::Static(t) => {
+                    t.render(&self.tera, target_dir, &self.container)
+                }
                 super::templates::Template::Endpoints(t) => {
                     t.render(&self.tera, target_dir, &openapi, &self.container)
                 }

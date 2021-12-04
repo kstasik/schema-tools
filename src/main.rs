@@ -15,8 +15,10 @@ pub mod storage;
 pub mod tools;
 pub mod validate;
 
+const VERSION: &str = "0.1.1";
+
 #[derive(Clap)]
-#[clap(version = "0.0.1", author = "Kacper S. <kacper@stasik.eu>")]
+#[clap(version = VERSION, author = "Kacper S. <kacper@stasik.eu>")]
 
 struct Opts {
     #[clap(subcommand)]
@@ -26,28 +28,28 @@ struct Opts {
 #[derive(Clap)]
 enum Command {
     #[clap(
-        version = "0.0.1",
+        version = VERSION,
         about = "Schema pre-processing",
         author = "Kacper S. <kacper@stasik.eu>"
     )]
     Process(commands::process::Opts),
 
     #[clap(
-        version = "0.0.1",
+        version = VERSION,
         about = "Schema validation",
         author = "Kacper S. <kacper@stasik.eu>"
     )]
     Validate(commands::validate::Opts),
 
     #[clap(
-        version = "0.0.1",
+        version = VERSION,
         about = "Schema to code transformations",
         author = "Kacper S. <kacper@stasik.eu>"
     )]
     Codegen(commands::codegen::Opts),
 
     #[clap(
-        version = "0.0.1",
+        version = VERSION,
         about = "Chain different operations in one process",
         author = "Kacper S. <kacper@stasik.eu>"
     )]

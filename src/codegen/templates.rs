@@ -20,6 +20,7 @@ pub enum Template {
     Endpoints(EndpointsTemplate),
     Tags(TagsTemplate),
     Static(StaticTemplate),
+    File(FileTemplate),
 }
 
 #[derive(Debug)]
@@ -47,6 +48,13 @@ pub struct ModelsTemplate {
 }
 
 #[derive(Debug)]
+pub struct StaticTemplate {
+    relative: PathBuf,
+    filename: Filename,
+    condition: Option<Condition>,
+}
+
+#[derive(Debug)]
 pub struct Condition {
     pub kv: String,
 }
@@ -66,10 +74,11 @@ pub trait Group {
 }
 
 #[derive(Debug)]
-pub struct StaticTemplate {
+pub struct FileTemplate {
     relative: String,
     path: PathBuf,
 }
+
 #[derive(PartialEq, Debug)]
 pub enum TemplateType {
     Models,
@@ -205,8 +214,8 @@ impl Templates {
 }
 
 impl Template {
-    fn from_static(relative: String, path: PathBuf) -> Self {
-        Template::Static(StaticTemplate { relative, path })
+    fn from_file(relative: String, path: PathBuf) -> Self {
+        Template::File(FileTemplate { relative, path })
     }
 
     fn from_content(relative: String, content: String) -> Result<Self, Error> {
@@ -227,6 +236,21 @@ impl Template {
 
             let params = super::format(first_line.trim_matches(&['{', '}', '#', ' '] as &[_]))?;
 
+            if let Some(serde_json::Value::String(min_version)) = params.get("min_version") {
+                let min = semver::Version::parse(min_version).map_err(Error::SemVersion)?;
+                let current = semver::Version::parse(crate::VERSION).unwrap();
+
+                let req = semver::VersionReq::parse(
+                    format!(">={}, <{}.{}.0", min_version, min.major + 1, min.minor).as_str(),
+                )
+                .unwrap();
+                if !req.matches(&current) {
+                    return Err(Error::IncorrectVersionError(current, min, relative));
+                }
+            } else {
+                return Err(Error::MissingMinVersionError(relative));
+            }
+
             params
                 .get("type")
                 .ok_or_else(|| Error::CodegenFileHeaderRequired("type".to_string()))?
@@ -235,6 +259,7 @@ impl Template {
                     "endpoints" => EndpointsTemplate::from(PathBuf::from(relative), &params),
                     "models" => ModelsTemplate::from(PathBuf::from(relative), &params),
                     "tags" => TagsTemplate::from(PathBuf::from(relative), &params),
+                    "static" => TagsTemplate::from(PathBuf::from(relative), &params),
                     _ => Err(Error::CodegenFileHeaderRequired("type".to_string())),
                 })
                 .unwrap()
@@ -265,6 +290,38 @@ impl Template {
         }
 
         Ok(())
+    }
+}
+
+impl StaticTemplate {
+    pub fn render(
+        &self,
+        tera: &Tera,
+        target_dir: &str,
+        container: &super::CodegenContainer,
+    ) -> Result<Vec<String>, Error> {
+        if self
+            .condition
+            .as_ref()
+            .map(|s| s.check(container))
+            .unwrap_or(true)
+        {
+            process_render(
+                tera,
+                serde_json::json!({}),
+                PathBuf::from(format!(
+                    "{}/{}",
+                    target_dir,
+                    self.filename.resolve(container)?
+                )),
+                self.relative.clone(),
+                container,
+            )
+        } else {
+            log::info!("Template skipped due to condition: {:?}", self.relative);
+
+            Ok(vec![])
+        }
     }
 }
 
@@ -482,7 +539,7 @@ impl ModelsTemplate {
     }
 }
 
-impl StaticTemplate {
+impl FileTemplate {
     pub fn copy(&self, target_dir: &str) -> Result<Vec<String>, Error> {
         let target = PathBuf::from(format!("{}/{}", target_dir, self.relative));
 
@@ -522,7 +579,7 @@ pub fn get(discovered: Discovered) -> Result<Templates, Error> {
     }
 
     for (relative, path) in discovered.files {
-        list.push(Template::from_static(relative, path))
+        list.push(Template::from_file(relative, path))
     }
 
     if list.is_empty() {

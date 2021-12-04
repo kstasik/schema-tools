@@ -23,6 +23,7 @@ pub enum Space {
     Tag(String),
     Operation(String),
     Id(String),
+    Parameter,
 }
 
 #[derive(Clone, Debug, PartialEq)]

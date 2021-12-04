@@ -144,6 +144,7 @@ fn new_endpoint(
             scope.add_spaces(&mut tags.clone().into_iter().map(Space::Tag).collect());
             scope.add_spaces(&mut vec![Space::Operation(operation.clone())]);
 
+            scope.add_spaces(&mut vec![Space::Operation(operation.clone())]);
             let mut endpoint_parameters =
                 parameters::extract(data, scope, mcontainer, resolver, options)?;
             if let Some(shared) = parameters {

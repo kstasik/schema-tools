@@ -25,6 +25,7 @@ use crate::{
 #[derive(Clone)]
 pub struct ModelContainer {
     regexps: Vec<types::RegexpType>,
+    formats: Vec<String>,
     models: Vec<types::Model>,
     mapping: HashMap<String, u32>,
     any: types::Model,
@@ -37,6 +38,7 @@ impl Serialize for ModelContainer {
     {
         let mut state = serializer.serialize_struct("container", 2)?;
         state.serialize_field("regexps", &self.regexps)?;
+        state.serialize_field("formats", &self.formats)?;
         state.serialize_field("models", &self.models)?;
         state.end()
     }
@@ -46,6 +48,7 @@ impl ModelContainer {
     pub fn default() -> Self {
         Self {
             regexps: vec![],
+            formats: vec![],
             models: vec![],
             mapping: HashMap::new(),
             any: types::Model::new(types::ModelType::AnyType(types::AnyType {})),
@@ -135,6 +138,12 @@ impl ModelContainer {
             self.regexps.last().unwrap()
         }
         .clone()
+    }
+
+    pub fn add_format(&mut self, fmt: &str) {
+        if !self.formats.iter().any(|s| s == fmt) {
+            self.formats.push(fmt.to_string())
+        }
     }
 }
 
@@ -377,6 +386,10 @@ fn add_validation_and_nullable(
         });
 
         result.insert("pattern".to_string(), serde_json::to_value(model).unwrap());
+    }
+
+    if let Some(serde_json::Value::String(fmt)) = result.get("format") {
+        mcontainer.add_format(fmt);
     }
 
     let nullable = schema
