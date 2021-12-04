@@ -12,6 +12,7 @@ pub struct Model {
 
     pub attributes: Attributes,
 
+    #[serde(flatten)]
     pub spaces: SpacesContainer,
 }
 
@@ -89,6 +90,7 @@ pub struct FlatModel {
 
 #[derive(Debug, Serialize, Clone, Default)]
 pub struct SpacesContainer {
+    #[serde(rename = "spaces")]
     pub list: Vec<Space>,
 }
 

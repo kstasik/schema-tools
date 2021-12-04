@@ -2,6 +2,12 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Missing min_version attribute in file: {0}")]
+    MissingMinVersionError(String),
+
+    #[error("Codegen version {0} does not satisfy the template constraint {1} in file: {2}")]
+    IncorrectVersionError(semver::Version, semver::Version, String),
+
     #[error("Cannot deserialize yaml document: {0}")]
     DeserializeYamlError(serde_yaml::Error),
 

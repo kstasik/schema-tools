@@ -4,6 +4,7 @@ use crate::{
     },
     error::Error,
     resolver::SchemaResolver,
+    scope::Space,
 };
 use serde::Serialize;
 use serde_json::Map;
@@ -63,8 +64,9 @@ pub fn extract(
     match node.get("parameters") {
         Some(parameters) => {
             let mut collection = Parameters::default();
+            scope.add_spaces(&mut vec![Space::Parameter]);
 
-            match parameters {
+            let result = match parameters {
                 Value::Array(ref params) => {
                     scope.any("parameters");
 
@@ -83,7 +85,11 @@ pub fn extract(
                     "parameters".to_string(),
                     scope.to_string(),
                 )),
-            }?;
+            };
+
+            scope.pop_space();
+
+            result?;
 
             Ok(collection)
         }
