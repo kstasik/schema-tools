@@ -1,3 +1,9 @@
+## v0.2.0 (2021-12-04)
+
+### Feat
+
+- versions, min_version, formats, parameters
+
 ## v0.1.1 (2021-10-21)
 
 ### Fix

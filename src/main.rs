@@ -15,7 +15,7 @@ pub mod storage;
 pub mod tools;
 pub mod validate;
 
-const VERSION: &str = "0.1.1";
+const VERSION: &str = "0.2.0";
 
 #[derive(Clap)]
 #[clap(version = VERSION, author = "Kacper S. <kacper@stasik.eu>")]
