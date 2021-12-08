@@ -208,7 +208,7 @@ pub fn fill_parameters(phrase: &str, data: (impl Serialize + Clone)) -> Result<S
             parameter = !parameter;
 
             if !current.is_empty() {
-                let path = format!("/{}", current.replace(".", "/"));
+                let path = format!("/{}", current.replace('.', "/"));
 
                 if let Some(value) = serde_json::json!(data).pointer(&path) {
                     result.push_str(&match value {
@@ -302,7 +302,7 @@ impl FromStr for Condition {
 
         if let [field, value] = data.split(&operator.to_string()).collect::<Vec<_>>()[..] {
             Ok(Self {
-                field: format!("/{}", field.replace(".", "/")),
+                field: format!("/{}", field.replace('.', "/")),
                 value: serde_json::from_str(value).unwrap(),
                 operator,
             })

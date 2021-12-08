@@ -25,6 +25,15 @@ pub enum ChainCommandOption {
     Output(OutputOpts),
 }
 
+impl Display for OutputOpts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.output.to_file {
+            Some(path) => write!(f, "to {} in {} format", path, self.output.output),
+            None => write!(f, "to stdout in {} format", self.output.output),
+        }
+    }
+}
+
 impl Display for ChainCommandOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
@@ -32,7 +41,7 @@ impl Display for ChainCommandOption {
             Self::Process(p) => write!(f, "process: {}", p),
             Self::Validate(p) => write!(f, "validate: {}", p),
             Self::Registry(p) => write!(f, "registry: {}", p),
-            Self::Output(p) => write!(f, "output: {:?}", p),
+            Self::Output(p) => write!(f, "output: {}", p),
         }
     }
 }

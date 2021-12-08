@@ -58,6 +58,9 @@ impl Renderer {
                 super::templates::Template::Models(t) => {
                     t.render(&self.tera, target_dir, &models, &self.container)
                 }
+                super::templates::Template::Static(t) => {
+                    t.render(&self.tera, target_dir, &self.container)
+                }
                 _ => Ok(vec![]),
             }?;
 
