@@ -24,6 +24,7 @@ pub fn register(tera: &mut Tera) {
     tera.register_filter("filter_not", filter_not);
     tera.register_filter("filter_startswith", filter_startswith);
     tera.register_filter("filter_inarray", filter_inarray);
+    tera.register_filter("filter_not_inarray", filter_not_inarray);
 }
 
 pub fn pascalcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
@@ -142,7 +143,7 @@ pub fn filter_not(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Va
     };
     let value = args.get("value").unwrap_or(&Value::Null);
 
-    let json_pointer = ["/", &key.replace(".", "/")].join("");
+    let json_pointer = ["/", &key.replace('.', "/")].join("");
     arr = arr
         .into_iter()
         .filter(|v| {
@@ -183,7 +184,7 @@ pub fn filter_startswith(value: &Value, args: &HashMap<String, Value>) -> TeraRe
         }
     };
 
-    let json_pointer = ["/", &key.replace(".", "/")].join("");
+    let json_pointer = ["/", &key.replace('.', "/")].join("");
     arr = arr
         .into_iter()
         .filter(|v| {
@@ -205,23 +206,58 @@ pub fn filter_inarray(value: &Value, args: &HashMap<String, Value>) -> TeraResul
     }
 
     let key = match args.get("attribute") {
-        Some(val) => try_get_value!("filter_not", "attribute", String, val),
+        Some(val) => try_get_value!("filter_inarray", "attribute", String, val),
         None => {
             return Err(tera::Error::msg(
-                "The `filter_not` filter has to have an `attribute` argument",
+                "The `filter_inarray` filter has to have an `attribute` argument",
             ))
         }
     };
     let values = args.get("values").unwrap_or(&Value::Null);
 
     if let Value::Array(accepted) = values {
-        let json_pointer = ["/", &key.replace(".", "/")].join("");
+        let json_pointer = ["/", &key.replace('.', "/")].join("");
         arr = arr
             .into_iter()
             .filter(|v| {
                 let val = v.pointer(&json_pointer).unwrap_or(&Value::Null);
 
                 accepted.contains(val)
+            })
+            .collect::<Vec<_>>();
+
+        Ok(to_value(arr).unwrap())
+    } else {
+        Err(tera::Error::msg(
+            "The `filter_inarray` filter has to have an `values` argument, type: array",
+        ))
+    }
+}
+
+pub fn filter_not_inarray(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
+    let mut arr = try_get_value!("filter_inarray", "value", Vec<Value>, value);
+    if arr.is_empty() {
+        return Ok(arr.into());
+    }
+
+    let key = match args.get("attribute") {
+        Some(val) => try_get_value!("filter_not_inarray", "attribute", String, val),
+        None => {
+            return Err(tera::Error::msg(
+                "The `filter_not_inarray` filter has to have an `attribute` argument",
+            ))
+        }
+    };
+    let values = args.get("values").unwrap_or(&Value::Null);
+
+    if let Value::Array(rejected) = values {
+        let json_pointer = ["/", &key.replace('.', "/")].join("");
+        arr = arr
+            .into_iter()
+            .filter(|v| {
+                let val = v.pointer(&json_pointer).unwrap_or(&Value::Null);
+
+                !rejected.contains(val)
             })
             .collect::<Vec<_>>();
 

@@ -149,7 +149,7 @@ impl BasicNamer {
                     })
                     .collect();
 
-                let parts: Vec<String> = glued.iter().map(|s| self.split(s)).flatten().collect();
+                let parts: Vec<String> = glued.iter().flat_map(|s| self.split(s)).collect();
                 if !glued.is_empty() {
                     Ok(parts)
                 } else {
@@ -375,5 +375,5 @@ fn scope_to_string(s: SchemaScopeType) -> Option<String> {
         SchemaScopeType::Reference(t) => Some(format!("\x1b[0;32m{}\x1b[0m", t)),
         SchemaScopeType::Index(i) => Some(format!("{}", i)),
     }
-    .map(|s| s.replace("/", "~1"))
+    .map(|s| s.replace('/', "~1"))
 }

@@ -259,7 +259,7 @@ impl Template {
                     "endpoints" => EndpointsTemplate::from(PathBuf::from(relative), &params),
                     "models" => ModelsTemplate::from(PathBuf::from(relative), &params),
                     "tags" => TagsTemplate::from(PathBuf::from(relative), &params),
-                    "static" => TagsTemplate::from(PathBuf::from(relative), &params),
+                    "static" => StaticTemplate::from(PathBuf::from(relative), &params),
                     _ => Err(Error::CodegenFileHeaderRequired("type".to_string())),
                 })
                 .unwrap()
@@ -294,6 +294,28 @@ impl Template {
 }
 
 impl StaticTemplate {
+    pub fn from(relative: PathBuf, config: &HashMap<&str, Value>) -> Result<Template, Error> {
+        let filename = Filename::from(
+            config
+                .get("filename")
+                .ok_or_else(|| Error::CodegenFileHeaderRequired("filename".to_string()))?
+                .as_str()
+                .unwrap()
+                .to_string(),
+        );
+
+        let condition = config
+            .get("if")
+            .map(|s| Condition::from(s.as_str().unwrap()))
+            .map_or(Ok(None), |v| v.map(Some))?;
+
+        Ok(Template::Static(Self {
+            relative,
+            filename,
+            condition,
+        }))
+    }
+
     pub fn render(
         &self,
         tera: &Tera,
