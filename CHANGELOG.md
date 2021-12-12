@@ -1,3 +1,13 @@
+## v0.3.0 (2021-12-12)
+
+### Fix
+
+- git build fix
+
+### Feat
+
+- static templates and filters
+
 ## v0.2.0 (2021-12-04)
 
 ### Feat
