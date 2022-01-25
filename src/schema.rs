@@ -24,10 +24,9 @@ impl<'a> Schema {
 
         let (content_type, response) = match url.scheme() {
             "file" => {
-                let content =
-                    fs::read_to_string(url.path().to_owned()).map_err(|_| Error::SchemaLoad {
-                        url: url.to_string(),
-                    })?;
+                let content = fs::read_to_string(url.path()).map_err(|_| Error::SchemaLoad {
+                    url: url.to_string(),
+                })?;
 
                 Ok((None, content))
             }
