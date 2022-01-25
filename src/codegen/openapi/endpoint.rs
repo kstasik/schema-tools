@@ -130,7 +130,7 @@ fn new_endpoint(
                     _ => Err(Error::CodegenInvalidEndpointFormat),
                 })
                 .map_or(Ok(None), |v| v.map(Some))?
-                .unwrap_or_else(Vec::new);
+                .unwrap_or_default();
 
             let x = data
                 .iter()

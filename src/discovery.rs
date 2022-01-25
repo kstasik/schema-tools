@@ -95,6 +95,10 @@ pub enum GitCheckoutType {
 }
 
 impl Registry {
+    pub fn new(path: PathBuf) -> Self {
+        Self { path }
+    }
+
     pub fn get_file(&self, path: &str) -> Result<String, Error> {
         let mut filepath = self.path.clone();
         filepath.push(path);
@@ -138,7 +142,7 @@ pub fn discover_git(
         fs::remove_dir_all(directory.as_path()).map_err(Error::DiscoveryCleanRegistryError)?;
     } else if directory.exists() {
         log::debug!("already exists: {:?}", directory);
-        return Ok(Registry { path: directory });
+        return Ok(Registry::new(directory));
     }
 
     log::debug!("checking out: {:?}", directory);
@@ -158,7 +162,7 @@ pub fn discover_git(
     repo.checkout_tree(&obj, None)
         .map_err(Error::GitDiscoveryError)?;
 
-    Ok(Registry { path: directory })
+    Ok(Registry::new(directory))
 }
 
 #[cfg(test)]

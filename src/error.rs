@@ -2,6 +2,12 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("cannot calculate hash: {0}")]
+    HashCalculationDirError(walkdir::Error),
+
+    #[error("cannot calculate hash: {0}")]
+    HashCalculationError(std::io::Error),
+
     #[error("Missing min_version attribute in file: {0}")]
     MissingMinVersionError(String),
 
@@ -14,11 +20,20 @@ pub enum Error {
     #[error("Filter {0} is incorrect")]
     IncorrectFilterError(String),
 
+    #[error("Provided path of local registry is not a directory: {0}")]
+    RegistryLocalPathNotDirError(std::path::PathBuf),
+
+    #[error("An io error occured during local registry discovery: {0}")]
+    RegistryLocalIoError(std::io::Error),
+
     #[error("Please provide revision, branch or tag")]
     RegistryMissingRevTagBranch,
 
     #[error("Read file error: {0}")]
     DiscoveryReadFile(std::io::Error),
+
+    #[error("Provided hash {0} doesnt match calculated {1} checksum")]
+    DiscoveryInvalidLock(String, String),
 
     #[error("Provided registry doesnt exist: {0}")]
     DiscoveryNoRegistry(String),
