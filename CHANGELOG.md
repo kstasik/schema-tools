@@ -1,3 +1,10 @@
+## v0.4.0 (2022-01-26)
+
+### Feat
+
+- registry lock and relative path
+- registry lock and relative path
+
 ## v0.3.0 (2021-12-12)
 
 ### Fix
