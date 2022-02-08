@@ -28,6 +28,7 @@ jobs:
           target: aarch64-apple-darwin
           default: true
           override: true
+      - run: brew install pkg-config openssl@1.1
       - run: cargo build --target aarch64-apple-darwin --release
 
   build_macos:
