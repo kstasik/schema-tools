@@ -7,15 +7,15 @@ on:
 name: build
 
 jobs:
-  build_unix:
-    name: Build for unix
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - run: cargo build --release
+#  build_unix:
+#    name: Build for unix
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#      - uses: actions-rs/toolchain@v1
+#        with:
+#          toolchain: stable
+#      - run: cargo build --release
 
   build_macos_arm:
     name: Build for macos (arm)
@@ -28,24 +28,21 @@ jobs:
           target: aarch64-apple-darwin
           default: true
           override: true
-      - run: brew reinstall openssl@1.1 pkg-config
-      - run: openssl version
-      - run: pkg-config --version
-      - run: ls -al /usr/local/opt/openssl/lib
+      - run: uname -m
       - run: cargo build --target aarch64-apple-darwin --release
         env:
           PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
           PKG_CONFIG_ALLOW_CROSS: 1
 
-  build_macos:
-    name: Build for macos
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          target: x86_64-apple-darwin
-          default: true
-          override: true
-      - run: cargo build --target x86_64-apple-darwin --release
+#  build_macos:
+#    name: Build for macos
+#    runs-on: macos-latest
+#    steps:
+#      - uses: actions/checkout@v2
+#      - uses: actions-rs/toolchain@v1
+#        with:
+#          toolchain: stable
+#          target: x86_64-apple-darwin
+#          default: true
+#          override: true
+#      - run: cargo build --target x86_64-apple-darwin --release
