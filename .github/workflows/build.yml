@@ -32,7 +32,10 @@ jobs:
       - run: openssl version
       - run: pkg-config --version
       - run: ls -al /usr/local/opt/openssl/lib
-      - run: PKG_CONFIG_ALLOW_CROSS=1 cargo build --target aarch64-apple-darwin --release
+      - run: cargo build --target aarch64-apple-darwin --release
+        env:
+          PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+          PKG_CONFIG_ALLOW_CROSS: 1
 
   build_macos:
     name: Build for macos
