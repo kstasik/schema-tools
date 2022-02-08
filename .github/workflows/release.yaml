@@ -47,7 +47,7 @@ jobs:
           target: ${{ matrix.config.target }}
           default: true
           override: true
-      - run: cargo build --release
+      - run: cargo build --target ${{ matrix.config.target }} --release
       - run: strip target/release/schematools
       - run: mv target/release/schematools target/release/schematools-${{ matrix.config.short }}
       - run: tar -czf target/release/schematools-${{ matrix.config.short }}.tar.gz -C ./target/release schematools-${{ matrix.config.short }}

@@ -28,7 +28,7 @@ jobs:
           target: aarch64-apple-darwin
           default: true
           override: true
-      - run: cargo build --release
+      - run: cargo build --target aarch64-apple-darwin --release
 
   build_macos:
     name: Build for macos
@@ -41,4 +41,4 @@ jobs:
           target: x86_64-apple-darwin
           default: true
           override: true
-      - run: cargo build --release
+      - run: cargo build --target x86_64-apple-darwin --release
