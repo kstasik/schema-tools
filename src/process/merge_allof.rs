@@ -81,7 +81,7 @@ fn process_merge(
                             Ok(node)
                         })
                         .unwrap();
-                    merge_values(&mut first, value, options);
+                    merge_values(&mut first, value);
                 }
 
                 first
@@ -89,7 +89,7 @@ fn process_merge(
 
             // todo: leave_invalid_properties vs
             root.as_object_mut().unwrap().remove("allOf");
-            merge_values(root, first, options);
+            merge_values(root, first);
         }
 
         Value::Null => {}
@@ -134,12 +134,12 @@ fn process_node(
     }
 }
 
-fn merge_values(a: &mut Value, b: Value, options: &MergerOptions) {
+fn merge_values(a: &mut Value, b: Value) {
     match (a, b) {
         (a @ &mut Value::Object(_), Value::Object(b)) => {
             let a = a.as_object_mut().unwrap();
             for (k, v) in b {
-                merge_values(a.entry(k).or_insert(Value::Null), v, options);
+                merge_values(a.entry(k).or_insert(Value::Null), v);
             }
         }
         (a @ &mut Value::Array(_), Value::Array(b)) => {

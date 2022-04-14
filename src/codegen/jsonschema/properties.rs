@@ -108,6 +108,11 @@ pub fn from_object(
 ) -> Result<Model, Error> {
     from_object_with_properties(schema, container, scope, resolver, options)
         .or_else(|_| {
+            super::patternproperties::from_pattern_properties(
+                schema, container, scope, resolver, options,
+            )
+        })
+        .or_else(|_| {
             super::additionalproperties::from_object_with_additional_properties(
                 schema, container, scope, resolver, options,
             )
@@ -121,6 +126,8 @@ mod tests {
 
     use super::*;
     use serde_json::json;
+    // use crate::codegen::jsonschema::types::ModelType::FlatModel;
+    use crate::codegen::jsonschema::types::FlatModel;
 
     #[test]
     fn test_should_convert_to_object_with_additional_properties() {
@@ -350,6 +357,57 @@ mod tests {
                     }
                 }
             ))
+        );
+    }
+
+    #[test]
+    fn test_should_change_object_to_map_with_pattern_properties() {
+        let schema = json!({
+            "type": "object",
+            "additionalProperties": true,
+            "patternProperties": {
+                "[A-Z]{2}": { "type": "number" }
+            }
+        });
+
+        let mut container = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        scope.entity("TestName");
+
+        let result = from_object(
+            schema.as_object().unwrap(),
+            &mut container,
+            &mut scope,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(
+            result.unwrap(),
+            Model::new(ModelType::FlatModel(FlatModel {
+                name: Some("TestName".to_string()),
+                type_: "map".to_string(),
+                model: Some(Box::from(FlatModel {
+                    name: Some("TestName".to_string()),
+                    type_: "number".to_string(),
+                    model: None,
+                    attributes: Attributes {
+                        required: true,
+                        ..Attributes::default()
+                    },
+                    spaces: Default::default(),
+                    original: None,
+                })),
+                attributes: Attributes {
+                    required: true,
+                    ..Attributes::default()
+                },
+                spaces: Default::default(),
+                original: None
+            }))
         );
     }
 }
