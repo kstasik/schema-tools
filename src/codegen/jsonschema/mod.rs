@@ -255,7 +255,7 @@ pub fn extract_type(
                                             schema, container, scope, resolver, options,
                                         )
 
-                                        // todo: consider modifing type when patternProperties is available
+                                        // todo: consider modifing type when properties and patternProperties is available
                                         // todo: consider modifing type when additionalProperties is available
                                     }
                                     "array" => {
