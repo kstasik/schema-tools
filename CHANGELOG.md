@@ -1,3 +1,9 @@
+## v0.4.1 (2022-04-23)
+
+### Fix
+
+- resolve pattern properties on type object
+
 ## v0.4.0 (2022-01-26)
 
 ### Feat
