@@ -88,6 +88,12 @@ pub struct FlatModel {
     pub original: Option<u32>,
 }
 
+impl From<&FlatModel> for String {
+    fn from(m: &FlatModel) -> Self {
+        format!("{}:{:?}", m.type_, m.model)
+    }
+}
+
 #[derive(Debug, Serialize, Clone, Default)]
 pub struct SpacesContainer {
     #[serde(rename = "spaces")]
