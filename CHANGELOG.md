@@ -1,3 +1,10 @@
+## v0.5.0 (2022-05-04)
+
+### Feat
+
+- unique models detection
+- unqiue models detection
+
 ## v0.4.1 (2022-04-23)
 
 ### Fix
