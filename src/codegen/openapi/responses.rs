@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::codegen::openapi::parameters::extract_parameter;
 use crate::{
     codegen::jsonschema::{JsonSchemaExtractOptions, ModelContainer},
@@ -12,26 +14,21 @@ use serde_json::Value;
 use super::parameters::Parameter;
 
 #[derive(Debug, Serialize, Default, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Responses {
-    #[serde(rename = "success")]
     pub success: Option<Response>,
-
-    #[serde(rename = "all")]
     pub all: Vec<Response>,
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Response {
-    #[serde(rename = "statusCode")]
     pub status_code: u32,
 
-    #[serde(rename = "models")]
     pub models: Option<super::MediaModelsContainer>,
 
-    #[serde(rename = "description")]
     pub description: Option<String>,
 
-    #[serde(rename = "headers")]
     pub headers: Option<Vec<Parameter>>,
 }
 
@@ -56,6 +53,7 @@ pub fn extract(
     }
 }
 
+#[allow(clippy::needless_borrow)]
 pub fn extract_responses(
     node: &Value,
     scope: &mut SchemaScope,
@@ -67,17 +65,53 @@ pub fn extract_responses(
         Value::Object(ref data) => {
             let mut responses = Responses::default();
 
-            for (status_code, response_node) in data {
-                scope.property(status_code);
+            // parse responses
+            let mut parsed = data
+                .iter()
+                .map(|(status_code, response_node)| {
+                    scope.property(status_code);
 
-                let response = extract_response(
-                    status_code,
-                    response_node,
-                    scope,
-                    mcontainer,
-                    resolver,
-                    options,
-                )?;
+                    let response = extract_response(
+                        status_code,
+                        response_node,
+                        scope,
+                        mcontainer,
+                        resolver,
+                        options,
+                    );
+
+                    scope.pop();
+
+                    response
+                })
+                .collect::<Result<Vec<Response>, _>>()?;
+
+            // find 2xx and uniques
+            let mut occurences: HashMap<String, u8> = HashMap::new();
+            for response in parsed.iter() {
+                if let Some(mcontainer) = &response.models {
+                    for mm in &mcontainer.list {
+                        occurences
+                            .entry((&mm.model).into())
+                            .and_modify(|count| *count += 1)
+                            .or_insert(1);
+                    }
+                }
+            }
+
+            for response in parsed.iter_mut() {
+                if let Some(ref mut mcontainer) = response.models {
+                    for mm in mcontainer.list.iter_mut() {
+                        let key: String = (&mm.model).into();
+
+                        mm.is_unique = *occurences.get(&key).unwrap_or(&1) == 1;
+                    }
+                }
+            }
+
+            for response in parsed {
+                scope.property(&response.status_code.to_string());
+
                 if responses.success.is_none()
                     && response.status_code >= 200
                     && response.status_code < 300
@@ -85,6 +119,7 @@ pub fn extract_responses(
                     log::info!("{} -> success status code: {}", scope, response.status_code);
                     responses.success = Some(response.clone());
                 }
+
                 responses.all.push(response);
 
                 scope.pop();
@@ -192,4 +227,90 @@ fn as_header_node(
 
         Ok(parameter)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_all_models_unique() {
+        let schema = json!({
+            "200": {
+                "description": "Success response",
+                "content": {
+                    "application/json": { "schema" : {"type": "string"} },
+                    "application/vnd.short+json": { "schema" : {"type": "object", "properties": { "test" : {"type": "string"}}} },
+                },
+            },
+            "400": {
+                "description": "Fail response",
+                "content": {
+                    "application/json": { "schema" : {"type": "object", "properties": { "errorCode" : {"type": "number"}}} },
+                },
+            }
+        });
+
+        let mut mcontainer = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        let result = extract_responses(&schema, &mut scope, &mut mcontainer, &resolver, &options);
+
+        assert_eq!(result.is_ok(), true);
+
+        let responses = result.unwrap();
+        assert_eq!(true, responses.all.len() > 0);
+
+        for response in responses.all {
+            let mcontainer = response.models.unwrap();
+            assert_eq!(true, mcontainer.list.len() > 0);
+
+            for m in mcontainer.list {
+                assert_eq!(true, m.is_unique, "{:?} should be unique", m.model);
+            }
+        }
+    }
+
+    #[test]
+    fn test_no_unique_model() {
+        let schema = json!({
+            "200": {
+                "description": "Success response",
+                "content": {
+                    "application/json": { "schema" : {"type": "string"} },
+                    "application/vnd.short+json": { "schema" : {"type": "string"} },
+                },
+            },
+            "400": {
+                "description": "Fail response",
+                "content": {
+                    "application/json": { "schema" : {"type": "string"} },
+                },
+            }
+        });
+
+        let mut mcontainer = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        let result = extract_responses(&schema, &mut scope, &mut mcontainer, &resolver, &options);
+
+        assert_eq!(result.is_ok(), true);
+
+        let responses = result.unwrap();
+        assert_eq!(true, responses.all.len() > 0);
+
+        for response in responses.all {
+            let mcontainer = response.models.unwrap();
+            assert_eq!(true, mcontainer.list.len() > 0);
+
+            for m in mcontainer.list {
+                assert_eq!(false, m.is_unique, "{:?} should not be unique", m.model);
+            }
+        }
+    }
 }

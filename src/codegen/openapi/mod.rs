@@ -35,12 +35,13 @@ impl EndpointContainer {
 }
 
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct MediaModel {
-    #[serde(rename = "model")]
     pub model: crate::codegen::jsonschema::types::FlatModel,
 
-    #[serde(rename = "content_type")]
     pub content_type: String,
+
+    pub is_unique: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -296,6 +297,7 @@ pub fn get_content(
                                         .map(|model| MediaModel {
                                             model,
                                             content_type: content_type.to_string(),
+                                            is_unique: false,
                                         }),
                                 );
 
