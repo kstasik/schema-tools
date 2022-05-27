@@ -13,7 +13,7 @@ pub struct Schema {
     url: Url,
 }
 
-impl<'a> Schema {
+impl Schema {
     pub fn load_url(url: Url) -> Result<Schema, Error> {
         let client = reqwest::blocking::Client::new();
         Self::load_url_with_client(url, &client)
