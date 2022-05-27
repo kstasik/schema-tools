@@ -18,7 +18,7 @@ pub struct SchemaScope {
     spaces: Vec<Space>,
 }
 
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Eq, PartialEq)]
 pub enum Space {
     Tag(String),
     Operation(String),
@@ -26,7 +26,7 @@ pub enum Space {
     Parameter,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum SchemaScopeType {
     // real parts of schema pointer
     Index(usize),

@@ -324,7 +324,7 @@ impl Condition {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(Eq, PartialEq)]
 enum ConditionOperator {
     Eq,
     Eqq,

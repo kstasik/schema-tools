@@ -41,7 +41,7 @@ impl Model {
     }
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq)]
 pub enum ModelType {
     // common types
     #[serde(rename = "primitive")]
@@ -77,7 +77,7 @@ pub enum ModelType {
     FlatModel(FlatModel),
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct FlatModel {
     pub name: Option<String>,
     pub type_: String,
@@ -94,7 +94,7 @@ impl From<&FlatModel> for String {
     }
 }
 
-#[derive(Debug, Serialize, Clone, Default)]
+#[derive(Debug, Eq, Serialize, Clone, Default)]
 pub struct SpacesContainer {
     #[serde(rename = "spaces")]
     pub list: Vec<Space>,
@@ -117,7 +117,7 @@ impl SpacesContainer {
     }
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct PrimitiveType {
     #[serde(rename = "name")]
     pub name: Option<String>,
@@ -126,14 +126,14 @@ pub struct PrimitiveType {
     pub type_: String,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct ObjectType {
     pub name: String,
     pub properties: Vec<FlatModel>,
     pub additional: bool,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct ArrayType {
     #[serde(rename = "name")]
     pub name: Option<String>,
@@ -142,7 +142,7 @@ pub struct ArrayType {
     pub model: Box<FlatModel>,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct EnumType {
     #[serde(rename = "name")]
     pub name: String,
@@ -154,7 +154,7 @@ pub struct EnumType {
     pub variants: Vec<String>,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct ConstType {
     #[serde(rename = "name")]
     pub name: String,
@@ -166,13 +166,13 @@ pub struct ConstType {
     pub value: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Default, Serialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Default, Serialize)]
 pub struct MapType {
     pub name: Option<String>,
     pub model: Box<FlatModel>,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq)]
 pub struct AnyType {}
 
 #[derive(Debug, Serialize, Clone)]
@@ -184,7 +184,7 @@ pub struct RegexpType {
     pub pattern: String,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct WrapperType {
     #[serde(rename = "name")]
     pub name: String,
@@ -196,7 +196,7 @@ pub struct WrapperType {
     pub kind: WrapperTypeKind,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
 pub enum WrapperTypeKind {
     AllOf,
     OneOf,
@@ -208,7 +208,7 @@ impl Default for WrapperTypeKind {
     }
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct NullableOptionalWrapperType {
     #[serde(rename = "name")]
     pub name: String,
@@ -217,7 +217,7 @@ pub struct NullableOptionalWrapperType {
     pub model: FlatModel,
 }
 
-#[derive(Debug, Serialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
 pub struct Attributes {
     #[serde(rename = "description")]
     pub description: Option<String>,

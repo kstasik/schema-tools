@@ -79,7 +79,7 @@ pub struct FileTemplate {
     path: PathBuf,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum TemplateType {
     Models,
     Endpoints,
