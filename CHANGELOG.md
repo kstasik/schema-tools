@@ -1,3 +1,10 @@
+## v0.5.1 (2022-05-27)
+
+### Fix
+
+- license added
+- license added
+
 ## v0.5.0 (2022-05-04)
 
 ### Feat
