@@ -145,6 +145,10 @@ impl ModelContainer {
             self.formats.push(fmt.to_string())
         }
     }
+
+    pub fn get_format(&self) -> Vec<String> {
+        self.formats.clone()
+    }
 }
 
 #[derive(Default)]

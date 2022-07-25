@@ -396,6 +396,11 @@ impl EndpointsTemplate {
             let mut openapi = openapi.clone().set_content_type(&self.content_type);
             let mut container = container.clone();
 
+            container.data.insert(
+                "formats".to_string(),
+                serde_json::to_value(openapi.models.get_format()).unwrap(),
+            );
+
             // process group
             group.process(&mut openapi, &mut container);
 
@@ -480,6 +485,11 @@ impl TagsTemplate {
         container
             .data
             .insert("tags".to_string(), serde_json::to_value(tags).unwrap());
+
+        container.data.insert(
+            "formats".to_string(),
+            serde_json::to_value(openapi.models.get_format()).unwrap(),
+        );
 
         if self
             .condition
