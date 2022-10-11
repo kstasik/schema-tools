@@ -61,7 +61,7 @@ fn calculate_dir<D: Digest>(path: &Path, hash: &mut D) -> Result<(), Error> {
 fn is_hidden(entry: &DirEntry, path: &Path) -> bool {
     if entry
         .path()
-        .strip_prefix(&path)
+        .strip_prefix(path)
         .map(|p| p.starts_with("tests"))
         .unwrap_or(false)
     {

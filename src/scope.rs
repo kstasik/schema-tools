@@ -184,15 +184,17 @@ impl BasicNamer {
     }
 }
 
-impl SchemaScope {
-    pub fn default() -> Self {
+impl Default for SchemaScope {
+    fn default() -> Self {
         Self {
             scope: vec![],
             spaces: vec![],
             naming_strategy: SchemaNamingStrategy::Default,
         }
     }
+}
 
+impl SchemaScope {
     pub fn new(naming_strategy: SchemaNamingStrategy) -> Self {
         Self {
             naming_strategy,

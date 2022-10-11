@@ -103,7 +103,7 @@ pub fn name_schema(
 
             for key in NESTED_DEFINITIONS.iter() {
                 if let Some(v) = map.get_mut(*key) {
-                    scope.any(*key);
+                    scope.any(key);
 
                     for (x, y) in v.as_object_mut().unwrap() {
                         scope.definition(x);
@@ -123,7 +123,7 @@ pub fn name_schema(
 
             for key in NESTED_NAMES.iter() {
                 if let Some(value) = map.get_mut(*key) {
-                    scope.form(*key);
+                    scope.form(key);
                     name_schema(value, scope, options)?;
                     scope.pop();
                 }

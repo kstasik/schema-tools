@@ -77,7 +77,7 @@ pub enum ModelType {
     FlatModel(FlatModel),
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FlatModel {
     pub name: Option<String>,
     pub type_: String,
@@ -217,7 +217,7 @@ pub struct NullableOptionalWrapperType {
     pub model: FlatModel,
 }
 
-#[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
+#[derive(Debug, Serialize, Clone, Eq, PartialEq)]
 pub struct Attributes {
     #[serde(rename = "description")]
     pub description: Option<String>,
@@ -410,8 +410,8 @@ impl Serialize for FlatModel {
     }
 }
 
-impl FlatModel {
-    pub fn default() -> Self {
+impl Default for FlatModel {
+    fn default() -> Self {
         Self {
             model: None,
             name: None,
@@ -421,7 +421,9 @@ impl FlatModel {
             spaces: SpacesContainer::default(),
         }
     }
+}
 
+impl FlatModel {
     // Modifies customizable attributes when refered type is resolved
     pub fn customize_attributes(mut self, attributes: &Attributes) -> Self {
         self.attributes.required = attributes.required;
@@ -555,8 +557,8 @@ impl MapType {
     }
 }
 
-impl Attributes {
-    pub fn default() -> Self {
+impl Default for Attributes {
+    fn default() -> Self {
         Self {
             description: None,
             default: None,

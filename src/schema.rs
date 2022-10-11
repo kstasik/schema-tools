@@ -73,11 +73,7 @@ impl Schema {
             false
         };
 
-        let body = if content_type
-            .clone()
-            .unwrap_or_else(|| "".to_string())
-            .contains("yaml")
-            || is_yaml_extension
+        let body = if content_type.clone().unwrap_or_default().contains("yaml") || is_yaml_extension
         {
             let mut docs = serde_yaml::Deserializer::from_str(response.as_ref())
                 .into_iter()
@@ -87,7 +83,7 @@ impl Schema {
             match docs.len() {
                 0 => Err(Error::SchemaLoadIncorrectType {
                     url: url.to_string(),
-                    content_type: content_type.unwrap_or_else(|| "".to_string()),
+                    content_type: content_type.unwrap_or_default(),
                     extension: extension.unwrap_or("").to_string(),
                 }),
                 1 => Ok(docs.remove(0)),
@@ -96,7 +92,7 @@ impl Schema {
         } else {
             serde_json::from_str(response.as_ref()).map_err(|_| Error::SchemaLoadIncorrectType {
                 url: url.to_string(),
-                content_type: content_type.unwrap_or_else(|| "".to_string()),
+                content_type: content_type.unwrap_or_default(),
                 extension: extension.unwrap_or("").to_string(),
             })?
         };

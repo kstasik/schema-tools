@@ -43,7 +43,7 @@ where
                     "*" => match node {
                         Value::Object(ref mut map) => {
                             for (key, value) in map {
-                                context.push_str(*type_, key);
+                                context.push_str(type_, key);
 
                                 parts.push(key.clone());
                                 each_mut(value, context, path, index + 1, parts, f)?;
@@ -57,7 +57,7 @@ where
                         _ => Err(Error::NotImplemented),
                     },
                     real_path => {
-                        context.push_str(*type_, real_path);
+                        context.push_str(type_, real_path);
 
                         if let Some(ref mut found) = node.pointer_mut(&["/", real_path].join("")) {
                             each_mut(found, context, path, index + 1, parts, f)?;
@@ -113,7 +113,7 @@ where
                     "*" => match node {
                         Value::Object(ref map) => {
                             for (key, value) in map {
-                                context.push_str(*type_, key);
+                                context.push_str(type_, key);
 
                                 parts.push(key.clone());
                                 each(value, context, path, index + 1, parts, f)?;
@@ -127,7 +127,7 @@ where
                         _ => Err(Error::NotImplemented),
                     },
                     real_path => {
-                        context.push_str(*type_, real_path);
+                        context.push_str(type_, real_path);
 
                         if let Some(ref mut found) = node.pointer(&["/", real_path].join("")) {
                             each(found, context, path, index + 1, parts, f)?;

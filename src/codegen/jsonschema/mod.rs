@@ -44,8 +44,8 @@ impl Serialize for ModelContainer {
     }
 }
 
-impl ModelContainer {
-    pub fn default() -> Self {
+impl Default for ModelContainer {
+    fn default() -> Self {
         Self {
             regexps: vec![],
             formats: vec![],
@@ -54,7 +54,9 @@ impl ModelContainer {
             any: types::Model::new(types::ModelType::AnyType(types::AnyType {})),
         }
     }
+}
 
+impl ModelContainer {
     #[allow(clippy::map_entry)]
     pub fn add(
         &mut self,
