@@ -436,6 +436,7 @@ mod tests {
         assert_eq!(spec.get_body().to_string(), expected.to_string());
     }
 
+    #[ignore]
     #[test]
     fn test_with_nested_external_reference() {
         let mut spec =
