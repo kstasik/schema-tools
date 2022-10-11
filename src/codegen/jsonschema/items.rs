@@ -1,5 +1,5 @@
 use super::{
-    types::{ArrayType, Model, ModelType},
+    types::{AnyType, ArrayType, Model, ModelType},
     JsonSchemaExtractOptions, ModelContainer,
 };
 use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
@@ -28,7 +28,9 @@ pub fn from_array(
             }
             Value::Array(_) => {
                 // todo: tuple validation
-                Err(Error::NotImplemented)
+                log::warn!("tuples not supported");
+
+                Ok(Model::new(ModelType::AnyType(AnyType {})))
             }
             _ => Err(Error::SchemaInvalidProperty("items".to_string())),
         },
