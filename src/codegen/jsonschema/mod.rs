@@ -147,6 +147,10 @@ impl ModelContainer {
             self.formats.push(fmt.to_string())
         }
     }
+
+    pub fn formats(&self) -> &Vec<String> {
+        &self.formats
+    }
 }
 
 #[derive(Default)]
