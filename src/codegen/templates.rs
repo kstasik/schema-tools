@@ -398,7 +398,7 @@ impl EndpointsTemplate {
 
             container.data.insert(
                 "formats".to_string(),
-                serde_json::to_value(openapi.models.get_format()).unwrap(),
+                serde_json::to_value(openapi.models.formats()).unwrap(),
             );
 
             // process group
@@ -488,7 +488,7 @@ impl TagsTemplate {
 
         container.data.insert(
             "formats".to_string(),
-            serde_json::to_value(openapi.models.get_format()).unwrap(),
+            serde_json::to_value(openapi.models.formats()).unwrap(),
         );
 
         if self

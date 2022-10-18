@@ -148,8 +148,8 @@ impl ModelContainer {
         }
     }
 
-    pub fn get_format(&self) -> Vec<String> {
-        self.formats.clone()
+    pub fn formats(&self) -> &Vec<String> {
+        &self.formats
     }
 }
 
