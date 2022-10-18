@@ -1,3 +1,13 @@
+## v0.6.0 (2022-10-18)
+
+### Feat
+
+- add formats to endpoints/tags renderers
+
+### Fix
+
+- fill formats when generate clients
+
 ## v0.5.2 (2022-10-11)
 
 ### Fix
