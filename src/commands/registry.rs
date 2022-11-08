@@ -1,6 +1,6 @@
 use std::{fmt::Display, fs};
 
-use clap::Clap;
+use clap::Parser;
 
 use crate::{
     discovery::{discover_git, Discovery, GitCheckoutType, Registry},
@@ -8,7 +8,7 @@ use crate::{
     hash,
 };
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct Opts {
     #[clap(subcommand)]
     command: Command,
@@ -22,33 +22,38 @@ impl Display for Opts {
     }
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 enum Command {
-    #[clap(about = "Adds registry", author = "Kacper S. <kacper@stasik.eu>")]
+    /// Adds registry
     Add(AddOpts),
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 struct AddOpts {
-    #[clap(about = "Registry name used in codegen name::")]
+    /// Registry name used in codegen name::
     name: String,
 
-    #[clap(about = "Uri of git registry")]
+    /// Uri of git registry
     uri: String,
 
-    #[clap(long, about = "Git tag")]
+    /// Git tag
+    #[clap(long)]
     tag: Option<String>,
 
-    #[clap(long, about = "Git branch")]
+    /// Git branch
+    #[clap(long)]
     branch: Option<String>,
 
-    #[clap(long, about = "Git revision")]
+    /// Git revision
+    #[clap(long)]
     rev: Option<String>,
 
-    #[clap(long, about = "Lock checksum")]
+    /// Lock checksum
+    #[clap(long)]
     lock: Option<String>,
 
-    #[clap(long, about = "Skip cache during checkout")]
+    /// Skip cache during checkout
+    #[clap(long)]
     no_cache: bool,
 }
 

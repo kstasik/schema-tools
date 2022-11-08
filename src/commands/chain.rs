@@ -1,4 +1,5 @@
-use clap::Clap;
+use clap::{Parser, Subcommand};
+
 use reqwest::blocking::Client;
 
 use crate::storage::SchemaStorage;
@@ -10,13 +11,13 @@ use super::validate;
 use super::{codegen, GetSchemaCommand};
 use std::fmt::Display;
 use std::time::Instant;
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct OutputOpts {
     #[clap(flatten)]
     output: crate::commands::Output,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, Subcommand)]
 pub enum ChainCommandOption {
     Codegen(codegen::Opts),
     Process(process::Opts),
@@ -74,9 +75,9 @@ fn parse_command(cmd: &str) -> Result<ChainCommandOption, Error> {
     }
 }
 
-#[derive(Clap, Debug)]
+#[derive(Debug, Parser)]
 pub struct Opts {
-    #[clap(short = 'c', parse(try_from_str = parse_command), number_of_values = 1)]
+    #[clap(short = 'c', value_parser = parse_command, number_of_values = 1)]
     commands: Vec<ChainCommandOption>,
 
     #[clap(flatten)]
