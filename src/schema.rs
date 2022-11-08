@@ -40,7 +40,7 @@ impl Schema {
                     Ok((None, content))
                 }
                 "http" | "https" => {
-                    let response = client.get(&url.to_string()).send().map_err(|error| {
+                    let response = client.get(url.to_string()).send().map_err(|error| {
                         Error::SchemaHttpLoad {
                             url: url.to_string(),
                             reason: error.to_string(),
@@ -83,7 +83,6 @@ impl Schema {
         let body = if content_type.clone().unwrap_or_default().contains("yaml") || is_yaml_extension
         {
             let mut docs = serde_yaml::Deserializer::from_str(response.as_ref())
-                .into_iter()
                 .map(|d| Value::deserialize(d).map_err(Error::DeserializeYamlError))
                 .collect::<Result<Vec<_>, _>>()?;
 
@@ -209,11 +208,10 @@ mod tests {
             "//{}/{}",
             env!("CARGO_MANIFEST_DIR"),
             "resources/test/json-schemas/01-simple.json"
-        )
-        .to_string();
+        );
 
         let url = path_to_url(path.clone());
 
-        assert_eq!(url.is_ok(), true, "cannot convert path: {} to url", path);
+        assert_eq!(url.is_ok(), true, "cannot convert path: {path} to url");
     }
 }

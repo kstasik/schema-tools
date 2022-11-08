@@ -98,7 +98,7 @@ impl MergerOptions {
                     .unwrap();
 
                 if let Some(val) = merged.pointer("/info/version") {
-                    info.insert(format!("x-version-{}", version), val.clone());
+                    info.insert(format!("x-version-{version}"), val.clone());
                 }
             }
 

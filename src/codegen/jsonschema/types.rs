@@ -322,8 +322,7 @@ impl Model {
                     Ok(s)
                 } else {
                     Err(Error::CodegenCannotNameModelError(format!(
-                        "primitive: {:?}",
-                        self
+                        "primitive: {self:?}"
                     )))
                 }
             }
@@ -332,8 +331,7 @@ impl Model {
                     Ok(s)
                 } else {
                     Err(Error::CodegenCannotNameModelError(format!(
-                        "array: {:?}",
-                        self
+                        "array: {self:?}"
                     )))
                 }
             }
@@ -341,15 +339,11 @@ impl Model {
                 if let Some(s) = &p.name {
                     Ok(s)
                 } else {
-                    Err(Error::CodegenCannotNameModelError(format!(
-                        "map: {:?}",
-                        self
-                    )))
+                    Err(Error::CodegenCannotNameModelError(format!("map: {self:?}")))
                 }
             }
             _ => Err(Error::CodegenCannotNameModelError(format!(
-                "unknown: {:?}",
-                self
+                "unknown: {self:?}"
             ))),
         }
     }

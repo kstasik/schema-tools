@@ -121,7 +121,7 @@ pub fn when_numeric(value: &Value, args: &HashMap<String, Value>) -> TeraResult<
             None => return Err(tera::Error::msg("Please provide prefix parameter")),
         };
 
-        Ok(to_value(format!("{}{}", prefix, value)).unwrap())
+        Ok(to_value(format!("{prefix}{value}")).unwrap())
     } else {
         Ok(to_value(value).unwrap())
     }

@@ -37,11 +37,11 @@ impl Display for OutputOpts {
 impl Display for ChainCommandOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
-            Self::Codegen(p) => write!(f, "codegen: {}", p),
-            Self::Process(p) => write!(f, "process: {}", p),
-            Self::Validate(p) => write!(f, "validate: {}", p),
-            Self::Registry(p) => write!(f, "registry: {}", p),
-            Self::Output(p) => write!(f, "output: {}", p),
+            Self::Codegen(p) => write!(f, "codegen: {p}"),
+            Self::Process(p) => write!(f, "process: {p}"),
+            Self::Validate(p) => write!(f, "validate: {p}"),
+            Self::Registry(p) => write!(f, "registry: {p}"),
+            Self::Output(p) => write!(f, "output: {p}"),
         }
     }
 }

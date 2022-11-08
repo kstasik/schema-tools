@@ -26,9 +26,7 @@ fn process_node(url: &Url, data: &mut Value) {
                 if Url::parse(reference) == Err(url::ParseError::RelativeUrlWithoutBase) {
                     let mut prefix = url.clone();
 
-                    if let [path, fragment] =
-                        reference.split('#').into_iter().collect::<Vec<_>>()[..]
-                    {
+                    if let [path, fragment] = reference.split('#').collect::<Vec<_>>()[..] {
                         url_extend(&mut prefix, path.split('/'));
 
                         let mut new_url = prefix.to_string();

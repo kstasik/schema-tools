@@ -115,7 +115,7 @@ impl BasicNamer {
         {
             SchemaScopeType::Entity(name) => {
                 let real_name = form
-                    .map(|f| format!("{}{}", name, f))
+                    .map(|f| format!("{name}{f}"))
                     .unwrap_or_else(|| name.to_string());
                 Ok(self.split(&real_name))
             }
@@ -320,7 +320,7 @@ impl SchemaScope {
 
                 parts.join("/")
             })
-            .unwrap_or_else(|| format!("{}", self))
+            .unwrap_or_else(|| format!("{self}"))
     }
 
     pub fn is_ambigous(&mut self) -> bool {
@@ -374,8 +374,8 @@ fn scope_to_string(s: SchemaScopeType) -> Option<String> {
         | SchemaScopeType::Any(v)
         | SchemaScopeType::Form(v)
         | SchemaScopeType::Definition(v) => Some(v),
-        SchemaScopeType::Reference(t) => Some(format!("\x1b[0;32m{}\x1b[0m", t)),
-        SchemaScopeType::Index(i) => Some(format!("{}", i)),
+        SchemaScopeType::Reference(t) => Some(format!("\x1b[0;32m{t}\x1b[0m")),
+        SchemaScopeType::Index(i) => Some(format!("{i}")),
     }
     .map(|s| s.replace('/', "~1"))
 }

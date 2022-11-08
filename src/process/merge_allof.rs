@@ -465,7 +465,7 @@ mod tests {
         let client = reqwest::blocking::Client::new();
         let ss = SchemaStorage::new(&schema, &client);
 
-        Merger::options().process(&mut schema, &&ss);
+        Merger::options().process(&mut schema, &ss);
 
         assert_eq!(schema.get_body().to_string(), expected.to_string());
     }
