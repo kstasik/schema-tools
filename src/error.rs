@@ -44,6 +44,9 @@ pub enum Error {
     #[error("Discovery clean registry error: {0}")]
     DiscoveryCleanRegistryError(std::io::Error),
 
+    #[error("Discovery cache registry error: {0}")]
+    DiscoveryCacheRegistryError(std::io::Error),
+
     #[error("Git url format should match git://repository#(branch|tag)?(#directory) pattern")]
     DiscoveryInvalidGitUrl,
 
@@ -155,8 +158,8 @@ pub enum Error {
     #[error("Schema not applicable")]
     SchemaNotApplicable,
 
-    #[error("Cannot load schema: {url}")]
-    SchemaLoad { url: String },
+    #[error("Cannot load schema: {url}, {path}")]
+    SchemaLoad { url: String, path: String },
 
     #[error("Cannot get remote schema: {url}, reason: {reason}")]
     SchemaHttpLoad { url: String, reason: String },
