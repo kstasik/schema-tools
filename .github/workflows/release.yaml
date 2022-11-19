@@ -39,6 +39,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             short: windows-amd64
+            extension: .exe
 # Waiting for https://github.com/actions/runner-images/issues/2187
 # Github only supports self-hosted runners: https://github.blog/changelog/2022-08-09-github-actions-self-hosted-runners-now-support-apple-m1-hardware/
 #          - os: macos-latest
@@ -53,9 +54,9 @@ jobs:
           default: true
           override: true
       - run: cargo build --release
-      - run: strip target/release/schematools
-      - run: mv target/release/schematools target/release/schematools-${{ matrix.config.short }}
-      - run: tar -czf target/release/schematools-${{ matrix.config.short }}.tar.gz -C ./target/release schematools-${{ matrix.config.short }}
+      - run: strip target/release/schematools${{ matrix.config.extension }}
+      - run: mv target/release/schematools${{ matrix.config.extension }} target/release/schematools-${{ matrix.config.short }}${{ matrix.config.extension }}
+      - run: tar -czf target/release/schematools-${{ matrix.config.short }}.tar.gz -C ./target/release schematools-${{ matrix.config.short }}${{ matrix.config.extension }}
 
       # upload files
       - name: Upload release assets
