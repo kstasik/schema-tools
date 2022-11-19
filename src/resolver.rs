@@ -148,6 +148,8 @@ mod tests {
         ))
         .unwrap();
 
+        println!("url: {:?}", url.path());
+
         let url2 = Url::parse(&format!(
             "file://{}/{}",
             env!("CARGO_MANIFEST_DIR"),

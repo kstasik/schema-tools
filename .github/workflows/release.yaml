@@ -36,9 +36,14 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             short: darwin-amd64
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            short: darwin-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            short: windows-amd64
+# Waiting for https://github.com/actions/runner-images/issues/2187
+# Github only supports self-hosted runners: https://github.blog/changelog/2022-08-09-github-actions-self-hosted-runners-now-support-apple-m1-hardware/
+#          - os: macos-latest
+#            target: aarch64-apple-darwin
+#            short: darwin-arm64
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1

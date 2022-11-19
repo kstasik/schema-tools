@@ -22,41 +22,48 @@ impl Schema {
     pub fn load_url_with_client(url: Url, client: &Client) -> Result<Schema, Error> {
         log::info!("loading: {}", url);
 
-        let (content_type, response) = match url.scheme() {
-            "file" => {
-                let content = fs::read_to_string(url.path()).map_err(|_| Error::SchemaLoad {
-                    url: url.to_string(),
-                })?;
+        let (content_type, response) =
+            match url.scheme() {
+                "file" => {
+                    let path = if cfg!(windows) {
+                        let path = url.path();
+                        path[1..path.len()].to_string()
+                    } else {
+                        url.path().to_string()
+                    };
 
-                Ok((None, content))
-            }
-            "http" | "https" => {
-                let response =
-                    client
-                        .get(&url.to_string())
-                        .send()
-                        .map_err(|error| Error::SchemaHttpLoad {
+                    let content = fs::read_to_string(&path).map_err(|_| Error::SchemaLoad {
+                        url: url.to_string(),
+                        path,
+                    })?;
+
+                    Ok((None, content))
+                }
+                "http" | "https" => {
+                    let response = client.get(&url.to_string()).send().map_err(|error| {
+                        Error::SchemaHttpLoad {
                             url: url.to_string(),
                             reason: error.to_string(),
-                        })?;
+                        }
+                    })?;
 
-                let content_type = response
-                    .headers()
-                    .get("content-type")
-                    .ok_or_else(|| Error::SchemaHttpLoad {
-                        url: url.to_string(),
-                        reason: "Cannot get content-type header".to_string(),
-                    })?
-                    .to_str()
-                    .unwrap();
+                    let content_type = response
+                        .headers()
+                        .get("content-type")
+                        .ok_or_else(|| Error::SchemaHttpLoad {
+                            url: url.to_string(),
+                            reason: "Cannot get content-type header".to_string(),
+                        })?
+                        .to_str()
+                        .unwrap();
 
-                Ok((Some(content_type.to_string()), response.text().unwrap()))
-            }
-            s => Err(Error::SchemaLoadInvalidScheme {
-                url: url.to_string(),
-                scheme: s.to_string(),
-            }),
-        }?;
+                    Ok((Some(content_type.to_string()), response.text().unwrap()))
+                }
+                s => Err(Error::SchemaLoadInvalidScheme {
+                    url: url.to_string(),
+                    scheme: s.to_string(),
+                }),
+            }?;
 
         let extension = url
             .path_segments()
@@ -196,16 +203,17 @@ mod tests {
     }
 
     #[test]
+    #[cfg(not(target_os = "windows"))]
     fn test_string_to_url_should_correctly_convert_absolute_existing_path_to_url() {
-        let url = path_to_url(
-            format!(
-                "//{}/{}",
-                env!("CARGO_MANIFEST_DIR"),
-                "resources/test/json-schemas/01-simple.json"
-            )
-            .to_string(),
-        );
+        let path = format!(
+            "//{}/{}",
+            env!("CARGO_MANIFEST_DIR"),
+            "resources/test/json-schemas/01-simple.json"
+        )
+        .to_string();
 
-        assert_eq!(url.is_ok(), true);
+        let url = path_to_url(path.clone());
+
+        assert_eq!(url.is_ok(), true, "cannot convert path: {} to url", path);
     }
 }

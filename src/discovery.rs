@@ -59,7 +59,7 @@ impl Discovery {
                     .unwrap()
                     .to_string_lossy();
 
-                if relative.starts_with(".git/") {
+                if relative.starts_with(".git") {
                     continue;
                 }
 
@@ -143,6 +143,8 @@ pub fn discover_git(
     } else if directory.exists() {
         log::debug!("already exists: {:?}", directory);
         return Ok(Registry::new(directory));
+    } else {
+        fs::create_dir_all(&directory).map_err(Error::DiscoveryCacheRegistryError)?;
     }
 
     log::debug!("checking out: {:?}", directory);
@@ -192,7 +194,7 @@ mod tests {
         assert_eq!(result.files.contains_key("README.md"), true);
 
         let content = fs::read_to_string(result.files.get("README.md").unwrap()).unwrap();
-        assert_eq!(content, "# Schema Tools\n".to_string());
+        assert_eq!(content.replace('\r', ""), "# Schema Tools\n".to_string());
 
         let template = result.templates.get("test.j2").unwrap();
         assert_eq!(template, "# just test");
@@ -250,9 +252,17 @@ mod tests {
             .resolve(&vec!["./resources/test/".to_string()])
             .unwrap();
 
+        let mut path = PathBuf::from("json-schemas");
+        path.push("01-simple.json");
+
+        let expected = path.to_str().unwrap();
+
         assert_eq!(
-            result.files.contains_key("json-schemas/01-simple.json"),
-            true
+            result.files.contains_key(expected),
+            true,
+            "cant find {} in {:?}",
+            expected,
+            result.files
         );
     }
 
@@ -268,7 +278,7 @@ mod tests {
         let data = registry.get_file("README.md").unwrap();
         let expected = "# Schema Tools\n";
 
-        assert_eq!(data, expected);
+        assert_eq!(data.replace('\r', ""), expected);
     }
 
     #[test]
@@ -308,7 +318,7 @@ json-patch = "*"
 [dev-dependencies]
 test-case = "1""#;
 
-        assert_eq!(data, expected);
+        assert_eq!(data.replace('\r', ""), expected);
     }
 
     #[test]
@@ -344,7 +354,7 @@ reqwest = { version = ">= 0.10", features = ["blocking"] }
 [dev-dependencies]
 test-case = "1""#;
 
-        assert_eq!(data, expected);
+        assert_eq!(data.replace('\r', ""), expected);
     }
 
     #[test]
