@@ -118,7 +118,7 @@ fn process_ref(
                         if let Some(internal_path) = ctx.resolved.get(&reference) {
                             log::debug!("{}: referencing to -> #{}", ctx.scope, internal_path);
 
-                            *root = serde_json::json!({ "$ref": format!("#{}", internal_path) });
+                            *root = serde_json::json!({ "$ref": format!("#{internal_path}") });
 
                             return;
                         } else {
@@ -160,8 +160,7 @@ pub fn parse_url(reference: String) -> Result<(Option<String>, Option<String>), 
         }
         1 => Ok((Some(parts[0].to_string()), None)),
         _ => Err(Error::DereferenceError(format!(
-            "Cannot parse: {}",
-            reference
+            "Cannot parse: {reference}"
         ))),
     }
 }

@@ -157,7 +157,7 @@ pub fn extract_response(
             } else {
                 code.parse::<u32>().map_err(|_| {
                     Error::CodegenInvalidEndpointProperty(
-                        format!("response:{}", code),
+                        format!("response:{code}"),
                         scope.to_string(),
                     )
                 })?
@@ -189,7 +189,7 @@ pub fn extract_response(
                         Ok(headers)
                     }
                     _ => Err(Error::CodegenInvalidEndpointProperty(
-                        format!("response:{}:headers", code),
+                        format!("response:{code}:headers"),
                         scope.to_string(),
                     )),
                 })
@@ -203,7 +203,7 @@ pub fn extract_response(
             })
         }
         _ => Err(Error::CodegenInvalidEndpointProperty(
-            format!("response:{}", code),
+            format!("response:{code}"),
             scope.to_string(),
         )),
     })
@@ -219,7 +219,7 @@ fn as_header_node(
         let mut parameter = node.clone();
 
         let obj = parameter.as_object_mut().ok_or_else(|| {
-            Error::CodegenInvalidEndpointProperty(format!("header:{}", name), "todo".to_string())
+            Error::CodegenInvalidEndpointProperty(format!("header:{name}"), "todo".to_string())
         })?;
 
         obj.insert("in".to_string(), Value::String("header".to_string()));
@@ -262,11 +262,11 @@ mod tests {
         assert_eq!(result.is_ok(), true);
 
         let responses = result.unwrap();
-        assert_eq!(true, responses.all.len() > 0);
+        assert_eq!(true, !responses.all.is_empty());
 
         for response in responses.all {
             let mcontainer = response.models.unwrap();
-            assert_eq!(true, mcontainer.list.len() > 0);
+            assert_eq!(true, !mcontainer.list.is_empty());
 
             for m in mcontainer.list {
                 assert_eq!(true, m.is_unique, "{:?} should be unique", m.model);
@@ -302,11 +302,11 @@ mod tests {
         assert_eq!(result.is_ok(), true);
 
         let responses = result.unwrap();
-        assert_eq!(true, responses.all.len() > 0);
+        assert_eq!(true, !responses.all.is_empty());
 
         for response in responses.all {
             let mcontainer = response.models.unwrap();
-            assert_eq!(true, mcontainer.list.len() > 0);
+            assert_eq!(true, !mcontainer.list.is_empty());
 
             for m in mcontainer.list {
                 assert_eq!(false, m.is_unique, "{:?} should not be unique", m.model);

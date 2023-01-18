@@ -27,7 +27,7 @@ fn process_node(url: &Url, data: &mut Value) {
                     let mut prefix = url.clone();
 
                     if let [path, fragment] =
-                        reference.split('#').into_iter().collect::<Vec<_>>()[..]
+                        reference.split('#').collect::<Vec<_>>()[..]
                     {
                         url_extend(&mut prefix, path.split('/'));
 

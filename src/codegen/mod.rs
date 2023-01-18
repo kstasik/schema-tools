@@ -44,8 +44,7 @@ pub fn format(data: &str) -> Result<HashMap<&str, Value>, Error> {
                     Ok((key_value[0], Value::from(key_value[1])))
                 }
                 _ => Err(Error::CodegenFileHeaderParseError(format!(
-                    "Cannot parse: {}",
-                    s
+                    "Cannot parse: {s}"
                 ))),
             }
         })
@@ -53,8 +52,7 @@ pub fn format(data: &str) -> Result<HashMap<&str, Value>, Error> {
 
     if !errors.is_empty() {
         return Err(Error::CodegenFileHeaderParseError(format!(
-            "Errors occured: {:?}",
-            errors
+            "Errors occured: {errors:?}"
         )));
     }
 

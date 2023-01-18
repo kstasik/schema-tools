@@ -33,7 +33,7 @@ where
     } else {
         let pos = s
             .find('=')
-            .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{}`", s))?;
+            .ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
 
         Ok((s[..pos].parse()?, serde_json::to_value(&s[pos + 1..])?))
     }
@@ -97,7 +97,7 @@ impl Output {
                     .expect("Can't save file on disk");
             }
             None => {
-                println!("{}", result);
+                println!("{result}");
             }
         };
     }
