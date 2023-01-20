@@ -1,6 +1,6 @@
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.7.0"
+version = "0.7.1"
 version_files = [
     "Cargo.toml:^version",
     "src/main.rs:const VERSION"
