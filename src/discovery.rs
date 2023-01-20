@@ -30,7 +30,7 @@ impl Discovery {
         // /path/                 |
         // -----------------------+
         for template in tpls {
-            let parts = template.split("::").into_iter().collect::<Vec<&str>>();
+            let parts = template.split("::").collect::<Vec<&str>>();
             let realpath = if let [registry, path] = parts[..] {
                 let r = self
                     .registries
@@ -117,9 +117,9 @@ pub fn discover_git(
 
     let revparse = match source {
         GitCheckoutType::Tag(tag) => {
-            refspecs.push(format!("refs/tags/{0}:refs/remotes/origin/tags/{0}", tag));
+            refspecs.push(format!("refs/tags/{tag}:refs/remotes/origin/tags/{tag}"));
 
-            format!("refs/remotes/origin/tags/{0}", tag)
+            format!("refs/remotes/origin/tags/{tag}")
         }
         GitCheckoutType::Rev(rev) => {
             refspecs.push(String::from("refs/heads/*:refs/remotes/origin/*"));
@@ -128,15 +128,15 @@ pub fn discover_git(
             rev
         }
         GitCheckoutType::Branch(branch) => {
-            refspecs.push(format!("refs/heads/{0}:refs/remotes/origin/{0}", branch));
+            refspecs.push(format!("refs/heads/{branch}:refs/remotes/origin/{branch}"));
 
-            format!("refs/remotes/origin/{0}", branch)
+            format!("refs/remotes/origin/{branch}")
         }
     };
 
     let digest = md5::compute(&revparse);
     directory.push("schema-tools");
-    directory.push(format!("{:x}", digest));
+    directory.push(format!("{digest:x}"));
 
     if directory.exists() && no_cache {
         fs::remove_dir_all(directory.as_path()).map_err(Error::DiscoveryCleanRegistryError)?;
@@ -184,7 +184,7 @@ mod tests {
         discovery.register("testing".to_string(), registry);
 
         let result = discovery
-            .resolve(&vec![
+            .resolve(&[
                 "testing::.".to_string(),
                 "resources/test/discovery/test2/".to_string(),
             ])
@@ -213,7 +213,7 @@ mod tests {
         discovery.register("testing".to_string(), registry);
 
         let result = discovery
-            .resolve(&vec![
+            .resolve(&[
                 "testing::.".to_string(),
                 "resources/test/discovery/test1/".to_string(),
             ])
@@ -238,7 +238,7 @@ mod tests {
         .unwrap();
         discovery.register("testing".to_string(), registry);
 
-        let result = discovery.resolve(&vec!["testing::.".to_string()]).unwrap();
+        let result = discovery.resolve(&["testing::.".to_string()]).unwrap();
 
         assert_eq!(result.files.len(), 1);
         assert_eq!(result.files.contains_key("README.md"), true);
@@ -249,7 +249,7 @@ mod tests {
         let discovery = Discovery::default();
 
         let result = discovery
-            .resolve(&vec!["./resources/test/".to_string()])
+            .resolve(&["./resources/test/".to_string()])
             .unwrap();
 
         let mut path = PathBuf::from("json-schemas");

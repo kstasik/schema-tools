@@ -71,7 +71,7 @@ fn main() {
     std::process::exit(match result {
         Ok(_) => 0,
         Err(e) => {
-            println!("\x1b[0;31mError occured:\x1b[0m {}", e);
+            println!("\x1b[0;31mError occured:\x1b[0m {e}");
             1
         }
     })

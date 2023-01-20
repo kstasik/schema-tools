@@ -17,7 +17,6 @@ where
     let parts = path
         .trim_matches('/')
         .split('/')
-        .into_iter()
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
 
@@ -38,7 +37,7 @@ where
     match path.get(index) {
         None => f(node, parts, context),
         Some(search) => {
-            if let [type_, search_key] = &search.split(':').into_iter().collect::<Vec<&str>>()[..] {
+            if let [type_, search_key] = &search.split(':').collect::<Vec<&str>>()[..] {
                 match *search_key {
                     "*" => match node {
                         Value::Object(ref mut map) => {
@@ -87,7 +86,6 @@ where
     let parts = path
         .trim_matches('/')
         .split('/')
-        .into_iter()
         .map(|s| s.to_string())
         .collect::<Vec<String>>();
 
@@ -108,7 +106,7 @@ where
     match path.get(index) {
         None => f(node, parts, context),
         Some(search) => {
-            if let [type_, search_key] = &search.split(':').into_iter().collect::<Vec<&str>>()[..] {
+            if let [type_, search_key] = &search.split(':').collect::<Vec<&str>>()[..] {
                 match *search_key {
                     "*" => match node {
                         Value::Object(ref map) => {
@@ -437,9 +435,7 @@ mod tests {
                 "-o",
                 "clientName=TestingClient"
             ]
-            .iter()
-            .map(|s| s.clone())
-            .collect::<Vec<_>>()
+            .to_vec()
         );
     }
 }
