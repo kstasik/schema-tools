@@ -1,22 +1,6 @@
-#[macro_use]
-extern crate lazy_static;
-
 use clap::{Parser, Subcommand};
 
-pub mod codegen;
-pub mod commands;
-pub mod discovery;
-pub mod error;
-pub mod hash;
-pub mod process;
-pub mod resolver;
-pub mod schema;
-pub mod scope;
-pub mod storage;
-pub mod tools;
-pub mod validate;
-
-const VERSION: &str = "0.8.0";
+use schematools::commands;
 
 #[derive(Parser)]
 #[command(author, version, about)]
