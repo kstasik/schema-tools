@@ -1,46 +1,52 @@
 use crate::schema::Schema;
 use crate::{error::Error, schema::path_to_url};
 
-use clap::Clap;
+use clap::{Parser, ValueEnum};
 use json_patch::{diff, from_value, patch};
 use serde::Serialize;
 use serde_json::Value;
 
-static OPERATION: &[&str] = &["add", "remove", "replace"];
+#[derive(Copy, Clone, Debug, Serialize, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+pub enum Operation {
+    Add,
+    Remove,
+    Replace,
+}
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub enum Action {
-    #[clap(about = "Create json patch file")]
+    /// Create json patch file
     Create(PatchCreateOpts),
 
-    #[clap(about = "Apply json patch file")]
+    /// Apply json patch file
     Apply(PatchApplyOpts),
 
-    #[clap(about = "Apply inline patch")]
+    /// Apply inline patch
     Inline(PatchInlineOpts),
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct PatchCreateOpts {
-    #[clap(about = "Path to original schema file")]
+    /// Path to original schema file
     original: String,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct PatchApplyOpts {
-    #[clap(about = "Path to apply file")]
+    /// Path to apply file
     patch: String,
 }
 
-#[derive(Clap, Debug, Serialize)]
+#[derive(Clone, Debug, Parser, Serialize)]
 pub struct PatchInlineOpts {
-    #[clap(about = "Operation add/remove/replace", possible_values = OPERATION, parse(try_from_str))]
-    op: String,
+    /// Operation add/remove/replace
+    op: Operation,
 
-    #[clap(about = "Json path")]
+    /// Json path
     path: String,
 
-    #[clap(about = "Json value", parse(try_from_str = serde_json::from_str))]
+    /// Json value
+    #[clap(value_parser)]
     value: Option<Value>,
 }
 

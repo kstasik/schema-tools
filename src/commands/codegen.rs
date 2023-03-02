@@ -8,14 +8,14 @@ use crate::{
     schema::{path_to_url, Schema},
     storage::SchemaStorage,
 };
-use clap::Clap;
+use clap::Parser;
 
 use crate::codegen;
 use crate::error::Error;
 
 use super::GetSchemaCommand;
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct Opts {
     #[clap(subcommand)]
     pub command: Command,
@@ -30,112 +30,93 @@ impl Display for Opts {
     }
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub enum Command {
-    #[clap(
-        about = "Converts json-schema to set of models",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    /// Converts json-schema to set of models
     JsonSchema(JsonSchemaOpts),
 
-    #[clap(about = "Openapi", author = "Kacper S. <kacper@stasik.eu>")]
+    /// Openapi
     Openapi(OpenapiOpts),
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct JsonSchemaOpts {
-    #[clap(
-        about = "Path to json/yaml file with json-schema specification",
-        multiple_values = true
-    )]
+    /// Path to json/yaml file with json-schema specification
     pub file: Vec<String>,
 
-    #[clap(
-        long,
-        about = "Wrap mixed to special wrap object which should allow to customize deserialization"
-    )]
+    /// Wrap mixed to special wrap object which should allow to customize deserialization
+    #[clap(long)]
     pub wrappers: bool,
 
-    #[clap(
-        long,
-        about = "Keep schema condition (allows access to original json schema in selected nodes)",
-        required = false
-    )]
+    /// Keep schema condition (allows access to original json schema in selected nodes)
+    #[clap(long, required = false)]
     keep_schema: Vec<String>,
 
-    #[clap(long, about = "Treat optional an nullable fields as models")]
+    /// Treat optional an nullable fields as models
+    #[clap(long)]
     pub optional_and_nullable_as_models: bool,
 
-    #[clap(long, about = "Treat nested arrays as models")]
+    /// Treat nested arrays as models
+    #[clap(long)]
     pub nested_arrays_as_models: bool,
 
-    #[clap(long, about = "Schema base name if title is absent")]
+    /// Schema base name if title is absent
+    #[clap(long)]
     pub base_name: Option<String>,
 
-    #[clap(
-        long,
-        about = "Directory with templates, name:: prefix if pointing to registry",
-        required = true
-    )]
+    /// Directory with templates, name:: prefix if pointing to registry
+    #[clap(long, required = true)]
     template: Vec<String>,
 
-    #[clap(
-        long,
-        about = "Target directory where generated files should be places"
-    )]
+    /// Target directory where generated files should be places
+    #[clap(long)]
     target_dir: String,
 
-    #[clap(long, about = "Code formatting command")]
+    /// Code formatting command
+    #[clap(long)]
     pub format: Option<String>,
 
-    #[clap(short = 'o', parse(try_from_str = super::get_options), number_of_values = 1)]
+    #[clap(short = 'o', value_parser = super::get_options::<String>, number_of_values = 1)]
     options: Vec<(String, Value)>,
 
     #[clap(flatten)]
     verbose: crate::commands::Verbosity,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct OpenapiOpts {
-    #[clap(about = "Path to json/yaml file with openapi specification")]
+    /// Path to json/yaml file with openapi specification
     pub file: String,
 
-    #[clap(
-        long,
-        about = "Wrap mixed to special wrap object which should allow to customize deserialization"
-    )]
+    /// Wrap mixed to special wrap object which should allow to customize deserialization
+    #[clap(long)]
     wrappers: bool,
 
-    #[clap(long, about = "Treat optional an nullable fields as models")]
+    /// Treat optional an nullable fields as models
+    #[clap(long)]
     pub optional_and_nullable_as_models: bool,
 
-    #[clap(long, about = "Treat nested arrays as models")]
+    /// Treat nested arrays as models
+    #[clap(long)]
     pub nested_arrays_as_models: bool,
 
-    #[clap(
-        long,
-        about = "Keep schema condition (allows access to original json schema in selected nodes)",
-        required = false
-    )]
+    /// Keep schema condition (allows access to original json schema in selected nodes)
+    #[clap(long, required = false)]
     keep_schema: Vec<String>,
 
-    #[clap(
-        long,
-        about = "Directory with templates, name:: prefix if pointing to registry",
-        required = true
-    )]
+    /// Directory with templates, name:: prefix if pointing to registry
+    #[clap(long, required = true)]
     template: Vec<String>,
 
-    #[clap(
-        long,
-        about = "Target directory where generated files should be places"
-    )]
+    /// Target directory where generated files should be placed
+    #[clap(long)]
     target_dir: String,
 
-    #[clap(long, about = "Code formatting command")]
+    /// Code formatting command
+    #[clap(long)]
     pub format: Option<String>,
 
-    #[clap(short = 'o', parse(try_from_str = super::get_options), number_of_values = 1)]
+    #[clap(short = 'o', value_parser = super::get_options::<String>, number_of_values = 1)]
     options: Vec<(String, Value)>,
 
     #[clap(flatten)]

@@ -3,16 +3,14 @@ use std::fmt::Display;
 use crate::commands::GetSchemaCommand;
 use crate::storage::SchemaStorage;
 use crate::tools;
-use clap::Clap;
+use clap::{Parser, Subcommand};
 use reqwest::blocking::Client;
-use std::str::FromStr;
 
 use crate::error::Error;
 use crate::process::{bump_openapi, dereference, merge_allof, merge_openapi, name, patch};
 use crate::schema::{path_to_url, Schema};
 
-static BUMP_OPENAPI_KIND: &[&str] = &["x-version"];
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct Opts {
     #[clap(subcommand)]
     pub command: Command,
@@ -31,60 +29,42 @@ impl Display for Opts {
     }
 }
 
-#[derive(Clap, Debug)]
+#[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    #[clap(
-        about = "Merges openapi specifications",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    /// Merges openapi specifications
     MergeOpenapi(MergeOpenapiOpts),
 
-    #[clap(
-        about = "Bumps version of openapi specifications",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    /// Bumps version of openapi specifications
     BumpOpenapi(BumpOpenapiOpts),
 
-    #[clap(
-        about = "Merges each occurence of allOf to one json schema",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    /// Merges each occurence of allOf to one json schema
     MergeAllOf(MergeAllOfOpts),
 
-    #[clap(
-        about = "Recursively resolves all $ref occurences in a schema file",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    /// Recursively resolves all $ref occurrences in a schema file
     Dereference(DereferenceOpts),
 
-    #[clap(
-        about = "Create missing titles for all schemas in openapi specification file",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    /// Create missing titles for all schemas in openapi specification file
     Name(NameOpts),
 
-    #[clap(
-        about = "Apply json patch to schema",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    // Apply json patch to schema
     Patch(PatchOpts),
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct MergeOpenapiOpts {
-    #[clap(about = "Path to json/yaml file")]
+    /// Path to json/yaml file
     pub file: String,
 
-    #[clap(long, about = "Openapi file to merge with")]
+    /// Openapi file to merge with
+    #[clap(long)]
     with: String,
 
-    #[clap(long, about = "Should change tags of all endpoints of merged openapi")]
+    /// Should change tags of all endpoints of merged openapi
+    #[clap(long)]
     retag: Option<String>,
 
-    #[clap(
-        long,
-        about = "Should add info.x-version- attribute to openapi specification"
-    )]
+    /// Should add info.x-version- attribute to openapi specification
+    #[clap(long)]
     add_version: Option<String>,
 
     #[clap(flatten)]
@@ -94,16 +74,18 @@ pub struct MergeOpenapiOpts {
     verbose: crate::commands::Verbosity,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct BumpOpenapiOpts {
-    #[clap(about = "Path to json/yaml file")]
+    /// Path to json/yaml file
     pub file: String,
 
-    #[clap(long, about = "Path to previos version of openapi specification")]
+    /// Path to previous version of openapi specification
+    #[clap(long)]
     original: String,
 
-    #[clap(short, long, about = "Type of bump", possible_values = BUMP_OPENAPI_KIND, parse(try_from_str), default_value = "x-version")]
-    kind: String,
+    /// Type of bump
+    #[clap(short, long, default_value = "x-version")]
+    kind: bump_openapi::BumpKind,
 
     #[clap(flatten)]
     output: crate::commands::Output,
@@ -112,19 +94,17 @@ pub struct BumpOpenapiOpts {
     verbose: crate::commands::Verbosity,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct MergeAllOfOpts {
-    #[clap(about = "Path to json/yaml file", multiple_values = true)]
+    /// Path to json/yaml file
     pub file: Vec<String>,
 
-    #[clap(long, about = "Leave invalid properties on allOf level")]
+    /// Leave invalid properties on allOf level
+    #[clap(long)]
     leave_invalid_properties: bool,
 
-    #[clap(
-        long,
-        about = "Filters to be applied on each root.allOf element",
-        required = false
-    )]
+    /// Filters to be applied on each root.allOf element
+    #[clap(long, required = false)]
     filter: Vec<String>,
 
     #[clap(flatten)]
@@ -134,21 +114,21 @@ pub struct MergeAllOfOpts {
     verbose: crate::commands::Verbosity,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct DereferenceOpts {
-    #[clap(about = "Path to json/yaml file", multiple_values = true)]
+    /// Path to json/yaml file
     pub file: Vec<String>,
 
-    #[clap(long, about = "Leaves internal references intact in root schema file")]
+    /// Leaves internal references intact in root schema file
+    #[clap(long)]
     skip_root_internal_references: bool,
 
-    #[clap(
-        long,
-        about = "Creates internal references if refs where pointing to same place"
-    )]
+    /// Creates internal references if refs where pointing to same place
+    #[clap(long)]
     create_internal_references: bool,
 
-    #[clap(long, about = "List of hostnames to skip dereference")]
+    /// List of hostnames to skip dereference
+    #[clap(long)]
     skip_references: Vec<String>,
 
     #[clap(flatten)]
@@ -158,25 +138,26 @@ pub struct DereferenceOpts {
     verbose: crate::commands::Verbosity,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 #[allow(dead_code)]
 pub struct NameOpts {
-    #[clap(about = "Path to json/yaml file with openapi specification")]
+    /// Path to json/yaml file with openapi specification
     file: String,
 
-    #[clap(
-        long,
-        about = "Reverts order of operationId generator to resource+method+version"
-    )]
+    /// Reverts order of operationId generator to resource+method+version
+    #[clap(long)]
     resource_method_version: bool,
 
-    #[clap(long, about = "Should overwrite existing titles")]
+    /// Should overwrite existing titles
+    #[clap(long)]
     overwrite: bool,
 
-    #[clap(long, about = "Should overwrite ambigous titles")]
-    overwrite_ambigous: bool,
+    /// Should overwrite ambiguous titles
+    #[clap(long)]
+    overwrite_ambiguous: bool,
 
-    #[clap(long, about = "Base name of parsed schema")]
+    /// Base name of parsed schema
+    #[clap(long)]
     base_name: Option<String>,
 
     #[clap(flatten)]
@@ -186,9 +167,9 @@ pub struct NameOpts {
     verbose: crate::commands::Verbosity,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct PatchOpts {
-    #[clap(about = "Path to json/yaml file with schema")]
+    /// Path to json/yaml file with schema
     file: String,
 
     #[clap(subcommand)]
@@ -260,7 +241,7 @@ impl Opts {
                 let original = Schema::load_url(path_to_url(opts.original.clone())?)?;
 
                 bump_openapi::Bumper::options(original)
-                    .with_kind(bump_openapi::BumpKind::from_str(&opts.kind).unwrap())
+                    .with_kind(opts.kind)
                     .process(schema)
             }
             Command::Dereference(opts) => {
@@ -280,7 +261,7 @@ impl Opts {
                 name::OpenapiNamer::options()
                     .with_resource_method_version(opts.resource_method_version)
                     .with_overwrite(opts.overwrite)
-                    .with_overwrite_ambigous(opts.overwrite_ambigous)
+                    .with_overwrite_ambigous(opts.overwrite_ambiguous)
                     .process(schema)
             }
             Command::Patch(opts) => patch::execute(schema, &opts.action),

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use clap::Clap;
+use clap::Parser;
 use reqwest::blocking::Client;
 
 use crate::error::Error;
@@ -9,7 +9,7 @@ use crate::validate;
 
 use super::GetSchemaCommand;
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 pub struct Opts {
     #[clap(subcommand)]
     command: Command,
@@ -24,39 +24,35 @@ impl Display for Opts {
     }
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 enum Command {
-    #[clap(
-        about = "Performs openapi specification validation",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    /// Performs openapi specification validation
     Openapi(OpenapiOpts),
 
-    #[clap(
-        about = "Performs json-schema specification validation",
-        author = "Kacper S. <kacper@stasik.eu>"
-    )]
+    /// Performs json-schema specification validation
     JsonSchema(JsonSchemaOpts),
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 struct OpenapiOpts {
-    #[clap(about = "Path to json/yaml file of openapi specification")]
+    /// Path to json/yaml file of openapi specification
     file: String,
 
-    #[clap(long, about = "Should continue on error")]
+    /// Should continue on error
+    #[clap(long)]
     pub continue_on_error: bool,
 
     #[clap(flatten)]
     verbose: crate::commands::Verbosity,
 }
 
-#[derive(Clap, Debug)]
+#[derive(Clone, Debug, Parser)]
 struct JsonSchemaOpts {
-    #[clap(about = "Path to json/yaml file representing json-schema")]
+    /// Path to json/yaml file representing json-schema
     file: String,
 
-    #[clap(long, about = "Should continue on error")]
+    /// Should continue on error
+    #[clap(long)]
     pub continue_on_error: bool,
 
     #[clap(flatten)]

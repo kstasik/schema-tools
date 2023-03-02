@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use serde_json::{Map, Value};
 
 use crate::{error::Error, schema::Schema};
@@ -9,11 +10,12 @@ pub struct BumperOptions {
     pub kind: BumpKind,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum BumpKind {
+    #[value(alias = "x-version")]
     Xversion,
     Undefined,
 }
-
 impl std::str::FromStr for BumpKind {
     type Err = ();
 

@@ -1,11 +1,12 @@
 [package]
 name = "schematools"
-version = "0.1.0"
+description = "Tools for codegen, preprocessing and validation of json-schema and openapi spec"
+version = "0.6.0"
 authors = ["Kacper Stasik <kacper@stasik.eu>"]
 edition = "2018"
 
 [dependencies]
-clap = "3.0.0-beta.2"
+clap = { version = "4.1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 serde_yaml = "0.9.14"
 url = "2"
