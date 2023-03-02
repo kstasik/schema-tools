@@ -16,7 +16,7 @@ pub mod storage;
 pub mod tools;
 pub mod validate;
 
-const VERSION: &str = "0.7.1";
+const VERSION: &str = "0.8.0";
 
 #[derive(Parser)]
 #[command(author, version, about)]
