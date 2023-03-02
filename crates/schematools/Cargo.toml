@@ -20,13 +20,13 @@ tera = { version = "1", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 walkdir = "2"
 json-patch = "0.2.6"
-semver = "0.11.0"
-git2 = "0.15.0"
+semver = "1.0"
+git2 = "0.16"
 md5 = "0.7.0"
-Inflector = "*"
+Inflector = "0.11"
 sha2 = "0.10.1"
 digest = "0.10.1"
 
 [dev-dependencies]
-test-case = "2.2.2"
+test-case = "3.0"
 testing_logger = "0.1.1"

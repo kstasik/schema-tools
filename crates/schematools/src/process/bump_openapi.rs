@@ -84,11 +84,14 @@ impl BumperOptions {
 
                 let mut original_version = extract_version(original_info, "version")?;
                 if bump.0 {
-                    original_version.increment_major()
+                    original_version.major += 1;
+                    original_version.minor = 0;
+                    original_version.patch = 0;
                 } else if bump.1 {
-                    original_version.increment_minor()
+                    original_version.minor += 1;
+                    original_version.patch = 0;
                 } else if bump.2 {
-                    original_version.increment_patch()
+                    original_version.patch += 1
                 }
 
                 log::info!("bumping version to: {}", original_version);
