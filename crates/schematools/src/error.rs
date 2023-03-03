@@ -23,7 +23,7 @@ pub enum Error {
     #[error("Provided path of local registry is not a directory: {0}")]
     RegistryLocalPathNotDirError(std::path::PathBuf),
 
-    #[error("An io error occured during local registry discovery: {0}")]
+    #[error("An io error occurred during local registry discovery: {0}")]
     RegistryLocalIoError(std::io::Error),
 
     #[error("Please provide revision, branch or tag")]
@@ -60,7 +60,7 @@ pub enum Error {
     InvalidOpenapiSchemaError,
 
     #[error("Cannot parse semversion: {0}")]
-    SemVersion(semver::SemVerError),
+    SemVersion(semver::Error),
 
     #[error("Cannot flatten model and change model type during container.add")]
     FlatteningTypeError,
