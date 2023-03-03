@@ -3,7 +3,7 @@ name = "cz_conventional_commits"
 version = "0.9.0"
 version_files = [
     "Cargo.toml:^version",
-    "src/lib.rs:const VERSION"
+    "crates/schematools/src/lib.rs:const VERSION"
 ]
 bump_message = "chore: bump version $current_version → $new_version [skip-ci]"
 tag_format = "v$version"
