@@ -2,7 +2,6 @@
 extern crate lazy_static;
 
 pub mod codegen;
-pub mod commands;
 pub mod discovery;
 pub mod error;
 pub mod hash;

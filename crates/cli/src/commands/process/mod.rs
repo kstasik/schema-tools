@@ -1,14 +1,17 @@
 use std::fmt::Display;
 
 use crate::commands::GetSchemaCommand;
-use crate::storage::SchemaStorage;
-use crate::tools;
 use clap::{Parser, Subcommand};
 use reqwest::blocking::Client;
+use schematools::storage::SchemaStorage;
+use schematools::tools;
 
 use crate::error::Error;
-use crate::process::{bump_openapi, dereference, merge_allof, merge_openapi, name, patch};
-use crate::schema::{path_to_url, Schema};
+use schematools::process::{dereference, merge_allof, merge_openapi, name};
+use schematools::schema::{path_to_url, Schema};
+
+pub mod bump_openapi;
+pub mod patch;
 
 #[derive(Clone, Debug, Parser)]
 pub struct Opts {
@@ -192,29 +195,38 @@ impl GetSchemaCommand for Opts {
                     .map(|s| path_to_url(s.clone()))
                     .collect::<Result<Vec<_>, _>>()?;
 
-                Schema::load_urls(urls)
+                Schema::load_urls(urls).map_err(Error::Schematools)
             }
-            Command::MergeOpenapi(opts) => {
-                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
-            }
-            Command::BumpOpenapi(opts) => {
-                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
-            }
+            Command::MergeOpenapi(opts) => Schema::load_url_with_client(
+                path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
+                client,
+            )
+            .map_err(Error::Schematools),
+            Command::BumpOpenapi(opts) => Schema::load_url_with_client(
+                path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
+                client,
+            )
+            .map_err(Error::Schematools),
             Command::Dereference(opts) => {
                 let urls = opts
                     .file
                     .iter()
                     .map(|s| path_to_url(s.clone()))
-                    .collect::<Result<Vec<_>, _>>()?;
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(Error::Schematools)?;
 
-                Schema::load_urls_with_client(urls, client)
+                Schema::load_urls_with_client(urls, client).map_err(Error::Schematools)
             }
-            Command::Name(opts) => {
-                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
-            }
-            Command::Patch(opts) => {
-                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
-            }
+            Command::Name(opts) => Schema::load_url_with_client(
+                path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
+                client,
+            )
+            .map_err(Error::Schematools),
+            Command::Patch(opts) => Schema::load_url_with_client(
+                path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
+                client,
+            )
+            .map_err(Error::Schematools),
         }
     }
 }
@@ -236,13 +248,15 @@ impl Opts {
                     .with_retag(opts.retag.clone())
                     .with_add_version(opts.add_version.clone())
                     .process(schema)
+                    .map_err(Error::Schematools)
             }
             Command::BumpOpenapi(opts) => {
                 let original = Schema::load_url(path_to_url(opts.original.clone())?)?;
 
-                bump_openapi::Bumper::options(original)
-                    .with_kind(opts.kind)
+                ::schematools::process::bump_openapi::Bumper::options(original)
+                    .with_kind(opts.kind.into())
                     .process(schema)
+                    .map_err(Error::Schematools)
             }
             Command::Dereference(opts) => {
                 dereference::Dereferencer::options()
@@ -263,8 +277,13 @@ impl Opts {
                     .with_overwrite(opts.overwrite)
                     .with_overwrite_ambiguous(opts.overwrite_ambiguous)
                     .process(schema)
+                    .map_err(Error::Schematools)
             }
-            Command::Patch(opts) => patch::execute(schema, &opts.action),
+            Command::Patch(opts) => {
+                let action = opts.action.clone().into();
+
+                ::schematools::process::patch::execute(schema, &action).map_err(Error::Schematools)
+            }
         }
     }
 }

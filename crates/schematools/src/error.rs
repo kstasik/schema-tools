@@ -134,12 +134,6 @@ pub enum Error {
     #[error("Schema path - is reserved for stdin option and reference only")]
     SchemaAsReference,
 
-    #[error("Chain wrong parameters: {0} {1}")]
-    ChainWrongParameters(String, clap::Error),
-
-    #[error("Unknown command: {0}")]
-    ChainUnknownCommand(String),
-
     #[error("Not implemented")]
     NotImplemented,
 
@@ -154,9 +148,6 @@ pub enum Error {
 
     #[error("Schema compilation error occurred {url}, reason: {reason}")]
     SchemaCompilation { url: String, reason: String },
-
-    #[error("Schema not applicable")]
-    SchemaNotApplicable,
 
     #[error("Cannot load schema: {url}, {path}")]
     SchemaLoad { url: String, path: String },

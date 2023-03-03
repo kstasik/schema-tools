@@ -1,17 +1,17 @@
-use codegen::jsonschema::JsonSchemaExtractOptions;
 use reqwest::blocking::Client;
+use schematools::codegen::jsonschema::JsonSchemaExtractOptions;
 use serde_json::Value;
 use std::{fmt::Display, time::Instant};
 
-use crate::{
+use clap::Parser;
+use schematools::{
     discovery::Discovery,
     schema::{path_to_url, Schema},
     storage::SchemaStorage,
 };
-use clap::Parser;
 
-use crate::codegen;
 use crate::error::Error;
+use schematools::codegen;
 
 use super::GetSchemaCommand;
 
@@ -131,13 +131,16 @@ impl GetSchemaCommand for Opts {
                     .file
                     .iter()
                     .map(|s| path_to_url(s.clone()))
-                    .collect::<Result<Vec<_>, _>>()?;
+                    .collect::<Result<Vec<_>, _>>()
+                    .map_err(Error::Schematools)?;
 
-                Schema::load_urls_with_client(urls, client)
+                Schema::load_urls_with_client(urls, client).map_err(Error::Schematools)
             }
-            Command::Openapi(opts) => {
-                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
-            }
+            Command::Openapi(opts) => Schema::load_url_with_client(
+                path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
+                client,
+            )
+            .map_err(Error::Schematools),
         }
     }
 }
@@ -162,7 +165,7 @@ impl Opts {
                         nested_arrays_as_models: opts.nested_arrays_as_models,
                         base_name: opts.base_name.clone(),
                         allow_list: true,
-                        keep_schema: crate::tools::Filter::new(&opts.keep_schema)?,
+                        keep_schema: schematools::tools::Filter::new(&opts.keep_schema)?,
                     },
                 )?;
 
@@ -179,7 +182,9 @@ impl Opts {
                     codegen::create_container(&opts.options),
                 )?;
 
-                renderer.models(models, &opts.target_dir, &opts.format)?;
+                renderer
+                    .models(models, &opts.target_dir, &opts.format)
+                    .map_err(Error::Schematools)?;
 
                 log::info!(
                     "\x1b[1;4mrendering took: {:.2?}\x1b[0m",
@@ -198,7 +203,7 @@ impl Opts {
                         wrappers: opts.wrappers,
                         optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
                         nested_arrays_as_models: opts.nested_arrays_as_models,
-                        keep_schema: crate::tools::Filter::new(&opts.keep_schema)?,
+                        keep_schema: schematools::tools::Filter::new(&opts.keep_schema)?,
                     },
                 )?;
 
@@ -210,7 +215,9 @@ impl Opts {
                 let timing_rendering = Instant::now();
 
                 let renderer = codegen::renderer::create(
-                    discovery.resolve(&opts.template)?,
+                    discovery
+                        .resolve(&opts.template)
+                        .map_err(Error::Schematools)?,
                     &[
                         codegen::templates::TemplateType::Models,
                         codegen::templates::TemplateType::Endpoints,
@@ -218,7 +225,9 @@ impl Opts {
                     codegen::create_container(&opts.options),
                 )?;
 
-                renderer.openapi(openapi, &opts.target_dir, &opts.format)?;
+                renderer
+                    .openapi(openapi, &opts.target_dir, &opts.format)
+                    .map_err(Error::Schematools)?;
 
                 log::info!(
                     "\x1b[1;4mrendering took: {:.2?}\x1b[0m",

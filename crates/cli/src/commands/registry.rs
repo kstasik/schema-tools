@@ -2,7 +2,7 @@ use std::{fmt::Display, fs};
 
 use clap::Parser;
 
-use crate::{
+use schematools::{
     discovery::{discover_git, Discovery, GitCheckoutType, Registry},
     error::Error,
     hash,

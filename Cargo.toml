@@ -1,7 +1,15 @@
 [workspace]
 members = [
-    "crates/schematools"
+    "crates/schematools",
+    "crates/cli"
 ]
 
 [workspace.package]
 version = "0.10.2"
+
+[workspace.dependencies]
+reqwest = { version = "0.11.12", default-features = false, features = ["blocking"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+serde_yaml = "0.9.14"
+log = "0.4"
+thiserror = "1.0"

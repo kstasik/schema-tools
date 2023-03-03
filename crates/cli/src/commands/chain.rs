@@ -2,8 +2,10 @@ use clap::{Parser, Subcommand};
 
 use reqwest::blocking::Client;
 
-use crate::storage::SchemaStorage;
-use crate::{discovery::Discovery, error::Error, schema::Schema};
+use schematools::storage::SchemaStorage;
+use schematools::{discovery::Discovery, schema::Schema};
+
+use crate::error::Error;
 
 use super::process;
 use super::registry;
@@ -48,7 +50,7 @@ impl Display for ChainCommandOption {
 }
 
 fn parse_command(cmd: &str) -> Result<ChainCommandOption, Error> {
-    let parts = crate::tools::ArgumentsExtractor::new(cmd).collect::<Vec<String>>();
+    let parts = schematools::tools::ArgumentsExtractor::new(cmd).collect::<Vec<String>>();
 
     match parts.get(0).unwrap().as_ref() {
         "registry" => Ok(ChainCommandOption::Registry(
