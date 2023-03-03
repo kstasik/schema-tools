@@ -1,7 +1,7 @@
 [package]
 name = "schematools"
 description = "Tools for codegen, preprocessing and validation of json-schema and openapi spec"
-version = "0.6.0"
+version = "0.9.0"
 authors = ["Kacper Stasik <kacper@stasik.eu>"]
 edition = "2018"
 
