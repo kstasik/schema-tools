@@ -1,3 +1,9 @@
+## v0.10.1 (2023-03-03)
+
+### Fix
+
+- issues connected with external libraries
+
 ## v0.10.0 (2023-03-03)
 
 ### Feat
