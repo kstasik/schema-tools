@@ -71,13 +71,13 @@ schematools process name schema.yaml
 Additional options are:
 ```
 --overwrite                  Should overwrite existing titles
---overwrite-ambigous         Should overwrite ambigous titles
+--overwrite-ambiguous         Should overwrite ambiguous titles
 --resource-method-version    Reverts order of operationId generator to resource+method+version
 ```
 
 ### Dereferencing
 
-To replace all occurences of `$ref` in openapi you may type:
+To replace all occurrences of `$ref` in openapi you may type:
 
 ```
 schematools process dereference schema.yaml

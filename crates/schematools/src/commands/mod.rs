@@ -48,7 +48,7 @@ where
 
 #[derive(Clone, Debug, Parser)]
 pub struct Verbosity {
-    /// Verbosity level, increase by multipling v occurrences (warning, info, debug, trace)
+    /// Verbosity level, increase by multiplying v occurrences (warning, info, debug, trace)
     #[clap(
         long,
         short,

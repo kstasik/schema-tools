@@ -68,7 +68,7 @@ pub enum Error {
     #[error("Cannot name model: {0}")]
     CodegenCannotNameModelError(String),
 
-    #[error("Json Patch error occured: {0}")]
+    #[error("Json Patch error occurred: {0}")]
     JsonPatchError(json_patch::PatchError),
 
     #[error("Cannot fill parameters: {0}")]
@@ -152,7 +152,7 @@ pub enum Error {
     #[error("Cannot validate schema {0}")]
     SchemaValidation(String),
 
-    #[error("Schema compilation error occured {url}, reason: {reason}")]
+    #[error("Schema compilation error occurred {url}, reason: {reason}")]
     SchemaCompilation { url: String, reason: String },
 
     #[error("Schema not applicable")]
@@ -188,7 +188,7 @@ pub enum Error {
     #[error("Cannot start logger: {0}")]
     LoggerStart(String),
 
-    #[error("Derefence critical issue: {0}")]
+    #[error("Dereference critical issue: {0}")]
     DereferenceError(String),
 
     #[error("De/serialization error: {0}")]

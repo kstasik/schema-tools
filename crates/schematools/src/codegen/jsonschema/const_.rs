@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn test_const_string() {
-        let schema = json!({"const": "mysecretvalue"});
+        let schema = json!({"const": "mySecretValue"});
 
         let mut container = ModelContainer::default();
         let mut scope = SchemaScope::default();
@@ -60,7 +60,7 @@ mod tests {
             Model::new(ModelType::ConstType(ConstType {
                 name: "TestName".to_string(),
                 type_: "string".to_string(),
-                value: "mysecretvalue".to_string(),
+                value: "mySecretValue".to_string(),
             }))
         );
     }

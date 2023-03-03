@@ -323,7 +323,7 @@ impl SchemaScope {
             .unwrap_or_else(|| format!("{self}"))
     }
 
-    pub fn is_ambigous(&mut self) -> bool {
+    pub fn is_ambiguous(&mut self) -> bool {
         if self.scope.len() < 2 {
             return false;
         }

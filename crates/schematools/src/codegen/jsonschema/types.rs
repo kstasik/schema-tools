@@ -246,7 +246,7 @@ pub struct Attributes {
 
 impl Model {
     pub fn children(&self, container: &ModelContainer) -> Vec<u32> {
-        let childs = match self.inner() {
+        let children = match self.inner() {
             ModelType::ArrayType(a) => {
                 vec![a.model.original]
             }
@@ -261,7 +261,7 @@ impl Model {
             _ => vec![],
         };
 
-        let mut ids = childs.iter().cloned().flatten().collect::<Vec<_>>();
+        let mut ids = children.iter().cloned().flatten().collect::<Vec<_>>();
         let mut additional: Vec<u32> = vec![];
         for id in ids.iter() {
             additional.append(
@@ -418,7 +418,7 @@ impl Default for FlatModel {
 }
 
 impl FlatModel {
-    // Modifies customizable attributes when refered type is resolved
+    // Modifies customizable attributes when referred type is resolved
     pub fn customize_attributes(mut self, attributes: &Attributes) -> Self {
         self.attributes.required = attributes.required;
         self.attributes.nullable = attributes.nullable;

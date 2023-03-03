@@ -80,7 +80,7 @@ fn process_ref(
     ctx: &mut DereferencerContext,
     resolver: &SchemaResolver,
 ) {
-    assert!(ctx.depth < 50, "Infinite reference occured!");
+    assert!(ctx.depth < 50, "Infinite reference occurred!");
 
     match ref_to_url(&ctx.base, &reference) {
         Some(mut url) => {
@@ -208,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Infinite reference occured!")]
+    #[should_panic(expected = "Infinite reference occurred!")]
     fn test_infinite_ref() {
         let mut spec = spec_from_file("resources/test/json-schemas/07-with-infinite-ref.json");
 
