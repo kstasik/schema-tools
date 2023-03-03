@@ -37,7 +37,7 @@ pub enum Command {
     /// Bumps version of openapi specifications
     BumpOpenapi(BumpOpenapiOpts),
 
-    /// Merges each occurence of allOf to one json schema
+    /// Merges each occurrence of allOf to one json schema
     MergeAllOf(MergeAllOfOpts),
 
     /// Recursively resolves all $ref occurrences in a schema file
@@ -261,7 +261,7 @@ impl Opts {
                 name::OpenapiNamer::options()
                     .with_resource_method_version(opts.resource_method_version)
                     .with_overwrite(opts.overwrite)
-                    .with_overwrite_ambigous(opts.overwrite_ambiguous)
+                    .with_overwrite_ambiguous(opts.overwrite_ambiguous)
                     .process(schema)
             }
             Command::Patch(opts) => patch::execute(schema, &opts.action),
@@ -273,7 +273,7 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
     let mut schema = opts.get_schema(client)?;
     let storage = &SchemaStorage::new(&schema, client);
 
-    // tood: ...
+    // todo: ...
     match &opts.command {
         Command::MergeAllOf(o) => {
             o.verbose.start()?;

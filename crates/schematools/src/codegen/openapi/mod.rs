@@ -58,7 +58,7 @@ impl Serialize for MediaModelsContainer {
         let mut models = self.list.clone();
         models.dedup_by(|a, b| a.model == b.model);
 
-        // different serialization dependening on scenario
+        // different serialization depending on scenario
         match models.len().cmp(&1) {
             std::cmp::Ordering::Greater => {
                 let default = models

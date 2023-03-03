@@ -50,7 +50,7 @@ fn extract_schemas(schemas: &[&Schema], client: &Client) -> HashMap<Url, Schema>
         );
     }
 
-    // absoultize refs
+    // absolutize refs
     resolved
         .into_iter()
         .map(|(url, mut schema)| {

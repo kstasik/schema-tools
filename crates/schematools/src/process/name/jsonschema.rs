@@ -8,7 +8,7 @@ pub struct JsonSchemaNamer;
 
 pub struct JsonSchemaNamerOptions {
     overwrite: bool,
-    overwrite_ambigous: bool,
+    overwrite_ambiguous: bool,
     base_name: Option<String>,
     naming_strategy: SchemaNamingStrategy,
 }
@@ -17,7 +17,7 @@ impl JsonSchemaNamer {
     pub fn options() -> JsonSchemaNamerOptions {
         JsonSchemaNamerOptions {
             overwrite: false,
-            overwrite_ambigous: false,
+            overwrite_ambiguous: false,
             base_name: None,
             naming_strategy: SchemaNamingStrategy::Default,
         }
@@ -30,8 +30,8 @@ impl JsonSchemaNamerOptions {
         self
     }
 
-    pub fn with_overwrite_ambigous(&mut self, value: bool) -> &mut Self {
-        self.overwrite_ambigous = value;
+    pub fn with_overwrite_ambiguous(&mut self, value: bool) -> &mut Self {
+        self.overwrite_ambiguous = value;
         self
     }
 
@@ -53,7 +53,7 @@ impl JsonSchemaNamerOptions {
             &mut SchemaScope::new(self.naming_strategy.clone()),
             &NamerOptions {
                 overwrite: self.overwrite,
-                overwrite_ambigous: self.overwrite_ambigous,
+                overwrite_ambiguous: self.overwrite_ambiguous,
                 base_name: self.base_name.clone(), // .or_else(|| Some("AnonymousType".to_string())),
             },
         )
@@ -62,7 +62,7 @@ impl JsonSchemaNamerOptions {
 
 pub struct NamerOptions {
     pub overwrite: bool,
-    pub overwrite_ambigous: bool,
+    pub overwrite_ambiguous: bool,
     pub base_name: Option<String>,
 }
 
@@ -162,7 +162,7 @@ fn get_title(
 
         return Ok(Some(title.ok_or(Error::NamingBaseNameNotFound)?));
     } else if title.is_none() || options.overwrite {
-        if !options.overwrite_ambigous && scope.is_ambigous() {
+        if !options.overwrite_ambiguous && scope.is_ambiguous() {
             return Ok(None);
         }
 
@@ -198,7 +198,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn test_one_of_ambigous() {
+    fn test_one_of_ambiguous() {
         let expected = json!({
             "type": "object",
             "title": "JustTesting",
@@ -249,7 +249,7 @@ mod tests {
 
         let _result = JsonSchemaNamer::options()
             .with_overwrite(true)
-            .with_overwrite_ambigous(true)
+            .with_overwrite_ambiguous(true)
             .with_base_name(Some("JustTesting".to_string()))
             .process(&mut schema);
 
@@ -257,7 +257,7 @@ mod tests {
     }
 
     #[test]
-    fn test_one_of_ambigous_false() {
+    fn test_one_of_ambiguous_false() {
         let expected = json!({
             "type": "object",
             "title": "JustTesting",
@@ -308,7 +308,7 @@ mod tests {
 
         let _result = JsonSchemaNamer::options()
             .with_overwrite(true)
-            .with_overwrite_ambigous(false)
+            .with_overwrite_ambiguous(false)
             .with_base_name(Some("JustTesting".to_string()))
             .process(&mut schema);
 

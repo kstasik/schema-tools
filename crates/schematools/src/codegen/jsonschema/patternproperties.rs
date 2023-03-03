@@ -43,7 +43,7 @@ pub fn from_pattern_properties(
                 let filtered = types.iter().filter(|f| f.type_ == first_type).count();
 
                 if filtered != types.len() {
-                    log::warn!("{}: patternProporties is mixed", scope);
+                    log::warn!("{}: patternProperties is mixed", scope);
                     AnyType::model(map, scope).flatten(container, scope)?
                 } else {
                     types.first().unwrap().clone()

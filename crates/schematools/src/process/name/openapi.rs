@@ -10,7 +10,7 @@ pub struct OpenapiNamer;
 pub struct OpenapiNamerOptions {
     pub resource_method_version: bool,
     pub overwrite: bool,
-    pub overwrite_ambigous: bool,
+    pub overwrite_ambiguous: bool,
     pub naming_strategy: SchemaNamingStrategy,
 }
 
@@ -19,7 +19,7 @@ impl OpenapiNamer {
         OpenapiNamerOptions {
             resource_method_version: false,
             overwrite: false,
-            overwrite_ambigous: false,
+            overwrite_ambiguous: false,
             naming_strategy: SchemaNamingStrategy::Default,
         }
     }
@@ -31,8 +31,8 @@ impl OpenapiNamerOptions {
         self
     }
 
-    pub fn with_overwrite_ambigous(&mut self, value: bool) -> &mut Self {
-        self.overwrite_ambigous = value;
+    pub fn with_overwrite_ambiguous(&mut self, value: bool) -> &mut Self {
+        self.overwrite_ambiguous = value;
         self
     }
 
@@ -64,7 +64,7 @@ impl OpenapiNamerOptions {
                         ctx,
                         &jsonschema::NamerOptions {
                             overwrite: self.overwrite,
-                            overwrite_ambigous: self.overwrite_ambigous,
+                            overwrite_ambiguous: self.overwrite_ambiguous,
                             base_name: None,
                         },
                     )?;
@@ -89,7 +89,7 @@ impl OpenapiNamerOptions {
                         ctx,
                         &jsonschema::NamerOptions {
                             overwrite: self.overwrite,
-                            overwrite_ambigous: self.overwrite_ambigous,
+                            overwrite_ambiguous: self.overwrite_ambiguous,
                             base_name: None,
                         },
                     )?;
@@ -114,7 +114,7 @@ impl OpenapiNamerOptions {
                         ctx,
                         &jsonschema::NamerOptions {
                             overwrite: self.overwrite,
-                            overwrite_ambigous: self.overwrite_ambigous,
+                            overwrite_ambiguous: self.overwrite_ambiguous,
                             base_name: None,
                         },
                     )?;

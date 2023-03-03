@@ -87,11 +87,11 @@ pub fn extract_responses(
                 .collect::<Result<Vec<Response>, _>>()?;
 
             // find 2xx and uniques
-            let mut occurences: HashMap<String, u8> = HashMap::new();
+            let mut occurrences: HashMap<String, u8> = HashMap::new();
             for response in parsed.iter() {
                 if let Some(mcontainer) = &response.models {
                     for mm in &mcontainer.list {
-                        occurences
+                        occurrences
                             .entry((&mm.model).into())
                             .and_modify(|count| *count += 1)
                             .or_insert(1);
@@ -104,7 +104,7 @@ pub fn extract_responses(
                     for mm in mcontainer.list.iter_mut() {
                         let key: String = (&mm.model).into();
 
-                        mm.is_unique = *occurences.get(&key).unwrap_or(&1) == 1;
+                        mm.is_unique = *occurrences.get(&key).unwrap_or(&1) == 1;
                     }
                 }
             }

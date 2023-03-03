@@ -220,7 +220,7 @@ mod tests {
     }
 
     #[test]
-    fn test_xversion_bump_minorg() {
+    fn test_xversion_bump_minor() {
         let recent = json!({
             "info": {
                 "version": "0.0.8",

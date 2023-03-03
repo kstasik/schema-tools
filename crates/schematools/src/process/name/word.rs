@@ -76,10 +76,10 @@ pub fn singularize(word: String) -> String {
     word
 }
 
-pub fn is_plurar(word: String) -> bool {
-    let plurar_form = pluralize(word.clone());
+pub fn is_plural(word: String) -> bool {
+    let plural_form = pluralize(word.clone());
 
-    if plurar_form == word {
+    if plural_form == word {
         return true;
     }
 

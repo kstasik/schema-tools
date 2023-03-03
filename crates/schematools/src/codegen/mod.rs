@@ -52,7 +52,7 @@ pub fn format(data: &str) -> Result<HashMap<&str, Value>, Error> {
 
     if !errors.is_empty() {
         return Err(Error::CodegenFileHeaderParseError(format!(
-            "Errors occured: {errors:?}"
+            "Errors occurred: {errors:?}"
         )));
     }
 
