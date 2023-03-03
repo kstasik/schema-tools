@@ -1,3 +1,14 @@
+## v0.10.0 (2023-03-03)
+
+### Feat
+
+- introduce workspace #71
+- change project structure
+
+### Fix
+
+- autobump
+
 ## v0.9.0 (2023-03-03)
 
 ### Feat
