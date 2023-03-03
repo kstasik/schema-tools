@@ -1,3 +1,13 @@
+## v0.9.0 (2023-03-03)
+
+### Feat
+
+- allow usage as a library
+
+### Fix
+
+- correct lib version
+
 ## v0.8.0 (2023-03-02)
 
 ### Feat
