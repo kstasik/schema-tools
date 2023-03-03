@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 
-use schematools::commands;
+pub mod commands;
+pub mod error;
 
 #[derive(Parser)]
 #[command(author, version, about)]

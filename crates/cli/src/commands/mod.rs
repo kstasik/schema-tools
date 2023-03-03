@@ -13,7 +13,8 @@ pub mod process;
 pub mod registry;
 pub mod validate;
 
-use crate::{error::Error, schema::Schema};
+use crate::error::Error;
+use schematools::schema::Schema;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, ValueEnum)]
 enum OutputValues {

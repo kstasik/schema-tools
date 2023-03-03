@@ -4,8 +4,8 @@ use clap::Parser;
 use reqwest::blocking::Client;
 
 use crate::error::Error;
-use crate::schema::{path_to_url, Schema};
-use crate::validate;
+use schematools::schema::{path_to_url, Schema};
+use schematools::validate;
 
 use super::GetSchemaCommand;
 
@@ -62,12 +62,16 @@ struct JsonSchemaOpts {
 impl GetSchemaCommand for Opts {
     fn get_schema(&self, client: &Client) -> Result<Schema, Error> {
         match &self.command {
-            Command::Openapi(opts) => {
-                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
-            }
-            Command::JsonSchema(opts) => {
-                Schema::load_url_with_client(path_to_url(opts.file.clone())?, client)
-            }
+            Command::Openapi(opts) => Schema::load_url_with_client(
+                path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
+                client,
+            )
+            .map_err(Error::Schematools),
+            Command::JsonSchema(opts) => Schema::load_url_with_client(
+                path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
+                client,
+            )
+            .map_err(Error::Schematools),
         }
     }
 }
@@ -75,8 +79,10 @@ impl GetSchemaCommand for Opts {
 impl Opts {
     pub fn run(&self, schema: &mut Schema) -> Result<(), Error> {
         match &self.command {
-            Command::Openapi(_) => validate::validate_openapi(schema),
-            Command::JsonSchema(_) => validate::validate_jsonschema(schema),
+            Command::Openapi(_) => validate::validate_openapi(schema).map_err(Error::Schematools),
+            Command::JsonSchema(_) => {
+                validate::validate_jsonschema(schema).map_err(Error::Schematools)
+            }
         }
         .map(|r| {
             log::info!("\x1b[0;32mSuccessful validation!\x1b[0m");

@@ -23,6 +23,18 @@ jobs:
           draft: true # todo: change to false
           prerelease: true
 
+  crates:
+    name: Publish schematools on crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: cargo publish -p schematools --token ${CRATES_TOKEN}
+        env:
+          CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+
   release_assets:
     name: Release assets
     needs: create_release
@@ -54,8 +66,8 @@ jobs:
           default: true
           override: true
       - run: cargo build --release
-      - run: strip target/release/schematools${{ matrix.config.extension }}
-      - run: mv target/release/schematools${{ matrix.config.extension }} target/release/schematools-${{ matrix.config.short }}${{ matrix.config.extension }}
+      - run: strip target/release/cli${{ matrix.config.extension }}
+      - run: mv target/release/cli${{ matrix.config.extension }} target/release/schematools-${{ matrix.config.short }}${{ matrix.config.extension }}
       - run: tar -czf target/release/schematools-${{ matrix.config.short }}.tar.gz -C ./target/release schematools-${{ matrix.config.short }}${{ matrix.config.extension }}
 
       # upload files
