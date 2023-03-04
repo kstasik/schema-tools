@@ -14,4 +14,4 @@ pub mod storage;
 pub mod tools;
 pub mod validate;
 
-pub const VERSION: &str = "0.12.0";
+pub const VERSION: &str = "0.13.0";

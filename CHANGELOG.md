@@ -1,3 +1,9 @@
+## v0.13.0 (2023-03-04)
+
+### Feat
+
+- Define features associated with dependencies
+
 ## v0.12.0 (2023-03-04)
 
 ### Fix
