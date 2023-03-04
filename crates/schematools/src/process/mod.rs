@@ -1,3 +1,4 @@
+#[cfg(feature = "semver")]
 pub mod bump_openapi;
 pub mod dereference;
 pub mod merge_allof;

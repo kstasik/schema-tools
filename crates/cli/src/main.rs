@@ -20,6 +20,7 @@ enum Command {
     Validate(commands::validate::Opts),
 
     /// Schema to code transformations
+    #[cfg(feature = "codegen")]
     Codegen(commands::codegen::Opts),
 
     // Chain different operations in one process
@@ -32,6 +33,7 @@ fn main() {
 
     let result = match opts.command {
         Command::Process(opts) => commands::process::execute(opts, &client),
+        #[cfg(feature = "codegen")]
         Command::Codegen(opts) => commands::codegen::execute(opts, &client),
         Command::Validate(opts) => commands::validate::execute(opts, &client),
         Command::Chain(opts) => commands::chain::execute(opts, &client),

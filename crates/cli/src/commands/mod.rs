@@ -8,6 +8,7 @@ use reqwest::blocking::Client;
 use serde_json::Value;
 
 pub mod chain;
+#[cfg(feature = "codegen")]
 pub mod codegen;
 pub mod process;
 pub mod registry;
