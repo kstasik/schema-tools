@@ -1,3 +1,9 @@
+## v0.11.1 (2023-03-04)
+
+### Fix
+
+- Add license to package metadata
+
 ## v0.11.0 (2023-03-03)
 
 ### Feat
