@@ -12,6 +12,7 @@ pub enum Error {
     MissingMinVersionError(String),
 
     #[error("Codegen version {0} does not satisfy the template constraint {1} in file: {2}")]
+    #[cfg(feature = "semver")]
     IncorrectVersionError(semver::Version, semver::Version, String),
 
     #[error("Cannot deserialize yaml document: {0}")]
@@ -54,12 +55,14 @@ pub enum Error {
     DiscoveryInvalidUrlError(url::ParseError),
 
     #[error("Cannot discover git repository: {0}")]
+    #[cfg(feature = "git2")]
     GitDiscoveryError(git2::Error),
 
     #[error("Openapi schema format is invalid")]
     InvalidOpenapiSchemaError,
 
     #[error("Cannot parse semversion: {0}")]
+    #[cfg(feature = "semver")]
     SemVersion(semver::Error),
 
     #[error("Cannot flatten model and change model type during container.add")]
@@ -69,6 +72,7 @@ pub enum Error {
     CodegenCannotNameModelError(String),
 
     #[error("Json Patch error occurred: {0}")]
+    #[cfg(feature = "json-patch")]
     JsonPatchError(json_patch::PatchError),
 
     #[error("Cannot fill parameters: {0}")]
@@ -90,12 +94,14 @@ pub enum Error {
     CodegenFileError(String),
 
     #[error("Codegen template error: {0:?}")]
+    #[cfg(feature = "tera")]
     CodegenTemplateError(tera::Error),
 
     #[error("Cannot find required templates in directory")]
     CodegenMissingRequiredTemplates,
 
     #[error("Cannot parse templates {0:?}")]
+    #[cfg(feature = "tera")]
     CodegenTemplatesParseError(tera::Error),
 
     #[error("Invalid openapi schema {0}: {1}")]

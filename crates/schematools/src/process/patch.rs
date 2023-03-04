@@ -1,6 +1,7 @@
 use crate::schema::Schema;
 use crate::{error::Error, schema::path_to_url};
 
+#[cfg(feature = "json-patch")]
 use json_patch::{diff, from_value, patch};
 use serde::Serialize;
 use serde_json::Value;
@@ -48,6 +49,7 @@ pub struct PatchInlineOpts {
     pub value: Option<Value>,
 }
 
+#[cfg(feature = "json-patch")]
 pub fn execute(schema: &mut Schema, action: &Action) -> Result<(), Error> {
     match action {
         Action::Create(c) => {

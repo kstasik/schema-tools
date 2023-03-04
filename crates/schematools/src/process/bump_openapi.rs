@@ -133,6 +133,7 @@ fn extract_info_mut(openapi: &mut Map<String, Value>) -> Result<&mut Map<String,
         .ok_or(Error::InvalidOpenapiSchemaError)
 }
 
+#[cfg(feature = "semver")]
 fn extract_version(info: &Map<String, Value>, field_name: &str) -> Result<semver::Version, Error> {
     semver::Version::parse(
         info.get(field_name)

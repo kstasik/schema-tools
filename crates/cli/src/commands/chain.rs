@@ -7,12 +7,16 @@ use schematools::{discovery::Discovery, schema::Schema};
 
 use crate::error::Error;
 
+#[cfg(feature = "codegen")]
+use super::codegen;
 use super::process;
 use super::registry;
 use super::validate;
-use super::{codegen, GetSchemaCommand};
+use super::GetSchemaCommand;
+
 use std::fmt::Display;
 use std::time::Instant;
+
 #[derive(Clone, Debug, Parser)]
 pub struct OutputOpts {
     #[clap(flatten)]
@@ -21,6 +25,7 @@ pub struct OutputOpts {
 
 #[derive(Clone, Debug, Subcommand)]
 pub enum ChainCommandOption {
+    #[cfg(feature = "codegen")]
     Codegen(codegen::Opts),
     Process(process::Opts),
     Validate(validate::Opts),
@@ -40,6 +45,7 @@ impl Display for OutputOpts {
 impl Display for ChainCommandOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self {
+            #[cfg(feature = "codegen")]
             Self::Codegen(p) => write!(f, "codegen: {p}"),
             Self::Process(p) => write!(f, "process: {p}"),
             Self::Validate(p) => write!(f, "validate: {p}"),
@@ -57,6 +63,7 @@ fn parse_command(cmd: &str) -> Result<ChainCommandOption, Error> {
             registry::Opts::try_parse_from(parts)
                 .map_err(|e| Error::ChainWrongParameters("registry".to_string(), e))?,
         )),
+        #[cfg(feature = "codegen")]
         "codegen" => Ok(ChainCommandOption::Codegen(
             codegen::Opts::try_parse_from(parts)
                 .map_err(|e| Error::ChainWrongParameters("codegen".to_string(), e))?,
@@ -95,6 +102,7 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
     let timing_load = Instant::now();
     for command in opts.commands {
         let schema = match &command {
+            #[cfg(feature = "codegen")]
             ChainCommandOption::Codegen(c) => c.get_schema(client),
             ChainCommandOption::Process(c) => c.get_schema(client),
             ChainCommandOption::Validate(c) => c.get_schema(client),
@@ -146,6 +154,7 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
             let timing_step = Instant::now();
 
             match cmd {
+                #[cfg(feature = "codegen")]
                 ChainCommandOption::Codegen(c) => c.run(current, &discovery, &storage),
                 ChainCommandOption::Process(c) => c.run(current, &storage).map(|result| {
                     storage

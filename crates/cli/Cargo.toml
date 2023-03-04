@@ -6,6 +6,13 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[features]
+default = ["codegen", "git2", "json-patch"]
+codegen = ["schematools/codegen"]
+git2 = ["schematools/git2"]
+json-patch = ["schematools/json-patch"]
+semver = ["schematools/semver"]
+
 [dependencies]
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }

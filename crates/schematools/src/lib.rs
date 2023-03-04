@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[cfg(feature = "codegen")]
 pub mod codegen;
 pub mod discovery;
 pub mod error;

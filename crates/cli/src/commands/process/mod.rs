@@ -10,6 +10,7 @@ use crate::error::Error;
 use schematools::process::{dereference, merge_allof, merge_openapi, name};
 use schematools::schema::{path_to_url, Schema};
 
+#[cfg(feature = "semver")]
 pub mod bump_openapi;
 pub mod patch;
 
@@ -23,10 +24,12 @@ impl Display for Opts {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.command {
             Command::MergeOpenapi(_) => write!(f, "merge_openapi"),
+            #[cfg(feature = "semver")]
             Command::BumpOpenapi(_) => write!(f, "bump_openapi"),
             Command::MergeAllOf(_) => write!(f, "merge_allof"),
             Command::Dereference(_) => write!(f, "dereference"),
             Command::Name(_) => write!(f, "name"),
+            #[cfg(feature = "json-patch")]
             Command::Patch(_) => write!(f, "patch"),
         }
     }
@@ -38,6 +41,7 @@ pub enum Command {
     MergeOpenapi(MergeOpenapiOpts),
 
     /// Bumps version of openapi specifications
+    #[cfg(feature = "semver")]
     BumpOpenapi(BumpOpenapiOpts),
 
     /// Merges each occurrence of allOf to one json schema
@@ -50,6 +54,7 @@ pub enum Command {
     Name(NameOpts),
 
     // Apply json patch to schema
+    #[cfg(feature = "json-patch")]
     Patch(PatchOpts),
 }
 
@@ -88,6 +93,7 @@ pub struct BumpOpenapiOpts {
 
     /// Type of bump
     #[clap(short, long, default_value = "x-version")]
+    #[cfg(feature = "semver")]
     kind: bump_openapi::BumpKind,
 
     #[clap(flatten)]
@@ -202,6 +208,7 @@ impl GetSchemaCommand for Opts {
                 client,
             )
             .map_err(Error::Schematools),
+            #[cfg(feature = "semver")]
             Command::BumpOpenapi(opts) => Schema::load_url_with_client(
                 path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
                 client,
@@ -222,6 +229,7 @@ impl GetSchemaCommand for Opts {
                 client,
             )
             .map_err(Error::Schematools),
+            #[cfg(feature = "json-patch")]
             Command::Patch(opts) => Schema::load_url_with_client(
                 path_to_url(opts.file.clone()).map_err(Error::Schematools)?,
                 client,
@@ -250,6 +258,7 @@ impl Opts {
                     .process(schema)
                     .map_err(Error::Schematools)
             }
+            #[cfg(feature = "semver")]
             Command::BumpOpenapi(opts) => {
                 let original = Schema::load_url(path_to_url(opts.original.clone())?)?;
 
@@ -279,9 +288,9 @@ impl Opts {
                     .process(schema)
                     .map_err(Error::Schematools)
             }
+            #[cfg(feature = "json-patch")]
             Command::Patch(opts) => {
                 let action = opts.action.clone().into();
-
                 ::schematools::process::patch::execute(schema, &action).map_err(Error::Schematools)
             }
         }
@@ -308,6 +317,7 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
 
             Ok(())
         }
+        #[cfg(feature = "semver")]
         Command::BumpOpenapi(o) => {
             o.verbose.start()?;
             opts.run(&mut schema, storage)?;
@@ -329,6 +339,7 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
 
             Ok(())
         }
+        #[cfg(feature = "json-patch")]
         Command::Patch(o) => {
             o.verbose.start()?;
             opts.run(&mut schema, storage)?;

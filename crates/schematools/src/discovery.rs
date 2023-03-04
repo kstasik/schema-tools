@@ -107,6 +107,7 @@ impl Registry {
     }
 }
 
+#[cfg(feature = "git2")]
 pub fn discover_git(
     repository: &str,
     source: GitCheckoutType,
@@ -168,6 +169,7 @@ pub fn discover_git(
 }
 
 #[cfg(test)]
+#[cfg(feature = "git2")]
 mod tests {
     use super::*;
 
