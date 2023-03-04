@@ -1,3 +1,123 @@
+## v0.12.0 (2023-03-04)
+
+### Fix
+
+- Add license to package metadata
+
+## v0.11.0 (2023-03-03)
+
+### Feat
+
+- cli crate
+
+## v0.10.2 (2023-03-03)
+
+### Fix
+
+- Use correct spelling
+
+## v0.10.1 (2023-03-03)
+
+### Fix
+
+- issues connected with external libraries
+
+## v0.10.0 (2023-03-03)
+
+### Feat
+
+- introduce workspace #71
+- change project structure
+
+### Fix
+
+- autobump
+
+## v0.9.0 (2023-03-03)
+
+### Feat
+
+- allow usage as a library
+
+### Fix
+
+- correct lib version
+
+## v0.8.0 (2023-03-02)
+
+### Feat
+
+- migration to clap4
+
+## v0.7.1 (2023-01-20)
+
+### Fix
+
+- bump dependencies
+
+## v0.7.0 (2022-11-20)
+
+### Feat
+
+- windows builds #63
+
+## v0.6.0 (2022-10-18)
+
+### Feat
+
+- add formats to endpoints/tags renderers
+
+### Fix
+
+- fill formats when generate clients
+
+## v0.5.2 (2022-10-11)
+
+### Fix
+
+- lint
+- tuples to any
+
+## v0.5.1 (2022-05-27)
+
+### Fix
+
+- license added
+
+## v0.5.0 (2022-05-04)
+
+### Feat
+
+- unqiue models detection
+
+## v0.4.1 (2022-04-23)
+
+### Fix
+
+- resolve pattern properties on type object
+
+## v0.4.0 (2022-01-26)
+
+### Feat
+
+- registry lock and relative path
+
+## v0.3.0 (2021-12-12)
+
+### Feat
+
+- static templates and filters
+
+### Fix
+
+- git build fix
+
+## v0.2.0 (2021-12-04)
+
+### Feat
+
+- versions, min_version, formats, parameters
+
 ## v0.11.1 (2023-03-04)
 
 ### Fix
