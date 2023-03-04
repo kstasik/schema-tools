@@ -66,8 +66,8 @@ jobs:
           default: true
           override: true
       - run: cargo build --release
-      - run: strip target/release/cli${{ matrix.config.extension }}
-      - run: mv target/release/cli${{ matrix.config.extension }} target/release/schematools-${{ matrix.config.short }}${{ matrix.config.extension }}
+      - run: strip target/release/schematools-cli${{ matrix.config.extension }}
+      - run: mv target/release/schematools-cli${{ matrix.config.extension }} target/release/schematools-${{ matrix.config.short }}${{ matrix.config.extension }}
       - run: tar -czf target/release/schematools-${{ matrix.config.short }}.tar.gz -C ./target/release schematools-${{ matrix.config.short }}${{ matrix.config.extension }}
 
       # upload files

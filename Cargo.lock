@@ -1271,7 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "schematools"
-version = "0.10.2"
+version = "0.11.1"
 dependencies = [
  "Inflector",
  "digest 0.10.1",
@@ -1297,7 +1297,7 @@ dependencies = [
 
 [[package]]
 name = "schematools-cli"
-version = "0.10.2"
+version = "0.11.1"
 dependencies = [
  "clap",
  "env_logger",
