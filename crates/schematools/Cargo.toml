@@ -2,6 +2,8 @@
 name = "schematools"
 description = "Tools for codegen, preprocessing and validation of json-schema and openapi spec"
 edition = "2018"
+license.workspace = true
+repository.workspace = true
 version.workspace = true
 
 [dependencies]
