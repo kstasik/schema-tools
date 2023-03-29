@@ -1,3 +1,9 @@
+## v0.13.1 (2023-03-29)
+
+### Fix
+
+- Show README.md on crates.io
+
 ## v0.13.0 (2023-03-04)
 
 ### Feat
