@@ -281,7 +281,7 @@ To target such registry you simply use: `--template REGISTRY_NAME::path/`
 This example shows openapi http server with two external openapi client dependencies:
 
 ```
-schematool chain -vv \
+schematools chain -vv \
   # 0. Register external repository with templates and fix it to tag
   -c 'registry add default https://codegen-templates/templates.git --tag v0.5.0' \
   # 1. Load local openapi specification from file and dereference
