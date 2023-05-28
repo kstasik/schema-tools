@@ -39,6 +39,10 @@ impl Model {
     pub fn inner(&self) -> &ModelType {
         &self.inner
     }
+
+    pub fn mut_inner(&mut self) -> &mut ModelType {
+        &mut self.inner
+    }
 }
 
 #[derive(Debug, Serialize, Clone, Eq, PartialEq)]
@@ -194,6 +198,9 @@ pub struct WrapperType {
 
     #[serde(rename = "kind")]
     pub kind: WrapperTypeKind,
+
+    #[serde(rename = "strategy")]
+    pub strategy: WrapperStrategy,
 }
 
 #[derive(Debug, Clone, Serialize, Eq, PartialEq)]
@@ -205,6 +212,20 @@ pub enum WrapperTypeKind {
 impl Default for WrapperTypeKind {
     fn default() -> Self {
         Self::OneOf
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum WrapperStrategy {
+    BruteForce,
+    Internally(String),
+    Externally,
+}
+
+impl Default for WrapperStrategy {
+    fn default() -> Self {
+        Self::BruteForce
     }
 }
 

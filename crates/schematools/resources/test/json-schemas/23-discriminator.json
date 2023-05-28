@@ -1,0 +1,36 @@
+{
+  "$id": "https://example.com/arrays.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Object",
+  "required": ["type", "name"],
+  "$defs": {
+    "NameType": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["test"],
+          "properties": {
+            "test": { "type": "string" }
+          }
+        },
+        {
+          "$ref": "#/$defs/Test2"
+        }
+      ],
+      "discriminator": {
+        "mapping": {
+          "test": "#/$defs/NameType/oneOf/0",
+          "test2": "#/$defs/Test2"
+        }
+      }
+    },
+    "Test2": {
+      "type": "object",
+      "required": ["test2"],
+      "properties": {
+        "test2": { "type": "string" }
+      }
+    }
+  }
+}

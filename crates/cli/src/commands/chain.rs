@@ -120,7 +120,7 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
                 Ok(())
             }
             Err(e) => match e {
-                Error::SchemaAsReference => Ok(()),
+                Error::Schematools(schematools::error::Error::SchemaAsReference) => Ok(()),
                 Error::SchemaNotApplicable => Ok(()),
                 e => Err(e),
             },
