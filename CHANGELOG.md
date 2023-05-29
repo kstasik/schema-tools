@@ -1,3 +1,9 @@
+## v0.14.0 (2023-05-29)
+
+### Feat
+
+- better enum representations support, cli fix, default tag when there are no tags
+
 ## v0.13.1 (2023-03-29)
 
 ### Fix
