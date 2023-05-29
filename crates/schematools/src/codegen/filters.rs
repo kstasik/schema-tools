@@ -105,7 +105,7 @@ pub fn path_parts(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Va
         None => return Err(tera::Error::msg("Please provide to parameter")),
     };
 
-    let path = Regex::new("\\{[A-z0-9]+\\}")
+    let path = Regex::new("\\{[A-z0-9\\-]+\\}")
         .unwrap()
         .replace_all(&data, to.as_str());
 

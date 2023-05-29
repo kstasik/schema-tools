@@ -1,0 +1,20 @@
+{
+  "$id": "https://example.com/arrays.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Object",
+  "required": ["type", "name"],
+  "$defs": {
+    "MovedTest2": {
+      "$ref": "23-discriminator.json#/$defs/Test2"
+    }
+  },
+  "properties": {
+    "type": {
+      "type": "string"
+    },
+    "name": {
+      "$ref": "23-discriminator.json#/$defs/NameType"
+    }
+  }
+}

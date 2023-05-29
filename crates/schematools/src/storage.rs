@@ -107,8 +107,12 @@ fn absolutize_refs(current: &Url, root: &mut Value) {
                 let mut absolute = ref_to_url(current, reference).unwrap().to_string();
                 std::mem::swap(reference, &mut absolute);
             } else {
-                for (_, value) in map.into_iter() {
-                    absolutize_refs(current, value);
+                for (key, value) in map.into_iter() {
+                    if key == "discriminator" && value["mapping"].is_object() {
+                        process_discriminator(current, &mut value["mapping"]);
+                    } else {
+                        absolutize_refs(current, value);
+                    }
                 }
             }
         }
@@ -119,6 +123,17 @@ fn absolutize_refs(current: &Url, root: &mut Value) {
         }
         _ => {}
     };
+}
+
+fn process_discriminator(current: &Url, data: &mut Value) {
+    if let Value::Object(mapping) = data {
+        for (_, value) in mapping.into_iter() {
+            if let Value::String(reference) = value {
+                let mut absolute = ref_to_url(current, reference).unwrap().to_string();
+                std::mem::swap(reference, &mut absolute);
+            }
+        }
+    }
 }
 
 pub fn ref_to_url(base: &Url, reference: &str) -> Option<Url> {

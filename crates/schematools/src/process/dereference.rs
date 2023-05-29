@@ -32,6 +32,7 @@ impl DereferencerContext {
 #[derive(Default)]
 pub struct DereferencerOptions {
     pub skip_root_internal_references: bool,
+    pub skip_discriminators: bool,
     pub create_internal_references: bool,
     pub skip_references: Vec<String>,
 }
@@ -44,6 +45,11 @@ impl DereferencerOptions {
 
     pub fn with_create_internal_references(&mut self, value: bool) -> &mut Self {
         self.create_internal_references = value;
+        self
+    }
+
+    pub fn with_skip_discriminators(&mut self, value: bool) -> &mut Self {
+        self.skip_discriminators = value;
         self
     }
 
@@ -67,6 +73,7 @@ impl Dereferencer {
     pub fn options() -> DereferencerOptions {
         DereferencerOptions {
             skip_root_internal_references: false,
+            skip_discriminators: false,
             create_internal_references: true,
             skip_references: vec![],
         }
@@ -138,7 +145,7 @@ fn process_ref(
                         }
                     }
 
-                    *root = s
+                    *root = s;
                 }
                 None => log::warn!("{}.$ref has to be a string", ctx.scope),
             }
@@ -180,7 +187,16 @@ fn process_node(
             } else {
                 for (property, value) in map.into_iter() {
                     ctx.scope.any(property);
+
                     process_node(value, options, ctx, resolver);
+
+                    if !options.skip_discriminators
+                        && property == "discriminator"
+                        && value["mapping"].is_object()
+                    {
+                        process_discriminator(&mut value["mapping"], ctx);
+                    }
+
                     ctx.scope.pop();
                 }
             }
@@ -193,6 +209,35 @@ fn process_node(
             }
         }
         _ => {}
+    }
+}
+
+fn process_discriminator(root: &mut Value, ctx: &mut DereferencerContext) {
+    log::debug!("{}: processing discriminator", ctx.scope);
+
+    if let Value::Object(ref mut map) = root {
+        for (_, value) in map.into_iter() {
+            if let Value::String(reference) = value {
+                if let Some(url) = ref_to_url(&ctx.base, reference) {
+                    let plain = url.to_string();
+
+                    if let Some(d) = ctx.resolved.get(&plain) {
+                        *reference = format!("#{}", d.clone());
+                    } else {
+                        for i in (0..=plain.len()).rev() {
+                            if plain.chars().nth(i).map_or(false, |i| i == '/') {
+                                let prefix = &plain[0..i];
+                                if let Some(prefix) = ctx.resolved.get(prefix) {
+                                    *reference =
+                                        format!("#{}{}", prefix.clone(), &plain[i..plain.len()]);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -249,6 +294,76 @@ mod tests {
                 }
             }
         });
+
+        assert_eq!(spec.get_body().to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_discriminator() {
+        let mut spec = spec_from_file("resources/test/json-schemas/22-discriminator-root.json");
+
+        let client = reqwest::blocking::Client::new();
+        let ss = SchemaStorage::new(&spec, &client);
+
+        Dereferencer::options()
+            .with_create_internal_references(true)
+            .with_skip_root_internal_references(true)
+            .process(&mut spec, &ss);
+
+        let expected = json!({
+          "$id": "https://example.com/arrays.schema.json",
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "title": "Object",
+          "required": [
+            "type",
+            "name"
+          ],
+          "$defs": {
+            "MovedTest2": {
+              "type": "object",
+              "required": [
+                "test2"
+              ],
+              "properties": {
+                "test2": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "name": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "test"
+                  ],
+                  "properties": {
+                    "test": {
+                      "type": "string"
+                    }
+                  }
+                },
+                {
+                  "$ref": "#/$defs/MovedTest2"
+                }
+              ],
+              "discriminator": {
+                "mapping": {
+                  "test": "#/properties/name/oneOf/0",
+                  "test2": "#/$defs/MovedTest2"
+                }
+              }
+            }
+          }
+        });
+
+        // println!("test: {}", spec.get_body().to_string());
 
         assert_eq!(spec.get_body().to_string(), expected.to_string());
     }

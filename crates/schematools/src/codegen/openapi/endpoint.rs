@@ -132,6 +132,12 @@ fn new_endpoint(
                 .map_or(Ok(None), |v| v.map(Some))?
                 .unwrap_or_default();
 
+            let tags = if tags.is_empty() {
+                vec!["default".to_string()]
+            } else {
+                tags
+            };
+
             let x = data
                 .iter()
                 .filter_map(|(key, val)| {

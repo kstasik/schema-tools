@@ -14,9 +14,6 @@ pub enum Error {
     #[error("Schema not applicable")]
     SchemaNotApplicable,
 
-    #[error("Schema path - is reserved for stdin option and reference only")]
-    SchemaAsReference,
-
     #[error("Cannot start logger: {0}")]
     LoggerStart(String),
 }

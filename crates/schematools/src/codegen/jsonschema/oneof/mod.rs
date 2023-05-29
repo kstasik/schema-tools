@@ -9,6 +9,8 @@ use crate::{
     scope::SchemaScope,
 };
 
+mod extractor;
+
 pub fn from_oneof(
     schema: &Map<String, Value>,
     container: &mut ModelContainer,
@@ -16,6 +18,14 @@ pub fn from_oneof(
     resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
 ) -> Result<Model, Error> {
+    let mut extractor = schema
+        .get("discriminator")
+        .and_then(|data| {
+            extractor::Discriminator::new(data)
+                .map(|d| Box::new(d) as Box<dyn extractor::Extractor>)
+        })
+        .unwrap_or(Box::new(extractor::Simple::new()));
+
     match schema.get("oneOf") {
         Some(one_of) => match one_of {
             Value::Array(variants) => {
@@ -34,20 +44,16 @@ pub fn from_oneof(
                         scope.index(i);
                         let result =
                             super::extract_type(value, container, scope, resolver, options)
-                                .and_then(|m| {
-                                    m.flatten(container, scope).map(|mut f| {
-                                        if let Some((property, value)) = get_const_property(&m) {
-                                            f.attributes.x.insert(
-                                                "property".to_string(),
-                                                Value::String(property),
-                                            );
-                                            f.attributes
-                                                .x
-                                                .insert("value".to_string(), Value::String(value));
-                                        }
+                                .and_then(|mut m| {
+                                    // all object names in oneOf of enum structure are changed
+                                    // to avoid collisions, in many cases extractor will modify
+                                    // such structure (for example will remove internal tag)
+                                    // so it cannot modify original structure
+                                    if let ModelType::ObjectType(ref mut obj) = m.mut_inner() {
+                                        obj.name = format!("{}Variant", obj.name);
+                                    }
 
-                                        f
-                                    })
+                                    extractor.extract(value, m, container, scope)
                                 })
                                 .map(|mut s| {
                                     s.attributes.required = true;
@@ -69,38 +75,13 @@ pub fn from_oneof(
                 Ok(Model::new(ModelType::WrapperType(WrapperType {
                     name: scope.namer().decorate(vec!["Variant".to_string()]),
                     models: models?,
+                    strategy: extractor.strategy(),
                     ..WrapperType::default()
                 })))
             }
             _ => Err(Error::SchemaInvalidProperty("oneOf".to_string())),
         },
         None => Err(Error::SchemaPropertyNotAvailable("oneOf".to_string())),
-    }
-}
-
-fn get_const_property(model: &Model) -> Option<(String, String)> {
-    if let ModelType::ObjectType(object) = model.inner() {
-        let property = if object.properties.len() == 1 {
-            object
-                .properties
-                .first()
-                .map(|f| (f.name.clone().unwrap(), f.name.clone().unwrap()))
-        } else {
-            object
-                .properties
-                .iter()
-                .find(|f| f.type_ == "const")
-                .map(|f| {
-                    (
-                        f.name.clone().unwrap(),
-                        f.model.clone().unwrap().name.unwrap(),
-                    )
-                })
-        };
-
-        property
-    } else {
-        None
     }
 }
 
@@ -149,7 +130,7 @@ fn simplify_one_of(
 mod tests {
     use std::collections::HashMap;
 
-    use crate::codegen::jsonschema::types::{Attributes, FlatModel, ObjectType};
+    use crate::codegen::jsonschema::types::{Attributes, FlatModel, ObjectType, WrapperStrategy};
 
     use super::*;
     use serde_json::json;
@@ -186,15 +167,19 @@ mod tests {
                         name: Some("Variant0".to_string()),
                         type_: "object".to_string(),
                         model: Some(Box::new(FlatModel {
-                            name: Some("A".to_string()),
-                            type_: "A".to_string(),
+                            name: Some("AVariant".to_string()),
+                            type_: "AVariant".to_string(),
                             ..FlatModel::default()
                         })),
                         attributes: Attributes {
-                            x: [
-                                ("value".to_string(), Value::String("some".to_string())),
-                                ("property".to_string(), Value::String("some".to_string()))
-                            ]
+                            x: [(
+                                "_discriminator".to_string(),
+                                json!({
+                                    "property": "some",
+                                    "value": "some",
+                                    "properties": 1
+                                })
+                            )]
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
@@ -208,15 +193,19 @@ mod tests {
                         name: Some("Variant1".to_string()),
                         type_: "object".to_string(),
                         model: Some(Box::new(FlatModel {
-                            name: Some("B".to_string()),
-                            type_: "B".to_string(),
+                            name: Some("BVariant".to_string()),
+                            type_: "BVariant".to_string(),
                             ..FlatModel::default()
                         })),
                         attributes: Attributes {
-                            x: [
-                                ("value".to_string(), Value::String("testing".to_string())),
-                                ("property".to_string(), Value::String("testing".to_string()))
-                            ]
+                            x: [(
+                                "_discriminator".to_string(),
+                                json!({
+                                    "property": "testing",
+                                    "value": "testing",
+                                    "properties": 1
+                                })
+                            )]
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
@@ -227,6 +216,7 @@ mod tests {
                         ..FlatModel::default()
                     }
                 ],
+                strategy: WrapperStrategy::Externally,
                 ..WrapperType::default()
             }))
         );
@@ -264,15 +254,19 @@ mod tests {
                         name: Some("Variant0".to_string()),
                         type_: "object".to_string(),
                         model: Some(Box::new(FlatModel {
-                            name: Some("A".to_string()),
-                            type_: "A".to_string(),
+                            name: Some("AVariant".to_string()),
+                            type_: "AVariant".to_string(),
                             ..FlatModel::default()
                         })),
                         attributes: Attributes {
-                            x: [
-                                ("value".to_string(), Value::String("value1".to_string())),
-                                ("property".to_string(), Value::String("type".to_string()))
-                            ]
+                            x: [(
+                                "_discriminator".to_string(),
+                                json!({
+                                    "property": "type",
+                                    "value": "value1",
+                                    "properties": 1
+                                })
+                            )]
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
@@ -286,15 +280,19 @@ mod tests {
                         name: Some("Variant1".to_string()),
                         type_: "object".to_string(),
                         model: Some(Box::new(FlatModel {
-                            name: Some("B".to_string()),
-                            type_: "B".to_string(),
+                            name: Some("BVariant".to_string()),
+                            type_: "BVariant".to_string(),
                             ..FlatModel::default()
                         })),
                         attributes: Attributes {
-                            x: [
-                                ("value".to_string(), Value::String("value2".to_string())),
-                                ("property".to_string(), Value::String("type".to_string()))
-                            ]
+                            x: [(
+                                "_discriminator".to_string(),
+                                json!({
+                                    "property": "type",
+                                    "value": "value2",
+                                    "properties": 1
+                                })
+                            )]
                             .iter()
                             .cloned()
                             .collect::<HashMap<String, Value>>(),
@@ -305,6 +303,7 @@ mod tests {
                         ..FlatModel::default()
                     }
                 ],
+                strategy: WrapperStrategy::Internally("type".to_string()),
                 ..WrapperType::default()
             }))
         );

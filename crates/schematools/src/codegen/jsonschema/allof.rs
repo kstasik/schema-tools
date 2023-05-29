@@ -47,6 +47,7 @@ pub fn from_allof(
                     name: scope.namer().simple()?,
                     models: models?,
                     kind: WrapperTypeKind::AllOf,
+                    ..Default::default()
                 })))
             }
             _ => Err(Error::SchemaInvalidProperty("allOf".to_string())),
@@ -96,6 +97,7 @@ mod tests {
                     }
                 ],
                 kind: WrapperTypeKind::AllOf,
+                ..Default::default()
             }))
         );
     }
