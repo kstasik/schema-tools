@@ -157,6 +157,7 @@ fn merge_values(a: &mut Value, b: Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Client;
     use serde_json::json;
 
     #[test]
@@ -242,7 +243,7 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&schema, &client);
 
         Merger::options().process(&mut schema, &ss);
@@ -296,7 +297,7 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&schema, &client);
 
         Merger::options().process(&mut schema, &ss);
@@ -338,7 +339,7 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&schema, &client);
 
         Merger::options().process(&mut schema, &ss);
@@ -390,7 +391,7 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&schema, &client);
 
         Merger::options().process(&mut schema, &ss);
@@ -462,7 +463,7 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&schema, &client);
 
         Merger::options().process(&mut schema, &ss);
@@ -587,7 +588,7 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&schema, &client);
 
         Merger::options().process(&mut schema, &ss);
@@ -631,7 +632,7 @@ mod tests {
 
         let mut schema = Schema::from_json(value);
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&schema, &client);
 
         Merger::options().process(&mut schema, &ss);

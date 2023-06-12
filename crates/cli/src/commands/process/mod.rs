@@ -2,9 +2,9 @@ use std::fmt::Display;
 
 use crate::commands::GetSchemaCommand;
 use clap::{Parser, Subcommand};
-use reqwest::blocking::Client;
 use schematools::storage::SchemaStorage;
 use schematools::tools;
+use schematools::Client;
 
 use crate::error::Error;
 use schematools::process::{dereference, merge_allof, merge_openapi, name};

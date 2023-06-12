@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use clap::Parser;
-use reqwest::blocking::Client;
+use schematools::Client;
 
 use crate::error::Error;
 use schematools::schema::{path_to_url, Schema};

@@ -7,16 +7,16 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["codegen", "git2", "json-patch"]
+default = ["codegen", "git2", "http", "json-patch"]
 codegen = ["schematools/codegen"]
 git2 = ["schematools/git2"]
+http = ["schematools/http"]
 json-patch = ["schematools/json-patch"]
 semver = ["schematools/semver"]
 
 [dependencies]
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-reqwest = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 

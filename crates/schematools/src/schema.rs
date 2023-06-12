@@ -1,11 +1,10 @@
-use reqwest::blocking::Client;
 use serde::Deserialize;
 use serde_json::Value;
 use std::{fs, path::PathBuf};
 use url::Url;
 
 use crate::error::Error;
-use crate::process;
+use crate::{process, Client};
 
 #[derive(Debug, Clone)]
 pub struct Schema {
@@ -15,10 +14,11 @@ pub struct Schema {
 
 impl Schema {
     pub fn load_url(url: Url) -> Result<Schema, Error> {
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         Self::load_url_with_client(url, &client)
     }
 
+    #[allow(unused_variables)]
     pub fn load_url_with_client(url: Url, client: &Client) -> Result<Schema, Error> {
         log::info!("loading: {}", url);
 
@@ -37,8 +37,9 @@ impl Schema {
                         path,
                     })?;
 
-                    Ok((None, content))
+                    Ok((None::<String>, content))
                 }
+                #[cfg(feature = "http")]
                 "http" | "https" => {
                     let response = client.get(url.to_string()).send().map_err(|error| {
                         Error::SchemaHttpLoad {
@@ -107,7 +108,7 @@ impl Schema {
     }
 
     pub fn load_urls(urls: Vec<Url>) -> Result<Schema, Error> {
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
 
         Self::load_urls_with_client(urls, &client)
     }

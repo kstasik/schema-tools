@@ -4,7 +4,7 @@ use std::io::prelude::*;
 
 use clap::{Parser, ValueEnum};
 use env_logger::Builder as LoggerBuilder;
-use reqwest::blocking::Client;
+use schematools::Client;
 use serde_json::Value;
 
 pub mod chain;

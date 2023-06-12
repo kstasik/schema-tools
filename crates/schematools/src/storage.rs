@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::schema::Schema;
-use reqwest::{blocking::Client, Url};
+use crate::Client;
 use serde_json::Value;
+use url::Url;
 
 pub struct SchemaStorage {
     pub schemas: HashMap<Url, Schema>,

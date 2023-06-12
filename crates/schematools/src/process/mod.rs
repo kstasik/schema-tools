@@ -8,8 +8,8 @@ pub mod merge_openapi;
 pub mod name;
 pub mod patch;
 
-use reqwest::Url;
 use serde_json::Value;
+use url::Url;
 
 // this function should probably be removed in favor of schema registry
 pub fn rel_to_absolute_refs(_url: &Url, mut _data: Value) -> Value {
@@ -86,7 +86,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reqwest::Url;
     use serde_json::json;
 
     #[test]
