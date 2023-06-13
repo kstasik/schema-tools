@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 
-use reqwest::blocking::Client;
+use schematools::Client;
 
 use schematools::storage::SchemaStorage;
 use schematools::{discovery::Discovery, schema::Schema};

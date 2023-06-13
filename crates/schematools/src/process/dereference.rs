@@ -6,8 +6,8 @@ use crate::schema::Schema;
 use crate::scope::SchemaScope;
 use crate::storage::{ref_to_url, SchemaStorage};
 
-use reqwest::Url;
 use serde_json::Value;
+use url::Url;
 
 pub struct Dereferencer;
 
@@ -244,7 +244,7 @@ fn process_discriminator(root: &mut Value, ctx: &mut DereferencerContext) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reqwest::Url;
+    use crate::Client;
     use serde_json::json;
 
     fn spec_from_file(file: &str) -> Schema {
@@ -257,7 +257,7 @@ mod tests {
     fn test_infinite_ref() {
         let mut spec = spec_from_file("resources/test/json-schemas/07-with-infinite-ref.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options()
@@ -270,7 +270,7 @@ mod tests {
     fn test_string_reference() {
         let mut spec = spec_from_file("resources/test/json-schemas/16-string-reference.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options().process(&mut spec, &ss);
@@ -302,7 +302,7 @@ mod tests {
     fn test_discriminator() {
         let mut spec = spec_from_file("resources/test/json-schemas/22-discriminator-root.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options()
@@ -372,7 +372,7 @@ mod tests {
     fn test_with_local_reference() {
         let mut spec = spec_from_file("resources/test/json-schemas/06-with-local-reference.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
         Dereferencer::options().process(&mut spec, &ss);
 
@@ -422,7 +422,7 @@ mod tests {
     fn test_create_internal_references() {
         let mut spec = spec_from_file("resources/test/json-schemas/20-local-reference.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options()
@@ -521,11 +521,12 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "http")]
     fn test_with_nested_remote_external_reference() {
         let mut spec =
             spec_from_file("resources/test/json-schemas/05-with-nested-remote-external-ref.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options().process(&mut spec, &ss);
@@ -556,7 +557,7 @@ mod tests {
         let mut spec =
             spec_from_file("resources/test/json-schemas/04-with-nested-external-ref.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options().process(&mut spec, &ss);
@@ -605,11 +606,12 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "http")]
     fn test_skip_references() {
         let mut spec =
             spec_from_file("resources/test/json-schemas/05-with-nested-remote-external-ref.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options()
@@ -633,11 +635,12 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "http")]
     fn test_simple_with_external_reference() {
         let mut spec =
             spec_from_file("resources/test/json-schemas/03-simple-with-external-ref.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options().process(&mut spec, &ss);
@@ -667,7 +670,7 @@ mod tests {
     fn test_simple_with_reference() {
         let mut spec = spec_from_file("resources/test/json-schemas/02-simple-with-reference.json");
 
-        let client = reqwest::blocking::Client::new();
+        let client = Client::new();
         let ss = SchemaStorage::new(&spec, &client);
 
         Dereferencer::options().process(&mut spec, &ss);

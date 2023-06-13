@@ -1,5 +1,5 @@
-use reqwest::blocking::Client;
 use schematools::codegen::jsonschema::JsonSchemaExtractOptions;
+use schematools::Client;
 use serde_json::Value;
 use std::{fmt::Display, time::Instant};
 

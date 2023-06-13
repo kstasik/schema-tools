@@ -1,6 +1,6 @@
 use crate::{error::Error, storage::SchemaStorage};
-use reqwest::Url;
 use serde_json::Value;
+use url::Url;
 
 use crate::{schema::Schema, scope::SchemaScope};
 
@@ -137,7 +137,6 @@ impl<'a> SchemaResolver<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use reqwest::Url;
 
     #[test]
     fn test_when_file_and_spec_are_valid() {

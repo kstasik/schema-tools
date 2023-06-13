@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use schematools::Client;
 
 pub mod commands;
 pub mod error;
@@ -29,7 +30,7 @@ enum Command {
 
 fn main() {
     let opts: Opts = Opts::parse();
-    let client = reqwest::blocking::Client::new();
+    let client = Client::new();
 
     let result = match opts.command {
         Command::Process(opts) => commands::process::execute(opts, &client),

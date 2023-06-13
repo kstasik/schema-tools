@@ -14,4 +14,16 @@ pub mod storage;
 pub mod tools;
 pub mod validate;
 
+#[cfg(feature = "http")]
+pub use reqwest::blocking::Client;
+/// A dummy client to be used when the http feature is disabled
+#[cfg(not(feature = "http"))]
+pub struct Client;
+#[cfg(not(feature = "http"))]
+impl Client {
+    pub fn new() -> Client {
+        Client {}
+    }
+}
+
 pub const VERSION: &str = "0.14.0";
