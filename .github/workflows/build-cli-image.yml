@@ -5,8 +5,8 @@ env:
 
 on:
   push:
-#     branches:
-#       - master
+    branches:
+      - master
 
 permissions: write-all
 name: build image
