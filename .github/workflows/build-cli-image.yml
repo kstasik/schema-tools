@@ -3,8 +3,8 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
-# on:
-#   push:
+on:
+  push:
 #     branches:
 #       - master
 
