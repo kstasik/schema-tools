@@ -588,7 +588,7 @@ impl Default for Attributes {
 }
 
 impl AnyType {
-    pub fn model(schema: &Map<String, Value>, scope: &mut SchemaScope) -> Model {
+    pub fn model(schema: &Map<String, Value>, scope: &SchemaScope) -> Model {
         log::debug!("{}: {:?} may be invalid json schema", scope, schema);
 
         Model::new(ModelType::AnyType(Self {}))
