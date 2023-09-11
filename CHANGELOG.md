@@ -1,3 +1,9 @@
+## v0.15.1 (2023-09-11)
+
+### Fix
+
+- better models of oneOf - support for simple types
+
 ## v0.15.0 (2023-06-13)
 
 ## v0.14.0 (2023-05-29)
