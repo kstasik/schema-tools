@@ -77,7 +77,7 @@ impl GetSchemaCommand for Opts {
 }
 
 impl Opts {
-    pub fn run(&self, schema: &mut Schema) -> Result<(), Error> {
+    pub fn run(&self, schema: &Schema) -> Result<(), Error> {
         match &self.command {
             Command::Openapi(_) => validate::validate_openapi(schema).map_err(Error::Schematools),
             Command::JsonSchema(_) => {
@@ -108,16 +108,16 @@ impl Opts {
 }
 
 pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
-    let mut schema = opts.get_schema(client)?;
+    let schema = opts.get_schema(client)?;
 
     match &opts.command {
         Command::Openapi(o) => {
             o.verbose.start()?;
-            opts.run(&mut schema)
+            opts.run(&schema)
         }
         Command::JsonSchema(o) => {
             o.verbose.start()?;
-            opts.run(&mut schema)
+            opts.run(&schema)
         }
     }
 }

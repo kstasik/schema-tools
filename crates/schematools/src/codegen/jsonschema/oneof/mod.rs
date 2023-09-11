@@ -176,7 +176,19 @@ mod tests {
                                 "_discriminator".to_string(),
                                 json!({
                                     "property": "some",
-                                    "value": "some",
+                                    "value": {
+                                        "simple": {
+                                            "name": "some",
+                                            "type": "string",
+                                            "model": null,
+                                            "required": true,
+                                            "nullable": false,
+                                            "validation": null,
+                                            "x": {},
+                                            "description": null,
+                                            "default": null
+                                        }
+                                    },
                                     "properties": 1
                                 })
                             )]
@@ -202,7 +214,19 @@ mod tests {
                                 "_discriminator".to_string(),
                                 json!({
                                     "property": "testing",
-                                    "value": "testing",
+                                    "value": {
+                                        "simple": {
+                                            "name": "testing",
+                                            "type": "number",
+                                            "model": null,
+                                            "required": true,
+                                            "nullable": false,
+                                            "validation": null,
+                                            "x": {},
+                                            "description": null,
+                                            "default": null
+                                        }
+                                    },
                                     "properties": 1
                                 })
                             )]
@@ -263,7 +287,7 @@ mod tests {
                                 "_discriminator".to_string(),
                                 json!({
                                     "property": "type",
-                                    "value": "value1",
+                                    "value": {"model": "value1"},
                                     "properties": 1
                                 })
                             )]
@@ -289,7 +313,7 @@ mod tests {
                                 "_discriminator".to_string(),
                                 json!({
                                     "property": "type",
-                                    "value": "value2",
+                                    "value": {"model":"value2"},
                                     "properties": 1
                                 })
                             )]

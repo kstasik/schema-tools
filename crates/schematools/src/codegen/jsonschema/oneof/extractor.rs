@@ -30,8 +30,15 @@ pub trait Extractor {
 #[derive(Serialize)]
 pub struct DiscriminatorMeta {
     pub property: String,
-    pub value: String,
+    pub value: DiscriminatorValue,
     pub properties: Option<usize>,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum DiscriminatorValue {
+    Model(String),
+    Simple(FlatModel),
 }
 
 pub struct Simple {
@@ -115,8 +122,8 @@ impl Simple {
                         value: f
                             .model
                             .as_ref()
-                            .and_then(|m| m.name.clone())
-                            .unwrap_or(f.name.clone().unwrap()),
+                            .and_then(|m| m.name.clone().map(DiscriminatorValue::Model))
+                            .unwrap_or(DiscriminatorValue::Simple(f.clone())),
                         properties: Some(object.properties.len()),
                     }
                 })
@@ -131,7 +138,11 @@ impl Simple {
 
                         DiscriminatorMeta {
                             property: f.name.clone().unwrap(),
-                            value: f.model.as_ref().and_then(|m| m.name.clone()).unwrap(),
+                            value: f
+                                .model
+                                .as_ref()
+                                .and_then(|m| m.name.clone().map(DiscriminatorValue::Model))
+                                .unwrap_or(DiscriminatorValue::Simple(f.clone())),
                             properties: Some(object.properties.len() - 1),
                         }
                     })
@@ -213,7 +224,7 @@ impl Extractor for Discriminator {
                     DISCRIMINATOR_META.to_owned(),
                     serde_json::to_value(DiscriminatorMeta {
                         property: self.property.clone(),
-                        value: value.clone(),
+                        value: DiscriminatorValue::Model(value.clone()),
                         properties,
                     })
                     .unwrap(),

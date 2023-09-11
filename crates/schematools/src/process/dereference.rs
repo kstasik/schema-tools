@@ -212,7 +212,7 @@ fn process_node(
     }
 }
 
-fn process_discriminator(root: &mut Value, ctx: &mut DereferencerContext) {
+fn process_discriminator(root: &mut Value, ctx: &DereferencerContext) {
     log::debug!("{}: processing discriminator", ctx.scope);
 
     if let Value::Object(ref mut map) = root {

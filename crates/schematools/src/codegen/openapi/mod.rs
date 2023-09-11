@@ -154,7 +154,7 @@ pub fn extract(
     tools::each_node(root, &mut scope, "path:security", |node, _parts, scope| {
         scope.glue("security");
 
-        let schemes = security::extract_defaults(node, scope, &mut scontainer)?;
+        let schemes = security::extract_defaults(node, scope, &scontainer)?;
         for scheme in schemes {
             scontainer.add_default(scheme);
         }
@@ -247,7 +247,7 @@ pub fn extract(
                     path,
                     scope,
                     &mut mcontainer,
-                    &mut scontainer,
+                    &scontainer,
                     resolver,
                     options,
                 )?;

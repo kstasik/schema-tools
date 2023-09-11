@@ -2,7 +2,7 @@ use crate::scope::SchemaScope;
 use serde_json::Map;
 use serde_json::Value;
 
-pub fn extract_required(data: &Map<String, Value>, scope: &mut SchemaScope) -> Vec<String> {
+pub fn extract_required(data: &Map<String, Value>, scope: &SchemaScope) -> Vec<String> {
     match data.get("required").unwrap_or(&serde_json::json!([])) {
         Value::Array(a) => a.iter().map(|v| v.as_str().unwrap().to_string()).collect(),
         _ => {

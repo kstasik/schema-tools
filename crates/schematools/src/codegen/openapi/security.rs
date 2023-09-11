@@ -87,7 +87,7 @@ pub fn new_scheme(
 pub fn extract_defaults(
     node: &Value,
     scope: &mut SchemaScope,
-    scontainer: &mut SecuritySchemes,
+    scontainer: &SecuritySchemes,
 ) -> Result<Vec<SecurityScheme>, Error> {
     match node {
         Value::Array(scheme_names) => {
@@ -113,7 +113,7 @@ pub fn extract_defaults(
 
 pub fn extract_default(
     node: &Value,
-    scontainer: &mut SecuritySchemes,
+    scontainer: &SecuritySchemes,
 ) -> Result<Option<SecurityScheme>, Error> {
     match node {
         Value::Object(data) => {

@@ -148,7 +148,7 @@ impl GetSchemaCommand for Opts {
 impl Opts {
     pub fn run(
         &self,
-        schema: &mut Schema,
+        schema: &Schema,
         discovery: &Discovery,
         storage: &SchemaStorage,
     ) -> Result<(), Error> {
@@ -241,7 +241,7 @@ impl Opts {
 }
 
 pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
-    let mut schema = opts.get_schema(client)?;
+    let schema = opts.get_schema(client)?;
     let storage = &SchemaStorage::new(&schema, client);
     let discovery = Discovery::default();
 
@@ -249,12 +249,12 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
         Command::JsonSchema(o) => {
             o.verbose.start()?;
 
-            opts.run(&mut schema, &discovery, storage)
+            opts.run(&schema, &discovery, storage)
         }
         Command::Openapi(o) => {
             o.verbose.start()?;
 
-            opts.run(&mut schema, &discovery, storage)
+            opts.run(&schema, &discovery, storage)
         }
     }
 }
