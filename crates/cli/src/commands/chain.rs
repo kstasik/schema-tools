@@ -58,7 +58,7 @@ impl Display for ChainCommandOption {
 fn parse_command(cmd: &str) -> Result<ChainCommandOption, Error> {
     let parts = schematools::tools::ArgumentsExtractor::new(cmd).collect::<Vec<String>>();
 
-    match parts.get(0).unwrap().as_ref() {
+    match parts.first().unwrap().as_ref() {
         "registry" => Ok(ChainCommandOption::Registry(
             registry::Opts::try_parse_from(parts)
                 .map_err(|e| Error::ChainWrongParameters("registry".to_string(), e))?,
