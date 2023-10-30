@@ -91,7 +91,7 @@ impl Serialize for MediaModelsContainer {
             }
             std::cmp::Ordering::Equal => {
                 let mut map = serializer.serialize_map(Some(2))?;
-                map.serialize_entry("default", models.get(0).unwrap())?;
+                map.serialize_entry("default", models.first().unwrap())?;
                 map.serialize_entry("all", &models)?;
                 map.end()
             }

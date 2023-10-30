@@ -272,7 +272,7 @@ impl Template {
         let parts = crate::tools::ArgumentsExtractor::new(command).collect::<Vec<String>>();
 
         for file in files {
-            let mut cmd = Command::new(parts.get(0).unwrap());
+            let mut cmd = Command::new(parts.first().unwrap());
             for i in 1..parts.len() {
                 cmd.arg(parts.get(i).unwrap());
             }
