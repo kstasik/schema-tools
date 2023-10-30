@@ -1,3 +1,9 @@
+## v0.15.2 (2023-10-30)
+
+### Fix
+
+- when numeric checks first character
+
 ## v0.15.1 (2023-09-11)
 
 ### Fix
