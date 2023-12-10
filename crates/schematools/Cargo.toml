@@ -32,6 +32,7 @@ git2 = { version = "0.17", optional = true }
 md5 = "0.7.0"
 Inflector = "0.11"
 digest = "0.10.1"
+pluralizer = "0.4"
 
 [dev-dependencies]
 test-case = "3.0"
