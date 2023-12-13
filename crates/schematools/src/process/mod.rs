@@ -11,20 +11,15 @@ pub mod patch;
 use serde_json::Value;
 use url::Url;
 
-// this function should probably be removed in favor of schema registry
-pub fn rel_to_absolute_refs(_url: &Url, mut _data: Value) -> Value {
-    unreachable!();
+pub fn rel_to_absolute_refs(url: &Url, mut data: Value) -> Value {
+    if url.scheme() == "file" {
+        let mut prefix = url.clone();
+        prefix.path_segments_mut().unwrap().pop();
 
-    /*
-        if url.scheme() == "file" {
-            let mut prefix = url.clone();
-            prefix.path_segments_mut().unwrap().pop();
+        process_node(&prefix, &mut data);
+    }
 
-            process_node(&prefix, &mut data);
-        }
-
-        data
-    */
+    data
 }
 
 fn process_node(url: &Url, data: &mut Value) {
