@@ -34,5 +34,6 @@ Inflector = { version = "0.11" }
 digest = "0.10.1"
 
 [dev-dependencies]
+serial_test = "2.0"
 test-case = "3.3"
 testing_logger = "0.1.1"

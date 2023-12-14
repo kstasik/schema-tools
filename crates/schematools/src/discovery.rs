@@ -172,8 +172,10 @@ pub fn discover_git(
 #[cfg(feature = "git2")]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_discovery_git_inherit_templates() {
         let mut discovery = Discovery::default();
 
@@ -203,6 +205,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_discovery_git_inherit() {
         let mut discovery = Discovery::default();
 
@@ -229,6 +232,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_discovery_git() {
         let mut discovery = Discovery::default();
 
@@ -269,6 +273,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_discover_git_hash() {
         let registry = discover_git(
             "https://github.com/kstasik/schema-tools.git",
