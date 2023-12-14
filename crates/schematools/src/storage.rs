@@ -81,7 +81,7 @@ fn resolve_externals(
             }
         }
         Value::Array(a) => {
-            for (_, x) in a.iter().enumerate() {
+            for x in a.iter() {
                 resolve_externals(resolved, base, x, client);
             }
         }
@@ -118,7 +118,7 @@ fn absolutize_refs(current: &Url, root: &mut Value) {
             }
         }
         Value::Array(ref mut a) => {
-            for (_, x) in a.iter_mut().enumerate() {
+            for x in a.iter_mut() {
                 absolutize_refs(current, x);
             }
         }
