@@ -2,9 +2,9 @@ use crate::schema::Schema;
 use crate::{error::Error, schema::path_to_url};
 
 #[cfg(feature = "json-patch")]
-use json_patch::{diff, from_value, patch};
+use json_patch::{diff, patch, Patch};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{from_value, Value};
 
 #[derive(Copy, Clone, Debug, Serialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Operation {
@@ -65,12 +65,13 @@ pub fn execute(schema: &mut Schema, action: &Action) -> Result<(), Error> {
         }
         Action::Apply(c) => {
             let patch_file = Schema::load_url(path_to_url(c.patch.clone())?)?;
-            let p = from_value(patch_file.get_body().clone()).map_err(Error::SerdeJsonError)?;
+            let p: Patch =
+                from_value(patch_file.get_body().clone()).map_err(Error::SerdeJsonError)?;
 
             patch(schema.get_body_mut(), &p).map_err(Error::JsonPatchError)
         }
         Action::Inline(i) => {
-            let p = from_value(serde_json::json!([i])).map_err(Error::SerdeJsonError)?;
+            let p: Patch = from_value(serde_json::json!([i])).map_err(Error::SerdeJsonError)?;
 
             patch(schema.get_body_mut(), &p).map_err(Error::JsonPatchError)
         }

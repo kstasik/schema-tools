@@ -1,3 +1,15 @@
+## v0.16.0 (2023-12-14)
+
+### Feat
+
+- update deps
+
+### Fix
+
+- run test consecutively so git initialization not overlaps
+- dereference specs with more than one file
+- auto cargo.lock update
+
 ## v0.15.2 (2023-10-30)
 
 ### Fix

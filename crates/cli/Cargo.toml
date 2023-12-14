@@ -1,7 +1,7 @@
 [package]
 name = "schematools-cli"
 description = "Tools for codegen, preprocessing and validation of json-schema and openapi spec"
-edition = "2018"
+edition = "2021"
 license.workspace = true
 repository.workspace = true
 version.workspace = true
@@ -15,14 +15,14 @@ json-patch = ["schematools/json-patch"]
 semver = ["schematools/semver"]
 
 [dependencies]
+serde = { workspace = true }
 serde_json = { workspace = true }
 serde_yaml = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 
-clap = { version = "4.1", features = ["derive"] }
+clap = { version = "4.4", features = ["derive"] }
 env_logger = "0.10"
-sha2 = "0.10.1"
-serde = { version = "1.0", features = ["derive"] }
+sha2 = "0.10"
 
 schematools = { path = "../schematools" }

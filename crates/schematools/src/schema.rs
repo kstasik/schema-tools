@@ -192,6 +192,122 @@ mod tests {
         assert_eq!(spec.is_ok(), true);
     }
 
+    #[test]
+    fn test_when_file_and_spec_are_valid_with_reference() {
+        let url = Url::parse(&format!(
+            "file://{}/{}",
+            env!("CARGO_MANIFEST_DIR"),
+            "resources/test/json-schemas/02-simple-with-reference.json"
+        ))
+        .unwrap();
+
+        let spec = Schema::load_url(url);
+        assert_eq!(spec.is_ok(), true);
+    }
+
+    #[test]
+    fn test_when_file_and_spec_are_valid_with_external_ref() {
+        let url = Url::parse(&format!(
+            "file://{}/{}",
+            env!("CARGO_MANIFEST_DIR"),
+            "resources/test/json-schemas/03-simple-with-external-ref.json"
+        ))
+        .unwrap();
+
+        let spec = Schema::load_url(url);
+        assert_eq!(spec.is_ok(), true);
+    }
+
+    #[test]
+    fn test_loading_few_simple_spec() {
+        let urls = vec![
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/01-simple.json"
+            ))
+            .unwrap(),
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/01-simple.json"
+            ))
+            .unwrap(),
+        ];
+
+        let spec = Schema::load_urls(urls);
+        assert_eq!(spec.is_ok(), true);
+    }
+
+    #[test]
+    fn test_loading_few_specs_with_reference() {
+        let urls = vec![
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/02-simple-with-reference.json"
+            ))
+            .unwrap(),
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/02-simple-with-reference.json"
+            ))
+            .unwrap(),
+        ];
+
+        let spec = Schema::load_urls(urls);
+        assert_eq!(spec.is_ok(), true);
+    }
+
+    #[test]
+    fn test_loading_few_specs_with_external_reference() {
+        let urls = vec![
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/03-simple-with-external-ref.json"
+            ))
+            .unwrap(),
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/03-simple-with-external-ref.json"
+            ))
+            .unwrap(),
+        ];
+
+        let spec = Schema::load_urls(urls);
+        assert_eq!(spec.is_ok(), true);
+    }
+
+    #[test]
+    fn test_loading_few_different_specs_url() {
+        let urls = vec![
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/01-simple.json"
+            ))
+            .unwrap(),
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/02-simple-with-reference.json"
+            ))
+            .unwrap(),
+            Url::parse(&format!(
+                "file://{}/{}",
+                env!("CARGO_MANIFEST_DIR"),
+                "resources/test/json-schemas/03-simple-with-external-ref.json"
+            ))
+            .unwrap(),
+        ];
+
+        let spec = Schema::load_urls(urls);
+        assert_eq!(spec.is_ok(), true);
+    }
+
     #[test_case( "./not-existing.json".to_string() ; "relative" )]
     #[test_case( "../not-existing.json".to_string() ; "relative2" )]
     #[test_case( "not-existing.json".to_string(); "relative3" )]
