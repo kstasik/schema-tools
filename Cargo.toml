@@ -8,7 +8,7 @@ members = [
 [workspace.package]
 license = "MIT"
 repository = "https://github.com/kstasik/schema-tools"
-version = "0.15.2"
+version = "0.16.0"
 
 [workspace.dependencies]
 reqwest = { version = "0.11.22", default-features = false, features = ["default-tls", "blocking"] }
