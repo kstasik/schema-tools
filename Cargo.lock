@@ -207,12 +207,6 @@ dependencies = [
 
 [[package]]
 name = "cfg-if"
-version = "0.1.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
-
-[[package]]
-name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
@@ -1246,8 +1240,8 @@ version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "35e4616e94b67b8b61846ea69d4bf041a62147d569d16f437689229e2677d38c"
 dependencies = [
-    "lazy_static",
-    "regex",
+ "lazy_static",
+ "regex",
 ]
 
 [[package]]
@@ -1395,7 +1389,7 @@ dependencies = [
 
 [[package]]
 name = "schematools"
-version = "0.15.2"
+version = "0.16.0"
 dependencies = [
  "Inflector",
  "digest",
@@ -1405,6 +1399,7 @@ dependencies = [
  "lazy_static",
  "log",
  "md5",
+ "pluralizer",
  "regex",
  "reqwest",
  "semver",
@@ -1422,7 +1417,7 @@ dependencies = [
 
 [[package]]
 name = "schematools-cli"
-version = "0.15.2"
+version = "0.16.0"
 dependencies = [
  "clap",
  "env_logger",
