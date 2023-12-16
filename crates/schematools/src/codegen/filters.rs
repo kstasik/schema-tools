@@ -1,3 +1,4 @@
+use pluralizer::pluralize;
 use regex::Regex;
 use std::collections::HashMap;
 use tera::to_value;
@@ -25,6 +26,7 @@ pub fn register(tera: &mut Tera) {
     tera.register_filter("filter_startswith", filter_startswith);
     tera.register_filter("filter_inarray", filter_inarray);
     tera.register_filter("filter_not_inarray", filter_not_inarray);
+    tera.register_filter("plural", plural);
 }
 
 pub fn pascalcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
@@ -267,4 +269,11 @@ pub fn filter_not_inarray(value: &Value, args: &HashMap<String, Value>) -> TeraR
             "The `filter_inarray` filter has to have an `values` argument, type: array",
         ))
     }
+}
+
+pub fn plural(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
+    let s = try_get_value!("plural", "value", String, value);
+    let plural = pluralize(&s, 2, false);
+
+    Ok(to_value(plural).unwrap())
 }
