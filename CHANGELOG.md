@@ -1,3 +1,9 @@
+## v0.18.0 (2023-12-17)
+
+### Feat
+
+- publish schematools-cli crate
+
 ## v0.17.1 (2023-12-17)
 
 ### Fix
