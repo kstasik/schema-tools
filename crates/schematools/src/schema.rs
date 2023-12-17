@@ -189,7 +189,7 @@ mod tests {
         .unwrap();
 
         let spec = Schema::load_url(url);
-        assert_eq!(spec.is_ok(), true);
+        assert!(spec.is_ok());
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod tests {
         .unwrap();
 
         let spec = Schema::load_url(url);
-        assert_eq!(spec.is_ok(), true);
+        assert!(spec.is_ok());
     }
 
     #[test]
@@ -215,7 +215,7 @@ mod tests {
         .unwrap();
 
         let spec = Schema::load_url(url);
-        assert_eq!(spec.is_ok(), true);
+        assert!(spec.is_ok());
     }
 
     #[test]
@@ -236,7 +236,7 @@ mod tests {
         ];
 
         let spec = Schema::load_urls(urls);
-        assert_eq!(spec.is_ok(), true);
+        assert!(spec.is_ok());
     }
 
     #[test]
@@ -257,7 +257,7 @@ mod tests {
         ];
 
         let spec = Schema::load_urls(urls);
-        assert_eq!(spec.is_ok(), true);
+        assert!(spec.is_ok());
     }
 
     #[test]
@@ -278,7 +278,7 @@ mod tests {
         ];
 
         let spec = Schema::load_urls(urls);
-        assert_eq!(spec.is_ok(), true);
+        assert!(spec.is_ok());
     }
 
     #[test]
@@ -305,7 +305,7 @@ mod tests {
         ];
 
         let spec = Schema::load_urls(urls);
-        assert_eq!(spec.is_ok(), true);
+        assert!(spec.is_ok());
     }
 
     #[test_case( "./not-existing.json".to_string() ; "relative" )]
@@ -315,7 +315,7 @@ mod tests {
     fn test_string_to_url_should_fail_when_file_does_not_exist(filepath: String) {
         let url = path_to_url(filepath);
 
-        assert_eq!(url.is_err(), true);
+        assert!(url.is_err());
     }
 
     #[test]
@@ -329,6 +329,6 @@ mod tests {
 
         let url = path_to_url(path.clone());
 
-        assert_eq!(url.is_ok(), true, "cannot convert path: {path} to url");
+        assert!(url.is_ok(), "cannot convert path: {path} to url");
     }
 }

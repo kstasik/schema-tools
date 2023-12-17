@@ -259,17 +259,17 @@ mod tests {
 
         let result = extract_responses(&schema, &mut scope, &mut mcontainer, &resolver, &options);
 
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
 
         let responses = result.unwrap();
-        assert_eq!(true, !responses.all.is_empty());
+        assert!(!responses.all.is_empty());
 
         for response in responses.all {
             let mcontainer = response.models.unwrap();
-            assert_eq!(true, !mcontainer.list.is_empty());
+            assert!(!mcontainer.list.is_empty());
 
             for m in mcontainer.list {
-                assert_eq!(true, m.is_unique, "{:?} should be unique", m.model);
+                assert!(m.is_unique, "{:?} should be unique", m.model);
             }
         }
     }
@@ -299,17 +299,17 @@ mod tests {
 
         let result = extract_responses(&schema, &mut scope, &mut mcontainer, &resolver, &options);
 
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
 
         let responses = result.unwrap();
-        assert_eq!(true, !responses.all.is_empty());
+        assert!(!responses.all.is_empty());
 
         for response in responses.all {
             let mcontainer = response.models.unwrap();
-            assert_eq!(true, !mcontainer.list.is_empty());
+            assert!(!mcontainer.list.is_empty());
 
             for m in mcontainer.list {
-                assert_eq!(false, m.is_unique, "{:?} should not be unique", m.model);
+                assert!(!m.is_unique, "{:?} should not be unique", m.model);
             }
         }
     }

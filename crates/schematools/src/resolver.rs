@@ -157,10 +157,10 @@ mod tests {
         .unwrap();
 
         let spec = Schema::load_url(url);
-        assert_eq!(spec.is_ok(), true);
+        assert!(spec.is_ok());
 
         let spec2 = Schema::load_url(url2);
-        assert_eq!(spec2.is_ok(), true);
+        assert!(spec2.is_ok());
 
         /*let schema = spec.unwrap();
         let schema2 = spec2.unwrap();

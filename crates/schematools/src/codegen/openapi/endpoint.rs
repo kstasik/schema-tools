@@ -239,7 +239,7 @@ mod tests {
             &options,
         );
 
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
         let endpoints = result.unwrap();
 
         let post_endpoint = endpoints.iter().find(|e| e.method == "post").unwrap();
@@ -298,7 +298,7 @@ mod tests {
             &options,
         );
 
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
 
         let endpoints = result.unwrap();
 
