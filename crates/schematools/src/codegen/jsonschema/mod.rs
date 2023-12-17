@@ -618,7 +618,7 @@ mod tests {
         let client = reqwest::blocking::Client::new();
         let result = extract(&schema, &SchemaStorage::new(&schema, &client), options);
 
-        assert_eq!(true, result.is_ok());
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -654,18 +654,15 @@ mod tests {
         let client = reqwest::blocking::Client::new();
         let result = extract(&schema, &SchemaStorage::new(&schema, &client), options);
 
-        assert_eq!(true, result.is_ok());
+        assert!(result.is_ok());
 
         let container = result.unwrap();
         let value = serde_json::to_value(container).unwrap();
 
-        assert_eq!(
-            value
-                .pointer("/models/1/object/properties/0/nullable")
-                .map(|v| v.as_bool().unwrap())
-                .unwrap(),
-            false
-        );
+        assert!(!value
+            .pointer("/models/1/object/properties/0/nullable")
+            .map(|v| v.as_bool().unwrap())
+            .unwrap());
         assert_eq!(
             value
                 .pointer("/models/1/object/properties/0/model/name")
@@ -673,13 +670,10 @@ mod tests {
                 .unwrap(),
             "Testing"
         );
-        assert_eq!(
-            value
-                .pointer("/models/1/object/properties/1/nullable")
-                .map(|v| v.as_bool().unwrap())
-                .unwrap(),
-            true
-        );
+        assert!(value
+            .pointer("/models/1/object/properties/1/nullable")
+            .map(|v| v.as_bool().unwrap())
+            .unwrap());
         assert_eq!(
             value
                 .pointer("/models/1/object/properties/1/model/name")

@@ -195,7 +195,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(result.files.len(), 1);
-        assert_eq!(result.files.contains_key("README.md"), true);
+        assert!(result.files.contains_key("README.md"));
 
         let content = fs::read_to_string(result.files.get("README.md").unwrap()).unwrap();
         assert_eq!(content.replace('\r', ""), "# Schema Tools\n".to_string());
@@ -225,7 +225,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(result.files.len(), 1);
-        assert_eq!(result.files.contains_key("README.md"), true);
+        assert!(result.files.contains_key("README.md"));
 
         let content = fs::read_to_string(result.files.get("README.md").unwrap()).unwrap();
         assert_eq!(content, "# just a test case".to_string());
@@ -247,7 +247,7 @@ mod tests {
         let result = discovery.resolve(&["testing::.".to_string()]).unwrap();
 
         assert_eq!(result.files.len(), 1);
-        assert_eq!(result.files.contains_key("README.md"), true);
+        assert!(result.files.contains_key("README.md"));
     }
 
     #[test]
@@ -263,9 +263,8 @@ mod tests {
 
         let expected = path.to_str().unwrap();
 
-        assert_eq!(
+        assert!(
             result.files.contains_key(expected),
-            true,
             "cant find {} in {:?}",
             expected,
             result.files

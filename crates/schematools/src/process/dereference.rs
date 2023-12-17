@@ -107,7 +107,7 @@ fn process_ref(
             }
 
             // resolve
-            match resolver
+            let resolved = resolver
                 .resolve_once(root, &mut ctx.scope, |resolved, _| {
                     if root == resolved {
                         return Err(Error::NotImplemented);
@@ -115,8 +115,8 @@ fn process_ref(
 
                     Ok(resolved.clone())
                 })
-                .ok()
-            {
+                .ok();
+            match resolved {
                 Some(mut s) => {
                     log::debug!("{}.$ref", ctx.scope);
 
