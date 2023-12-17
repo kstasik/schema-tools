@@ -1,3 +1,9 @@
+## v0.17.1 (2023-12-17)
+
+### Fix
+
+- verification of commit message
+
 ## v0.17.0 (2023-12-16)
 
 ### Feat
