@@ -221,10 +221,10 @@ impl Extractor for Discriminator {
         {
             if let Some(value) = value.pop() {
                 let properties = match m.mut_inner() {
-                    ModelType::ObjectType(ot) => {
+                    ModelType::ObjectType(object_type) => {
                         // remove excess discrimnator field from variant
-                        // fixme: it probabily should convert property to const type instead
-                        ot.properties = ot
+                        // fixme: it probably should convert property to const type instead
+                        object_type.properties = object_type
                             .properties
                             .clone()
                             .into_iter()
@@ -236,7 +236,7 @@ impl Extractor for Discriminator {
                             })
                             .collect::<Vec<_>>();
 
-                        Some(ot.properties.len())
+                        Some(object_type.properties.len())
                     }
                     _ => None,
                 };
