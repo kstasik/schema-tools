@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use serde::Serialize;
@@ -16,6 +17,7 @@ const DISCRIMINATOR_META: &str = "_discriminator";
 // extractor has access to original and processed oneOf
 // it also may need to create new models if it affects oneOf options
 pub trait Extractor {
+    /// Performs extraction on oneOf specific value
     fn extract(
         &mut self,
         original: &Value,
@@ -23,6 +25,17 @@ pub trait Extractor {
         container: &mut ModelContainer,
         scope: &mut SchemaScope,
     ) -> Result<FlatModel, Error>;
+
+    /// Receives created flat model as extractor processing result
+    fn postprocess(&self, list: Vec<FlatModel>) -> Vec<FlatModel> {
+        list
+    }
+
+    /// Receives contains of oneOf array and return list of array
+    /// may be used to change oneOf list
+    fn preprocess<'a>(&mut self, one_of: Cow<'a, [Value]>) -> Cow<'a, [Value]> {
+        one_of
+    }
 
     fn strategy(&self) -> WrapperStrategy;
 }
@@ -162,21 +175,29 @@ impl Simple {
 #[derive(Debug)]
 pub struct Discriminator {
     property: String,
-    mapping: HashMap<String, String>,
+    mapping: HashMap<String, Vec<String>>,
 }
 
 impl Discriminator {
     pub fn new(data: &Value) -> Option<Self> {
         let property = data["propertyName"].as_str()?;
-        let mapping = data["mapping"]
+
+        let mut mapping = HashMap::<String, Vec<String>>::new();
+
+        data["mapping"]
             .as_object()?
             .into_iter()
             .filter_map(|(key, value)| {
                 value
                     .as_str()
-                    .map(|reference| (reference.to_string(), key.clone()))
+                    .map(|reference| (key.clone(), reference.to_string()))
             })
-            .collect::<HashMap<_, _>>();
+            .for_each(|(key, value)| {
+                mapping
+                    .entry(value)
+                    .and_modify(|l| l.push(key.clone()))
+                    .or_insert(vec![key]);
+            });
 
         Some(Self {
             property: property.to_string(),
@@ -196,41 +217,45 @@ impl Extractor for Discriminator {
         // use refs to find correct mapping
         if let Some(value) = original["$ref"]
             .as_str()
-            .and_then(|reference| self.mapping.get(reference))
+            .and_then(|reference| self.mapping.get_mut(reference))
         {
-            let properties = match m.mut_inner() {
-                ModelType::ObjectType(ot) => {
-                    // remove excess discrimnator field from variant
-                    // fixme: it probabily should convert property to const type instead
-                    ot.properties = ot
-                        .properties
-                        .clone()
-                        .into_iter()
-                        .filter(|a| {
-                            a.name
-                                .as_ref()
-                                .map(|name| name != &self.property)
-                                .unwrap_or_default()
+            if let Some(value) = value.pop() {
+                let properties = match m.mut_inner() {
+                    ModelType::ObjectType(ot) => {
+                        // remove excess discrimnator field from variant
+                        // fixme: it probabily should convert property to const type instead
+                        ot.properties = ot
+                            .properties
+                            .clone()
+                            .into_iter()
+                            .filter(|a| {
+                                a.name
+                                    .as_ref()
+                                    .map(|name| name != &self.property)
+                                    .unwrap_or_default()
+                            })
+                            .collect::<Vec<_>>();
+
+                        Some(ot.properties.len())
+                    }
+                    _ => None,
+                };
+
+                m.flatten(container, scope).map(|mut f| {
+                    f.attributes.x.insert(
+                        DISCRIMINATOR_META.to_owned(),
+                        serde_json::to_value(DiscriminatorMeta {
+                            property: self.property.clone(),
+                            value: DiscriminatorValue::Model(value),
+                            properties,
                         })
-                        .collect::<Vec<_>>();
-
-                    Some(ot.properties.len())
-                }
-                _ => None,
-            };
-
-            m.flatten(container, scope).map(|mut f| {
-                f.attributes.x.insert(
-                    DISCRIMINATOR_META.to_owned(),
-                    serde_json::to_value(DiscriminatorMeta {
-                        property: self.property.clone(),
-                        value: DiscriminatorValue::Model(value.clone()),
-                        properties,
-                    })
-                    .unwrap(),
-                );
-                f
-            })
+                        .unwrap(),
+                    );
+                    f
+                })
+            } else {
+                unreachable!()
+            }
         } else {
             m.flatten(container, scope)
         }
@@ -238,5 +263,25 @@ impl Extractor for Discriminator {
 
     fn strategy(&self) -> WrapperStrategy {
         WrapperStrategy::Internally(self.property.clone())
+    }
+
+    fn preprocess<'a>(&mut self, one_of: Cow<'a, [Value]>) -> Cow<'a, [Value]> {
+        let mut list: Vec<Value> = Vec::new();
+
+        let references = one_of.iter().filter_map(|original| {
+            original["$ref"].as_str().and_then(|reference| {
+                self.mapping
+                    .get(reference)
+                    .map(|mappings| (mappings.len(), original))
+            })
+        });
+
+        for (qty, value) in references {
+            for _ in 0..qty {
+                list.push(value.clone());
+            }
+        }
+
+        Cow::Owned(list)
     }
 }

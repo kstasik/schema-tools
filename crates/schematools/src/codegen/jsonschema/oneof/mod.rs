@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use super::{
     types::{Model, ModelType, WrapperType},
     JsonSchemaExtractOptions, ModelContainer,
@@ -37,7 +39,8 @@ pub fn from_oneof(
 
                 scope.form("oneOf");
 
-                let models = variants
+                let models = extractor
+                    .preprocess(Cow::from(variants))
                     .iter()
                     .enumerate()
                     .map(|(i, value)| {
@@ -67,7 +70,8 @@ pub fn from_oneof(
                         scope.pop();
                         result
                     })
-                    .collect::<Result<Vec<_>, Error>>();
+                    .collect::<Result<Vec<_>, Error>>()
+                    .map(|list| extractor.postprocess(list));
 
                 scope.pop();
 
