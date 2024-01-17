@@ -1,3 +1,9 @@
+## v0.18.1 (2024-01-17)
+
+### Fix
+
+- issues with dicriminator mapping pointing to same reference multiple times #102
+
 ## v0.18.0 (2023-12-17)
 
 ### Feat
