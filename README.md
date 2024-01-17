@@ -16,7 +16,7 @@ Just another approach to openapi/jsonschema code generator. It's a home project 
     - merge-openapi
 - [Tera](https://github.com/Keats/tera) (jinja2) **code generator** with custom templates support
 
-It is designed to speed up development of mircoservices heavly using json objects (json schemas on api level as well events).
+It is designed to speed up development of microservices heavly using json objects (json schemas on api level as well events).
 
 Main differences in approach between other solutions like `openapi-generator`:
 
@@ -87,7 +87,7 @@ You should hardly ever perform full dereference of openapi. It partially derefer
 
 - **skip-references** - is useful if you are using registry of common schemas. In many cases you don't want to dereference such `$ref`s
 - **skip-root-internal-references** - is useful to skip `/components.*` openapi schema references which are very often stored in root openapi file.
-- **create-internal-references** - saves space and dereferences each pointer ony once, all next occurrences are replaced by pointer to first pointer
+- **create-internal-references** - saves space and dereferences each pointer only once, all next occurrences are replaced by pointer to first pointer
 
 ```
  --create-internal-references             Creates internal references if refs where pointing to same place
@@ -103,7 +103,7 @@ To merge `allOf`s into objects type:
 schematools process merge-all-of openapi.yaml
 ```
 
-It's useful to perform such thing before code generation taking into account that json schema is more represntation of validation not data structure itself. In many languages unions are a complicated thing but if you are using allOfs to extract common parts of structs it's a functionality which may be very helpful for you.
+It's useful to perform such thing before code generation taking into account that json schema is more representation of validation not data structure itself. In many languages unions are a complicated thing but if you are using allOfs to extract common parts of structs it's a functionality which may be very helpful for you.
 
 ### Patch
 
@@ -121,7 +121,7 @@ schematools process patch <file> apply <patch-file>
 
 ### Merge openapi and bump
 
-If you microservice is splitted to more than one service (and is exposed under same ingress) you may find it useful to create one openapi definition:
+If you microservice is split to more than one service (and is exposed under same ingress) you may find it useful to create one openapi definition:
 
 ```
 schematools process merge-openapi <file> --with <with>
@@ -162,7 +162,7 @@ schema-tools codegen openapi openapi.json --template templates/  --target-dir pk
 ### Codegen options
 
 - `--nested-arrays-as-models` - some languages allow to create `Vec<HashMap<Vec<HashMap>>>>` / `[][][]int` inline types, some may need to create wrapping types for such cases
-- `--optional-and-nullable-as-models` - openapi allows to create two levels of "nullability", some languages doesnt distinguish between null and undefined. This option wrap all occurences of nullable and optional fields in separate types
+- `--optional-and-nullable-as-models` - openapi allows to create two levels of "nullability", some languages doesnt distinguish between null and undefined. This option wrap all occurrences of nullable and optional fields in separate types
 - `--wrappers` - option to wrap mixed types (oneOf) to custom objects with custom deserialization logic
 - `-o <options>` - option to pass options (string or json) to all templates files ex. `-o 'name=ordersClient' -o 'usedEndpoints=["/orders", "/orders/{id}/items"]'`
 - `--format` - executes language formatter after code generation ex. `--format "gofmt -w"`

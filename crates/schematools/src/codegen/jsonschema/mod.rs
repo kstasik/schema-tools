@@ -489,7 +489,7 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn test_nullable_one_of_should_inherit_additionals_from_detected_type() {
+    fn test_nullable_one_of_should_inherit_additional_from_detected_type() {
         let schema = Schema::from_json(json!({
             "definitions": {
                 "def2": {

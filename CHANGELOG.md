@@ -2,7 +2,7 @@
 
 ### Fix
 
-- issues with dicriminator mapping pointing to same reference multiple times #102
+- issues with discriminator mapping pointing to same reference multiple times #102
 
 ## v0.18.0 (2023-12-17)
 
@@ -156,7 +156,7 @@
 
 ### Feat
 
-- unqiue models detection
+- unique models detection
 
 ## v0.4.1 (2022-04-23)
 
@@ -278,7 +278,7 @@
 ### Feat
 
 - unique models detection
-- unqiue models detection
+- unique models detection
 
 ## v0.4.1 (2022-04-23)
 
@@ -360,7 +360,7 @@
 
 ### Fix
 
-- primitve consts
+- primitive consts
 
 ## v0.0.37 (2021-08-09)
 
@@ -404,7 +404,7 @@
 
 ### Feat
 
-- multiple files support on derefernce and merge-all-of
+- multiple files support on dereference and merge-all-of
 
 ## v0.0.29 (2021-06-21)
 
@@ -541,7 +541,7 @@
 
 ### Fix
 
-- confilcts in case of array type
+- conflicts in case of array type
 
 ## v0.0.8 (2021-01-17)
 
