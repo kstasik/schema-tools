@@ -11,6 +11,7 @@ version.workspace = true
 default = ["codegen", "git2", "http", "json-patch"]
 codegen = ["tera", "semver", "pluralizer"]
 http = ["jsonschema/resolve-http", "reqwest"]
+vendored-openssl = ["git2/vendored-openssl", "reqwest/native-tls-vendored"]
 
 [dependencies]
 serde = { workspace = true }

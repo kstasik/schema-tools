@@ -55,3 +55,39 @@ jobs:
           default: true
           override: true
       - run: cargo build --release
+
+  build_vendored_unix:
+    name: Build for unix vendored
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - run: cargo build --release --features vendored-openssl
+
+  build_vendored_macos:
+    name: Build for macos vendored
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-apple-darwin
+          default: true
+          override: true
+      - run: cargo build --release --features vendored-openssl
+
+  build_vendored_windows:
+    name: Build for windows vendored
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-pc-windows-msvc
+          default: true
+          override: true
+      - run: cargo build --release --features vendored-openssl

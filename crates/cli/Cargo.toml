@@ -13,6 +13,7 @@ git2 = ["schematools/git2"]
 http = ["schematools/http"]
 json-patch = ["schematools/json-patch"]
 semver = ["schematools/semver"]
+vendored-openssl = ["schematools/vendored-openssl"]
 
 [dependencies]
 serde = { workspace = true }
