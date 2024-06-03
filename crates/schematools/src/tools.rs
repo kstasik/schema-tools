@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::str::{Chars, FromStr};
 
 use crate::error::Error;
@@ -329,14 +330,16 @@ enum ConditionOperator {
     Neq,
 }
 
-impl ToString for ConditionOperator {
-    fn to_string(&self) -> String {
-        match *self {
+impl Display for ConditionOperator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match *self {
             Self::Eq => "=",
             Self::Eqq => "==",
             Self::Neq => "!=",
         }
-        .to_string()
+        .to_string();
+
+        write!(f, "{}", str)
     }
 }
 
