@@ -1,3 +1,11 @@
+## v0.18.2 (2024-06-03)
+
+### Fix
+
+- enable arm64 build for macos
+- clippy warnings
+- default build of cli with semver feature
+
 ## v0.18.1 (2024-01-17)
 
 ### Fix
