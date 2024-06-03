@@ -59,6 +59,7 @@ pub struct Simple {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum SimpleProperty {
     Internal(String),
     External(String),
