@@ -1,3 +1,9 @@
+## v0.19.1 (2024-10-11)
+
+### Fix
+
+- arm macos support added on github actions
+
 ## v0.19.0 (2024-10-11)
 
 ### Feat
