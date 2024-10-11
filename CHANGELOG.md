@@ -1,3 +1,9 @@
+## v0.19.0 (2024-10-11)
+
+### Feat
+
+- nested string enum support
+
 ## v0.18.2 (2024-06-03)
 
 ### Fix
