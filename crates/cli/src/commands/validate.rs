@@ -84,10 +84,7 @@ impl Opts {
                 validate::validate_jsonschema(schema).map_err(Error::Schematools)
             }
         }
-        .map(|r| {
-            log::info!("\x1b[0;32mSuccessful validation!\x1b[0m");
-            r
-        })
+        .inspect(|_| log::info!("\x1b[0;32mSuccessful validation!\x1b[0m"))
         .or_else(|e| {
             log::error!("\x1b[1;31mValidation failed: \x1b[0m {}", e);
 

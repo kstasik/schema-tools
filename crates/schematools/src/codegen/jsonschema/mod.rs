@@ -233,10 +233,7 @@ pub fn extract_type(
 
         match node {
             Value::Object(schema) => {
-                title::extract_title(schema, scope, options).map(|s| {
-                    scope.entity(&s);
-                    s
-                })?;
+                title::extract_title(schema, scope, options).inspect(|s| scope.entity(s))?;
 
                 log::trace!("{}", scope);
 
