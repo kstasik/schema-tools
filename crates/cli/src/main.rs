@@ -6,7 +6,6 @@ pub mod error;
 
 #[derive(Parser)]
 #[command(author, version, about)]
-
 struct Opts {
     #[clap(subcommand)]
     command: Command,

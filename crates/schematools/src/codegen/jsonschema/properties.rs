@@ -30,10 +30,7 @@ pub fn from_object_with_properties(
                     let mut model =
                         super::extract_type(property, container, scope, resolver, options)
                             .and_then(|s| s.flatten(container, scope))
-                            .map_err(|e| {
-                                scope.pop();
-                                e
-                            })?;
+                            .inspect_err(|_| scope.pop())?;
 
                     model.name = Some(name.clone());
                     model.attributes.required = required.contains(name);
@@ -42,12 +39,8 @@ pub fn from_object_with_properties(
                         && !model.attributes.required
                         && options.optional_and_nullable_as_models
                     {
-                        convert_to_nullable_optional_wrapper(model, container, scope).map_err(
-                            |e| {
-                                scope.pop();
-                                e
-                            },
-                        )?
+                        convert_to_nullable_optional_wrapper(model, container, scope)
+                            .inspect_err(|_| scope.pop())?
                     } else {
                         model
                     };

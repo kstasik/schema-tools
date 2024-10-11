@@ -156,11 +156,10 @@ pub fn execute(opts: Opts, client: &Client) -> Result<(), Error> {
             match cmd {
                 #[cfg(feature = "codegen")]
                 ChainCommandOption::Codegen(c) => c.run(current, &discovery, &storage),
-                ChainCommandOption::Process(c) => c.run(current, &storage).map(|result| {
+                ChainCommandOption::Process(c) => c.run(current, &storage).inspect(|_| {
                     storage
                         .schemas
                         .insert(current.get_url().clone(), current.clone());
-                    result
                 }),
                 ChainCommandOption::Validate(v) => v.run(current),
                 ChainCommandOption::Output(o) => {

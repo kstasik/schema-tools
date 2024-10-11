@@ -156,7 +156,7 @@ impl<'a> ArgumentsExtractor<'a> {
     }
 }
 
-impl<'a> Iterator for ArgumentsExtractor<'a> {
+impl Iterator for ArgumentsExtractor<'_> {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {

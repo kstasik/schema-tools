@@ -50,8 +50,26 @@ pub struct DiscriminatorMeta {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum DiscriminatorValue {
-    Model(String),
+    Model(DiscriminatorValueModel),
     Simple(FlatModel),
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DiscriminatorValueModel {
+    name: String,
+    kind: String,
+}
+
+impl DiscriminatorValueModel {
+    pub fn flat(model: &FlatModel) -> Option<DiscriminatorValue> {
+        model.name.clone().map(|name| {
+            DiscriminatorValue::Model(Self {
+                name,
+                kind: model.type_.clone(),
+            })
+        })
+    }
 }
 
 pub struct Simple {
@@ -136,7 +154,7 @@ impl Simple {
                         value: f
                             .model
                             .as_ref()
-                            .and_then(|m| m.name.clone().map(DiscriminatorValue::Model))
+                            .and_then(|e| DiscriminatorValueModel::flat(e))
                             .unwrap_or(DiscriminatorValue::Simple(f.clone())),
                         properties: Some(object.properties.len()),
                     }
@@ -155,7 +173,7 @@ impl Simple {
                             value: f
                                 .model
                                 .as_ref()
-                                .and_then(|m| m.name.clone().map(DiscriminatorValue::Model))
+                                .and_then(|e| DiscriminatorValueModel::flat(e))
                                 .unwrap_or(DiscriminatorValue::Simple(f.clone())),
                             properties: Some(object.properties.len() - 1),
                         }
@@ -247,7 +265,10 @@ impl Extractor for Discriminator {
                         DISCRIMINATOR_META.to_owned(),
                         serde_json::to_value(DiscriminatorMeta {
                             property: self.property.clone(),
-                            value: DiscriminatorValue::Model(value),
+                            value: DiscriminatorValue::Model(DiscriminatorValueModel {
+                                name: value,
+                                kind: "string".to_string(),
+                            }),
                             properties,
                         })
                         .unwrap(),
