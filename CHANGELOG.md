@@ -1,3 +1,9 @@
+## v0.19.2 (2024-10-14)
+
+### Fix
+
+- ubuntu runner fixed version
+
 ## v0.19.1 (2024-10-11)
 
 ### Fix

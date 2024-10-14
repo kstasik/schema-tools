@@ -26,4 +26,4 @@ impl Client {
     }
 }
 
-pub const VERSION: &str = "0.19.1";
+pub const VERSION: &str = "0.19.2";
