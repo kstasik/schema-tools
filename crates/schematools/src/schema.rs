@@ -76,7 +76,7 @@ impl Schema {
             .last();
 
         let is_yaml_extension = if let Some(s) = extension {
-            s.contains("yaml")
+            s.contains("yaml") || s.contains("yml")
         } else {
             false
         };
