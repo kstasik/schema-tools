@@ -225,7 +225,7 @@ fn process_discriminator(root: &mut Value, ctx: &DereferencerContext) {
                         *reference = format!("#{}", d.clone());
                     } else {
                         for i in (0..=plain.len()).rev() {
-                            if plain.chars().nth(i).map_or(false, |i| i == '/') {
+                            if plain.chars().nth(i) == Some('/') {
                                 let prefix = &plain[0..i];
                                 if let Some(prefix) = ctx.resolved.get(prefix) {
                                     *reference =

@@ -280,10 +280,7 @@ impl FromStr for ConditionSet {
 
 impl ConditionSet {
     pub fn check(&self, data: &Value) -> bool {
-        self.conditions
-            .iter()
-            .map(|c| c.check(data))
-            .all(|result| result)
+        self.conditions.iter().all(|c| c.check(data))
     }
 }
 
@@ -374,10 +371,7 @@ impl Filter {
             return default;
         }
 
-        self.conditions
-            .iter()
-            .map(|c| c.check(data))
-            .any(|result| result)
+        self.conditions.iter().any(|c| c.check(data))
     }
 }
 
