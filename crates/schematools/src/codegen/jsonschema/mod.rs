@@ -7,10 +7,10 @@ use serde_json::{Map, Value};
 
 pub mod additionalproperties;
 pub mod allof;
+pub mod anyoneof;
 pub mod const_;
 pub mod enum_;
 pub mod items;
-pub mod oneof;
 pub mod patternproperties;
 pub mod properties;
 pub mod required;
@@ -248,56 +248,59 @@ pub fn extract_type(
                     })
                     .unwrap_or(false);
 
-                let result = match schema.get("type") {
-                    Some(model_type) => {
-                        match model_type {
-                            Value::String(type_) => {
-                                let model = match type_.as_str() {
-                                    "object" => {
-                                        properties::from_object(
+                let result =
+                    match schema.get("type") {
+                        Some(model_type) => {
+                            match model_type {
+                                Value::String(type_) => {
+                                    let model = match type_.as_str() {
+                                        "object" => {
+                                            properties::from_object(
+                                                schema, container, scope, resolver, options,
+                                            )
+
+                                            // todo: consider modifying type when properties and patternProperties is available
+                                            // todo: consider modifying type when additionalProperties is available
+                                        }
+                                        "array" => {
+                                            items::from_array(
+                                                schema, container, scope, resolver, options,
+                                            )
+
+                                            // todo: additionalProperties for tuple like types
+                                        }
+                                        _ => const_::from_const(
                                             schema, container, scope, resolver, options,
                                         )
+                                        .or_else(|_| {
+                                            Ok(types::Model::new(types::ModelType::PrimitiveType(
+                                                types::PrimitiveType::from(
+                                                    schema, scope, resolver, options,
+                                                ),
+                                            )))
+                                        }),
+                                    }?;
 
-                                        // todo: consider modifying type when properties and patternProperties is available
-                                        // todo: consider modifying type when additionalProperties is available
-                                    }
-                                    "array" => {
-                                        items::from_array(
-                                            schema, container, scope, resolver, options,
-                                        )
-
-                                        // todo: additionalProperties for tuple like types
-                                    }
-                                    _ => const_::from_const(
-                                        schema, container, scope, resolver, options,
-                                    )
-                                    .or_else(|_| {
-                                        Ok(types::Model::new(types::ModelType::PrimitiveType(
-                                            types::PrimitiveType::from(
-                                                schema, scope, resolver, options,
-                                            ),
-                                        )))
-                                    }),
-                                }?;
-
-                                // enum is mostly used for validation
-                                // only simple type enums can be used model building
-                                // todo: from_const
-                                Ok(enum_::convert_to_enum(model, schema, scope, options))
+                                    // enum is mostly used for validation
+                                    // only simple type enums can be used model building
+                                    // todo: from_const
+                                    Ok(enum_::convert_to_enum(model, schema, scope, options))
+                                }
+                                Value::Array(_) => extract_type(
+                                    &simplify_type(schema),
+                                    container,
+                                    scope,
+                                    resolver,
+                                    options,
+                                ),
+                                _ => Err(Error::JsonSchemaInvalid(
+                                    "Type has to be an array of string or string".to_string(),
+                                )),
                             }
-                            Value::Array(_) => extract_type(
-                                &simplify_type(schema),
-                                container,
-                                scope,
-                                resolver,
-                                options,
-                            ),
-                            _ => Err(Error::JsonSchemaInvalid(
-                                "Type has to be an array of string or string".to_string(),
-                            )),
                         }
-                    }
-                    None => oneof::from_oneof(schema, container, scope, resolver, options)
+                        None => anyoneof::from_one_or_any_of(
+                            schema, container, scope, resolver, options,
+                        )
                         .or_else(|_| allof::from_allof(schema, container, scope, resolver, options))
                         .or_else(|_| {
                             patternproperties::from_pattern_properties(
@@ -308,7 +311,7 @@ pub fn extract_type(
                             const_::from_const(schema, container, scope, resolver, options)
                         })
                         .or_else(|_| Ok(types::AnyType::model(schema, scope))),
-                };
+                    };
 
                 scope.pop();
 

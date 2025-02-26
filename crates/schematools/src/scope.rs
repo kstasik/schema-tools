@@ -110,7 +110,7 @@ impl BasicNamer {
                         | SchemaScopeType::Reference(_)
                 )
             })
-            .last()
+            .next_back()
             .unwrap()
         {
             SchemaScopeType::Entity(name) => {
@@ -128,7 +128,7 @@ impl BasicNamer {
                         SchemaScopeType::Entity(t) => Some(t),
                         _ => None,
                     })
-                    .last();
+                    .next_back();
 
                 if let Some(name) = entity {
                     let parts = [&self.split(&name)[..], &self.split(last)[..]].concat();

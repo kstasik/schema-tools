@@ -73,7 +73,7 @@ impl Schema {
             .last()
             .unwrap()
             .split('.')
-            .last();
+            .next_back();
 
         let is_yaml_extension = if let Some(s) = extension {
             s.contains("yaml")

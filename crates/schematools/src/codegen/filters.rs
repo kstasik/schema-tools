@@ -117,7 +117,7 @@ pub fn path_parts(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Va
 pub fn when_numeric(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
     let value = try_get_value!("when_numeric", "value", String, value);
 
-    if value.chars().next().map_or(false, char::is_numeric) {
+    if value.chars().next().is_some_and(char::is_numeric) {
         let prefix = match args.get("prefix") {
             Some(val) => try_get_value!("when_numeric", "prefix", String, val),
             None => return Err(tera::Error::msg("Please provide prefix parameter")),
