@@ -27,7 +27,7 @@ jobs:
     name: Publish schematools on crates.io
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -59,7 +59,7 @@ jobs:
             target: aarch64-apple-darwin
             short: darwin-arm64
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
