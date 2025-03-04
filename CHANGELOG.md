@@ -1,3 +1,13 @@
+## v0.20.0 (2025-03-04)
+
+### Feat
+
+- refactor oneOf handling to support anyOf schemas.
+
+### Fix
+
+- update actions/checkout to v4 in GitHub workflows
+
 ## v0.19.2 (2024-10-14)
 
 ### Fix
