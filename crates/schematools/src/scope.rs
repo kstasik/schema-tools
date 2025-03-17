@@ -80,7 +80,7 @@ impl BasicNamer {
         let form = if self.parts.len() < 2 {
             None
         } else if let Some(SchemaScopeType::Form(form)) = self.parts.get(self.parts.len() - 2) {
-            if form == "oneOf" {
+            if form == "oneOf" || form == "anyOf" {
                 let last = self.parts.last().unwrap();
                 match last {
                     SchemaScopeType::Index(i) => Some(format!("Option{}", i + 1)),
@@ -329,7 +329,7 @@ impl SchemaScope {
         }
 
         if let Some(SchemaScopeType::Form(form)) = self.scope.get(self.scope.len() - 2) {
-            form == "oneOf"
+            form == "oneOf" || form == "anyOf"
         } else {
             false
         }
