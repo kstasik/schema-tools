@@ -102,38 +102,59 @@ fn simplify_one_or_any_of(
     resolver: &SchemaResolver,
     options: &JsonSchemaExtractOptions,
 ) -> Option<Result<Model, Error>> {
-    let null_type = serde_json::json!({"type":"null"});
+    match variants.len() {
+        1 => {
+            let element = variants.first()?;
 
-    if variants.len() != 2 || !variants.contains(&null_type) {
-        return None;
-    }
+            Some(
+                resolver
+                    .resolve(element, scope, |node, scope| {
+                        log::debug!(
+                            "{}: mapping oneOf/anyOf with only one option to simple type",
+                            scope
+                        );
 
-    let element = variants.iter().find(|element| *element != &null_type);
+                        Ok(super::extract_type(
+                            node, container, scope, resolver, options,
+                        ))
+                    })
+                    .unwrap(),
+            )
+        }
 
-    element.map(|option| {
-        resolver
-            .resolve(option, scope, |node, scope| {
-                log::debug!("{}: mapping oneOf with null to simple type", scope);
+        2 => {
+            let null_type = serde_json::json!({"type":"null"});
+            if !variants.contains(&null_type) {
+                return None;
+            }
 
-                Ok(
-                    super::extract_type(node, container, scope, resolver, options).map(|m| {
+            let element = variants.iter().find(|element| *element != &null_type)?;
+
+            Some(
+                resolver
+                    .resolve(element, scope, |node, scope| {
+                        log::debug!("{}: mapping oneOf/anyOf with null to simple type", scope);
+
+                        let model = super::extract_type(node, container, scope, resolver, options)?;
                         let attributes = Attributes {
                             nullable: true,
-                            ..m.attributes.clone()
+                            ..model.attributes.clone()
                         };
 
-                        super::add_validation_and_nullable(
-                            m,
+                        Ok(Ok(super::add_validation_and_nullable(
+                            model,
                             node.as_object().unwrap(),
                             container,
                             options.keep_schema.check(node, false),
                         )
-                        .with_attributes(&attributes)
-                    }),
-                )
-            })
-            .unwrap()
-    })
+                        .with_attributes(&attributes)))
+                    })
+                    .unwrap(),
+            )
+        }
+
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -421,6 +442,46 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_should_convert_to_object() {
+        let schema = json!({"oneOf": [{"type": "object","required":"test","properties":{"test":{"type":"string"}}}]});
+        let mut container = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        scope.entity("TestName");
+        let result = from_one_or_any_of(
+            schema.as_object().unwrap(),
+            &mut container,
+            &mut scope,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(
+            result.unwrap(),
+            Model::new(ModelType::ObjectType(ObjectType {
+                name: "TestName".to_string(),
+                properties: vec![FlatModel {
+                    name: Some("test".to_string()),
+                    type_: "string".to_string(),
+                    attributes: Attributes {
+                        required: false,
+                        ..Attributes::default()
+                    },
+                    ..FlatModel::default()
+                },],
+                additional: true,
+                ..ObjectType::default()
+            }))
+            .with_attributes(&Attributes {
+                nullable: false,
+                ..Attributes::default()
+            })
+        );
+    }
+
     // anyOf
     #[test]
     fn test_should_add_additional_info_about_discriminator_externally_tagged_for_any_of() {
@@ -695,6 +756,46 @@ mod tests {
                 ],
                 ..WrapperType::default()
             }))
+        );
+    }
+
+    #[test]
+    fn test_should_convert_to_object_for_any_of() {
+        let schema = json!({"anyOf": [{"type": "object","required":"test","properties":{"test":{"type":"string"}}}]});
+        let mut container = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        scope.entity("TestName");
+        let result = from_one_or_any_of(
+            schema.as_object().unwrap(),
+            &mut container,
+            &mut scope,
+            &resolver,
+            &options,
+        );
+
+        assert_eq!(
+            result.unwrap(),
+            Model::new(ModelType::ObjectType(ObjectType {
+                name: "TestName".to_string(),
+                properties: vec![FlatModel {
+                    name: Some("test".to_string()),
+                    type_: "string".to_string(),
+                    attributes: Attributes {
+                        required: false,
+                        ..Attributes::default()
+                    },
+                    ..FlatModel::default()
+                },],
+                additional: true,
+                ..ObjectType::default()
+            }))
+            .with_attributes(&Attributes {
+                nullable: false,
+                ..Attributes::default()
+            })
         );
     }
 }
