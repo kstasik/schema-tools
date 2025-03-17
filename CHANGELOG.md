@@ -1,3 +1,11 @@
+## v0.20.1 (2025-03-17)
+
+### Fix
+
+- support `anyOf` in schema naming and add related tests.
+- refactor model comparison logic with `is_like` method.
+- refactor `from_one_or_any_of` logic and add new tests
+
 ## v0.20.0 (2025-03-04)
 
 ### Feat
