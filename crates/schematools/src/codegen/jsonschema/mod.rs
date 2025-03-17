@@ -75,7 +75,11 @@ impl ModelContainer {
 
             (Some(*id), model)
         } else if self.exists(&model) {
-            let id = self.models.iter().position(|s| *s == model).unwrap();
+            let id = self
+                .models
+                .iter()
+                .position(|s| (*s).is_like(&model))
+                .unwrap();
             let model = self.models.get(id).unwrap();
             (Some(id as u32), model)
         } else {
@@ -105,7 +109,7 @@ impl ModelContainer {
     }
 
     pub fn exists(&mut self, model: &types::Model) -> bool {
-        self.models.iter().any(|s| s == model)
+        self.models.iter().any(|s| s.is_like(model))
     }
 
     pub fn resolve(&mut self, scope: &mut SchemaScope) -> Option<&types::Model> {
