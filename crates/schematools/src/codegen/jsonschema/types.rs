@@ -5,7 +5,7 @@ use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope, scope::S
 
 use super::{title, JsonSchemaExtractOptions, ModelContainer};
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
 pub struct Model {
     #[serde(flatten)]
     inner: ModelType,
@@ -16,12 +16,6 @@ pub struct Model {
     pub spaces: SpacesContainer,
 }
 
-impl PartialEq for Model {
-    fn eq(&self, other: &Self) -> bool {
-        self.inner == other.inner && self.spaces == other.spaces
-    }
-}
-
 impl Model {
     pub fn new(inner: ModelType) -> Self {
         Self {
@@ -29,6 +23,10 @@ impl Model {
             attributes: Attributes::default(),
             spaces: SpacesContainer::default(),
         }
+    }
+
+    pub fn is_like(&self, other: &Model) -> bool {
+        self.inner == other.inner && self.spaces == other.spaces
     }
 
     pub fn with_attributes(mut self, attributes: &Attributes) -> Self {

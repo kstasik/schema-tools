@@ -350,6 +350,10 @@ mod tests {
                     }
                 }
             ))
+            .with_attributes(&Attributes {
+                required: false,
+                ..Attributes::default()
+            })
         );
     }
 
