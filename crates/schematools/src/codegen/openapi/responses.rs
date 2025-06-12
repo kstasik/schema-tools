@@ -87,6 +87,7 @@ pub fn extract_responses(
                 .collect::<Result<Vec<Response>, _>>()?;
 
             // find 2xx and uniques
+            // alternative_content_type
             let mut occurrences: HashMap<String, u8> = HashMap::new();
             for response in parsed.iter() {
                 if let Some(mcontainer) = &response.models {
@@ -272,6 +273,41 @@ mod tests {
                 assert!(m.is_unique, "{:?} should be unique", m.model);
             }
         }
+    }
+
+    #[test]
+    fn test_alternative() {
+        let schema = json!({
+            "200": {
+                "description": "Success response",
+                "content": {
+                    "application/json": { "schema" : {"type": "string"} },
+                    "text/html": { "schema" : {"type": "string"} },
+                },
+            }
+        });
+
+        let mut mcontainer = ModelContainer::default();
+        let mut scope = SchemaScope::default();
+        let resolver = SchemaResolver::empty();
+        let options = JsonSchemaExtractOptions::default();
+
+        let result = extract_responses(&schema, &mut scope, &mut mcontainer, &resolver, &options);
+
+        assert!(result.is_ok());
+
+        let responses = result.unwrap();
+        assert!(!responses.all.is_empty());
+
+
+        let response = responses.all.iter().next().unwrap();
+        let models = response.models.as_ref().unwrap();
+        let mut it = models.list.iter();
+        let first = it.next().unwrap();
+        let second = it.next().unwrap();
+        
+        assert!(first.alternative_content_type.is_none());
+        assert_eq!(second.alternative_content_type, Some("text/html".to_string()));
     }
 
     #[test]

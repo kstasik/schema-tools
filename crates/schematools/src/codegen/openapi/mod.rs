@@ -39,9 +39,18 @@ impl EndpointContainer {
 pub struct MediaModel {
     pub model: crate::codegen::jsonschema::types::FlatModel,
 
+    /// preferred is application/json
     pub content_type: String,
 
+    /// Indicates whether the model is unique to the endpoint. 
+    /// If it is, the model can be directly converted to the appropriate response using From<Model>
+    /// 
+    /// Uniqness is checked on endpoint level, all models for an endpoints are scanned.
     pub is_unique: bool,
+
+    /// Available if an endpoint returns multiple content types and it's not an alternative vendor type
+    /// Preferred content-type is application/json and all other types are treated as alternative
+    pub alternative_content_type: Option<String>
 }
 
 #[derive(Debug, Clone)]
@@ -298,6 +307,7 @@ pub fn get_content(
                                             model,
                                             content_type: content_type.to_string(),
                                             is_unique: false,
+                                            alternative_content_type: None
                                         }),
                                 );
 
