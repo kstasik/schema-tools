@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::codegen::openapi::parameters::extract_parameter;
+use crate::codegen::openapi::MediaVendorType;
 use crate::{
     codegen::jsonschema::{JsonSchemaExtractOptions, ModelContainer},
     error::Error,
@@ -86,8 +87,7 @@ pub fn extract_responses(
                 })
                 .collect::<Result<Vec<Response>, _>>()?;
 
-            // find 2xx and uniques
-            // alternative_content_type
+            // find 2xx and unique models for entire endpoint
             let mut occurrences: HashMap<String, u8> = HashMap::new();
             for response in parsed.iter() {
                 if let Some(mcontainer) = &response.models {
@@ -102,10 +102,29 @@ pub fn extract_responses(
 
             for response in parsed.iter_mut() {
                 if let Some(ref mut mcontainer) = response.models {
+                    // inidicates if an endpoint has multiple content types
+                    mcontainer.multiple_content_types = mcontainer.list.len() > 0;
+
                     for mm in mcontainer.list.iter_mut() {
                         let key: String = (&mm.model).into();
 
                         mm.is_unique = *occurrences.get(&key).unwrap_or(&1) == 1;
+
+                        let re = regex::Regex::new(r"/vnd\.|\+").unwrap();
+                        let mut base_content_type = mm.content_type.clone();
+                        if let [b, inner, e] = re.split(&mm.content_type).collect::<Vec<_>>()[..] {
+                            base_content_type = format!("{}/{}", b, e);
+                            mm.vnd = Some(MediaVendorType {
+                                base: base_content_type.clone(),
+                                vnd: inner.to_string(),
+                            });
+                        }
+
+                        if mcontainer.multiple_content_types
+                            && base_content_type != mcontainer.default_content_type
+                        {
+                            mm.alternative_content_type = true;
+                        }
                     }
                 }
             }
@@ -265,6 +284,27 @@ mod tests {
         let responses = result.unwrap();
         assert!(!responses.all.is_empty());
 
+        {
+            let mut it = responses.all.iter();
+            let response200 = it.next().unwrap();
+            let m1 = response200.models.as_ref().unwrap().list.get(0).unwrap();
+            assert_eq!(m1.alternative_content_type, false);
+
+            let m2 = response200.models.as_ref().unwrap().list.get(1).unwrap();
+            assert_eq!(m2.alternative_content_type, false);
+            assert_eq!(
+                m2.vnd,
+                Some(MediaVendorType {
+                    base: "application/json".to_string(),
+                    vnd: "short".to_string()
+                })
+            );
+
+            let response400 = it.next().unwrap();
+            let m1 = response400.models.as_ref().unwrap().list.get(0).unwrap();
+            assert_eq!(m1.alternative_content_type, false);
+        }
+
         for response in responses.all {
             let mcontainer = response.models.unwrap();
             assert!(!mcontainer.list.is_empty());
@@ -299,15 +339,15 @@ mod tests {
         let responses = result.unwrap();
         assert!(!responses.all.is_empty());
 
-
         let response = responses.all.iter().next().unwrap();
         let models = response.models.as_ref().unwrap();
+
         let mut it = models.list.iter();
         let first = it.next().unwrap();
+        assert_eq!(first.alternative_content_type, false);
+
         let second = it.next().unwrap();
-        
-        assert!(first.alternative_content_type.is_none());
-        assert_eq!(second.alternative_content_type, Some("text/html".to_string()));
+        assert_eq!(second.alternative_content_type, true);
     }
 
     #[test]
@@ -342,6 +382,7 @@ mod tests {
 
         for response in responses.all {
             let mcontainer = response.models.unwrap();
+
             assert!(!mcontainer.list.is_empty());
 
             for m in mcontainer.list {
