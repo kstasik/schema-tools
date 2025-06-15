@@ -39,15 +39,39 @@ impl EndpointContainer {
 pub struct MediaModel {
     pub model: crate::codegen::jsonschema::types::FlatModel,
 
+    /// preferred is application/json
     pub content_type: String,
 
+    /// Indicates whether the model is unique to the endpoint.
+    /// If it is, the model can be directly converted to the appropriate response using From<Model>
+    ///
+    /// Uniqness is checked on endpoint level, all models for an endpoints are scanned.
     pub is_unique: bool,
+
+    /// Available if an endpoint returns multiple content types and it's not an alternative vendor type
+    /// Preferred content-type is MediaModelsContainer.default_content_type and all other types are treated as alternative
+    pub alternative_content_type: bool,
+
+    /// Parsed vendor type
+    pub vnd: Option<MediaVendorType>,
+}
+
+#[derive(Debug, Serialize, Clone, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaVendorType {
+    base: String,
+    vnd: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct MediaModelsContainer {
     pub list: Vec<MediaModel>,
+
+    /// Which content type is default, fallbacks to application/json
     pub default_content_type: String,
+
+    /// Indicates if a response has multiple content types
+    pub multiple_content_types: bool,
 }
 
 impl Serialize for MediaModelsContainer {
@@ -64,35 +88,20 @@ impl Serialize for MediaModelsContainer {
                 let default = models
                     .iter()
                     .find(|m| m.content_type == self.default_content_type);
-                let with_names: Vec<_> = models
-                    .iter()
-                    .map(|s| {
-                        let mut v = serde_json::to_value(s).unwrap();
+                let with_names: Vec<_> = models.iter().collect();
 
-                        let m = v.as_object_mut().unwrap();
-
-                        let re = regex::Regex::new(r"/vnd\.|\+").unwrap();
-                        let parts: Vec<&str> = re.split(&s.content_type).collect();
-
-                        m.insert(
-                            "vnd".to_string(),
-                            serde_json::to_value(parts.get(1)).unwrap(),
-                        );
-
-                        v
-                    })
-                    .collect();
-
-                let mut map = serializer.serialize_map(Some(2))?;
+                let mut map = serializer.serialize_map(Some(3))?;
 
                 map.serialize_entry("default", &default)?;
                 map.serialize_entry("all", &with_names)?; // map models and add something to detect vnd types?
+                map.serialize_entry("multipleContentTypes", &self.multiple_content_types)?;
                 map.end()
             }
             std::cmp::Ordering::Equal => {
-                let mut map = serializer.serialize_map(Some(2))?;
+                let mut map = serializer.serialize_map(Some(3))?;
                 map.serialize_entry("default", models.first().unwrap())?;
                 map.serialize_entry("all", &models)?;
+                map.serialize_entry("multipleContentTypes", &self.multiple_content_types)?;
                 map.end()
             }
             std::cmp::Ordering::Less => serializer.serialize_none(),
@@ -298,6 +307,8 @@ pub fn get_content(
                                             model,
                                             content_type: content_type.to_string(),
                                             is_unique: false,
+                                            alternative_content_type: false,
+                                            vnd: None,
                                         }),
                                 );
 
@@ -312,8 +323,9 @@ pub fn get_content(
                     })
                     .collect::<Result<Vec<_>, _>>()
                     .map(|list| MediaModelsContainer {
-                        list,
                         default_content_type: "application/json".to_string(),
+                        multiple_content_types: list.len() > 1,
+                        list,
                     }),
             );
             scope.pop();
