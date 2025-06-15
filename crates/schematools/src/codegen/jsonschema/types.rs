@@ -398,7 +398,7 @@ impl Model {
                 p.name = Some(name);
                 ModelType::ArrayType(p)
             }
-            _ => panic!("Unsupported rename: {}", name),
+            _ => panic!("Unsupported rename: {name}"),
         })
     }
 }

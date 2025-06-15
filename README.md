@@ -2,6 +2,8 @@
 
 [![build](https://github.com/kstasik/schema-tools/workflows/build/badge.svg)](https://github.com/kstasik/schema-tools/actions)
 [![tests](https://github.com/kstasik/schema-tools/workflows/test/badge.svg)](https://github.com/kstasik/schema-tools/actions)
+[![crates-cli](https://img.shields.io/crates/v/schematools-cli)](https://crates.io/crates/schematools-cli)
+[![crates-lib](https://img.shields.io/crates/v/schematools)](https://crates.io/crates/schematools)
 
 # Introduction
 

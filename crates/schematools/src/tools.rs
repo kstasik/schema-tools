@@ -69,7 +69,7 @@ where
                     }
                 }
             } else {
-                panic!("Incorrect path: {}", search);
+                panic!("Incorrect path: {search}");
             }
         }
     }
@@ -138,7 +138,7 @@ where
                     }
                 }
             } else {
-                panic!("Incorrect path: {}", search);
+                panic!("Incorrect path: {search}");
             }
         }
     }
@@ -336,7 +336,7 @@ impl Display for ConditionOperator {
         }
         .to_string();
 
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
 

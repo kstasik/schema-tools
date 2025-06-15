@@ -113,7 +113,7 @@ pub fn extract_responses(
 
                         let mut base_content_type = mm.content_type.clone();
                         if let [b, inner, e] = re.split(&mm.content_type).collect::<Vec<_>>()[..] {
-                            base_content_type = format!("{}/{}", b, e);
+                            base_content_type = format!("{b}/{e}");
                             mm.vnd = Some(MediaVendorType {
                                 base: base_content_type.clone(),
                                 vnd: inner.to_string(),
