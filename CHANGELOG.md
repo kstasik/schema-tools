@@ -1,3 +1,15 @@
+## v0.21.0 (2025-06-15)
+
+### Feat
+
+- multiple response types + readme updated
+- multiple alternative responses
+
+### Fix
+
+- clippy issues
+- alternative media types
+
 ## v0.20.1 (2025-03-17)
 
 ### Fix
