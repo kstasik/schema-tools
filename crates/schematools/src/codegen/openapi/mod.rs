@@ -90,16 +90,18 @@ impl Serialize for MediaModelsContainer {
                     .find(|m| m.content_type == self.default_content_type);
                 let with_names: Vec<_> = models.iter().collect();
 
-                let mut map = serializer.serialize_map(Some(2))?;
+                let mut map = serializer.serialize_map(Some(3))?;
 
                 map.serialize_entry("default", &default)?;
                 map.serialize_entry("all", &with_names)?; // map models and add something to detect vnd types?
+                map.serialize_entry("multipleContentTypes", &self.multiple_content_types)?;
                 map.end()
             }
             std::cmp::Ordering::Equal => {
-                let mut map = serializer.serialize_map(Some(2))?;
+                let mut map = serializer.serialize_map(Some(3))?;
                 map.serialize_entry("default", models.first().unwrap())?;
                 map.serialize_entry("all", &models)?;
+                map.serialize_entry("multipleContentTypes", &self.multiple_content_types)?;
                 map.end()
             }
             std::cmp::Ordering::Less => serializer.serialize_none(),

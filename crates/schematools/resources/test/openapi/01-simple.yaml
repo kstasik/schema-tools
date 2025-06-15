@@ -1,15 +1,16 @@
-requestBodies:
-  requestbody1:
-    content:
-      application/json:
-        schema:
-          required:
-            - items
-          type: object
-          properties:
-            items:
-              type: string
-    required: true
+components:
+  requestBodies:
+    requestBody1:
+      content:
+        application/json:
+          schema:
+            required:
+              - items
+            type: object
+            properties:
+              items:
+                type: string
+      required: true
   responses:
     response1:
       content:

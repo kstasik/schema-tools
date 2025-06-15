@@ -28,6 +28,49 @@ Main differences in approach between other solutions like `openapi-generator`:
 - codegen executed per microservice approach (not as a separate, generic client library)
 - json-schema registry support, TODO: shared models - create one model for shared structures in different clients/servers to avoid mapping same structures
 
+# Examples
+
+Install `CLI` tool:
+
+```
+cargo install schematools-cli@0.21.0
+```
+
+## json-schema struct codegen
+
+```
+schematools-cli chain -vvv -c 'registry add templates https://github.com/kstasik/schema-tools-templates --rev 411f5207001637c19380046a21991b9ddba2bfe9' \
+   -c 'process dereference https://raw.githubusercontent.com/kstasik/schema-tools/refs/heads/master/crates/schematools/resources/test/json-schemas/01-simple.json --skip-root-internal-references --create-internal-references' \
+   -c 'process merge-all-of - --leave-invalid-properties' \
+   -c 'codegen json-schema - --base-name Person --template templates::rust/_common/ --template templates::rust/model/ --format "rustfmt --edition 2021" --target-dir schemas/ -o namespace=people -o skipValidate=~true'
+```
+
+## openapi client codegen
+
+```
+schematools-cli \
+   chain -vvv -c 'registry add templates https://github.com/kstasik/schema-tools-templates --rev 411f5207001637c19380046a21991b9ddba2bfe9' \
+   -c 'process dereference https://raw.githubusercontent.com/kstasik/schema-tools/refs/heads/master/crates/schematools/resources/test/openapi/01-simple.yaml --skip-root-internal-references --create-internal-references' \
+   -c 'process merge-all-of - --leave-invalid-properties' \
+   -c 'codegen openapi - --template templates::rust/_common/ --template templates::rust/client/ --format "rustfmt --edition 2021" --target-dir src/clients/ -o apm=tracing -o name=simple -o namespace=simple -o skipValidate=~true'
+```
+
+## debugging json processing stages
+
+You can use the `output` command multiple times to inspect how the JSON/YAML file appears at different stages of the process.
+
+```
+   -c 'output --to-file formatted.json -o json"' \
+```
+
+## using local templates / overwriting original templates
+
+Create a `local-templates` directory and link it as the last used directory. Maintain the original registry naming if you wish to overwrite the templates.
+
+```
+   --template templates::rust/_common/ --template templates::rust/client/ --template local-templates/
+```
+
 # General rules
 
 - All commands support yaml and json files.

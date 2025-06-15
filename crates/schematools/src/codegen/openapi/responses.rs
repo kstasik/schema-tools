@@ -100,17 +100,17 @@ pub fn extract_responses(
                 }
             }
 
+            let re = regex::Regex::new(r"/vnd\.|\+").unwrap();
             for response in parsed.iter_mut() {
                 if let Some(ref mut mcontainer) = response.models {
                     // inidicates if an endpoint has multiple content types
-                    mcontainer.multiple_content_types = mcontainer.list.len() > 0;
+                    mcontainer.multiple_content_types = mcontainer.list.len() > 1;
 
                     for mm in mcontainer.list.iter_mut() {
                         let key: String = (&mm.model).into();
 
                         mm.is_unique = *occurrences.get(&key).unwrap_or(&1) == 1;
 
-                        let re = regex::Regex::new(r"/vnd\.|\+").unwrap();
                         let mut base_content_type = mm.content_type.clone();
                         if let [b, inner, e] = re.split(&mm.content_type).collect::<Vec<_>>()[..] {
                             base_content_type = format!("{}/{}", b, e);
