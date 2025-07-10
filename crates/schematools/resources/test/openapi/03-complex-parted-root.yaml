@@ -1,0 +1,37 @@
+openapi: 3.1.0
+info:
+  title: SimpleApi
+  description: simple api
+  version: 0.1.0
+tags:
+  - name: 'SimpleApi'
+    description: Simple API
+
+components:
+  parameters:
+    $ref: './03-complex-parted-parameters.yaml'
+  schemas:
+    ResourceList:
+      $ref: './03-complex-parted-schemas.yaml#/ResourceList'
+  responses:
+    $ref: './03-complex-parted-responses.yaml'
+
+paths:
+  /v2/resources/{id}:
+    get:
+      description: Some description
+      operationId: resourceGet
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/page'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceList"
+        204:
+          $ref: "#/components/responses/response204"
+        404:
+          $ref: "#/components/responses/response404"

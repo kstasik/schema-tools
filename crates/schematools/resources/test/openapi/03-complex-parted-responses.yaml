@@ -1,0 +1,26 @@
+response404:
+  content:
+    application/json:
+      schema:
+        type: object
+        properties:
+          error:
+            type: object
+            additionalProperties: false
+            description: Error object containing information about the error.
+            properties:
+              code:
+                description: String based error identification code.
+                example: invalid-data
+                type: string
+              data:
+                description: "Additional error information"
+                example: {}
+                type: object
+
+response204:
+  description: Success
+  content:
+    application/json:
+      schema:
+        $ref: "./03-complex-parted-schemas.yaml#/ResourceList"

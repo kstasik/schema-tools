@@ -196,7 +196,7 @@ impl Iterator for ArgumentsExtractor<'_> {
     }
 }
 
-pub fn fill_parameters(phrase: &str, data: (impl Serialize + Clone)) -> Result<String, Error> {
+pub fn fill_parameters(phrase: &str, data: impl Serialize + Clone) -> Result<String, Error> {
     let chars = phrase.chars();
     let mut result = String::new();
 

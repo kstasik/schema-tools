@@ -1,0 +1,20 @@
+ResourceDefinition:
+  type: object
+  required:
+    - id
+    - name
+  properties:
+    id:
+      type: string
+    name:
+      type: string
+
+ResourceList:
+  type: object
+  required:
+    - data
+  properties:
+    data:
+      type: array
+      items:
+        $ref: './02-parted-schemas.yaml#/ResourceDefinition'
