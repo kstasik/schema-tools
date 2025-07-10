@@ -116,6 +116,7 @@ fn process_ref(
                     Ok(resolved.clone())
                 })
                 .ok();
+
             match resolved {
                 Some(mut s) => {
                     log::debug!("{}.$ref", ctx.scope);
@@ -181,9 +182,19 @@ fn process_node(
     match root {
         Value::Object(ref mut map) => {
             if let Some(Value::String(reference)) = map.get_mut("$ref") {
-                ctx.depth += 1;
-                process_ref(reference.clone(), root, options, ctx, resolver);
-                ctx.depth -= 1;
+                let parted_reference = reference.as_str().split("#").collect::<Vec<&str>>();
+                if parted_reference.len() == 2 && ctx.resolved.contains_key(parted_reference[0]) {
+                    let new_reference = format!(
+                        "#{}{}",
+                        ctx.resolved.get(parted_reference[0]).unwrap(),
+                        parted_reference[1]
+                    );
+                    *map.entry("$ref").or_insert("$ref".into()) = Value::String(new_reference);
+                } else {
+                    ctx.depth += 1;
+                    process_ref(reference.clone(), root, options, ctx, resolver);
+                    ctx.depth -= 1;
+                }
             } else {
                 for (property, value) in map.into_iter() {
                     ctx.scope.any(property);
@@ -720,6 +731,303 @@ mod tests {
                   }
                 }
               }
+            }
+        });
+
+        assert_eq!(spec.get_body().to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_parted_schema_with_reference() {
+        let mut spec = spec_from_file("resources/test/openapi/02-parted-root.yaml");
+
+        let client = Client::new();
+        let ss = SchemaStorage::new(&spec, &client);
+
+        Dereferencer::options()
+            .with_create_internal_references(true)
+            .with_skip_root_internal_references(true)
+            .process(&mut spec, &ss);
+
+        let expected = json!({
+            "openapi": "3.1.0",
+            "info": {
+                "title": "SimpleApi",
+                "description": "simple api",
+                "version": "0.1.0"
+            },
+            "tags": [{
+                "name": "SimpleApi",
+                "description": "Simple API",
+            }],
+            "components": {
+                "parameters": {
+                    "pathId": {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Resource id",
+                        "schema": {
+                            "type": "string",
+                        }
+                    },
+                    "page": {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1,
+                        }
+                    }
+                },
+                "schemas": {
+                    "ResourceDefinition": {
+                        "type": "object",
+                        "required": ["id","name"],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "ResourceList": {
+                        "type": "object",
+                        "required": ["data"],
+                        "properties": {
+                            "data": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/ResourceDefinition",
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "response404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "description": "Error object containing information about the error.",
+                                            "properties": {
+                                                "code": {
+                                                    "description": "String based error identification code.",
+                                                    "example": "invalid-data",
+                                                    "type": "string"
+                                                },
+                                                "data": {
+                                                    "description": "Additional error information",
+                                                    "example": {},
+                                                    "type": "object"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "response204": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResourceList"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "paths": {
+                "/v2/resources/{id}": {
+                    "get": {
+                        "description": "Some description",
+                        "operationId": "resourceGet",
+                        "parameters": [
+                            {
+                                "$ref": "#/components/parameters/pathId"
+                            },
+                            {
+                                "$ref": "#/components/parameters/page"
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Success",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/ResourceList"
+                                        }
+                                    }
+                                }
+                            },
+                            "204": {
+                                "$ref": "#/components/responses/response204"
+                            },
+                            "404": {
+                                "$ref": "#/components/responses/response404"
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        assert_eq!(spec.get_body().to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_complex_parted_schema_parts_with_reference() {
+        let mut spec = spec_from_file("resources/test/openapi/03-complex-parted-root.yaml");
+
+        let client = Client::new();
+        let ss = SchemaStorage::new(&spec, &client);
+
+        Dereferencer::options()
+            .with_create_internal_references(true)
+            .with_skip_root_internal_references(true)
+            .process(&mut spec, &ss);
+
+        let expected = json!({
+            "openapi": "3.1.0",
+            "info": {
+                "title": "SimpleApi",
+                "description": "simple api",
+                "version": "0.1.0"
+            },
+            "tags": [{
+                "name": "SimpleApi",
+                "description": "Simple API",
+            }],
+            "components": {
+                "parameters": {
+                    "pathId": {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Resource id",
+                        "schema": {
+                            "type": "string",
+                        }
+                    },
+                    "page": {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number",
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1,
+                        }
+                    }
+                },
+                "schemas": {
+                    "ResourceList": {
+                        "type": "object",
+                        "required": ["data"],
+                        "properties": {
+                            "data": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "required": ["id","name"],
+                                    "properties": {
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "response404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "object",
+                                            "additionalProperties": false,
+                                            "description": "Error object containing information about the error.",
+                                            "properties": {
+                                                "code": {
+                                                    "description": "String based error identification code.",
+                                                    "example": "invalid-data",
+                                                    "type": "string"
+                                                },
+                                                "data": {
+                                                    "description": "Additional error information",
+                                                    "example": {},
+                                                    "type": "object"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "response204": {
+                        "description": "Success",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResourceList"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "paths": {
+                "/v2/resources/{id}": {
+                    "get": {
+                        "description": "Some description",
+                        "operationId": "resourceGet",
+                        "parameters": [
+                            {
+                                "$ref": "#/components/parameters/pathId"
+                            },
+                            {
+                                "$ref": "#/components/parameters/page"
+                            }
+                        ],
+                        "responses": {
+                            "200": {
+                                "description": "Success",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "$ref": "#/components/schemas/ResourceList"
+                                        }
+                                    }
+                                }
+                            },
+                            "204": {
+                                "$ref": "#/components/responses/response204"
+                            },
+                            "404": {
+                                "$ref": "#/components/responses/response404"
+                            }
+                        }
+                    }
+                }
             }
         });
 

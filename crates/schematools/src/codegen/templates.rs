@@ -623,7 +623,7 @@ pub fn get(discovered: Discovered) -> Result<Templates, Error> {
 
 fn process_render(
     tera: &Tera,
-    data: (impl Serialize + Clone),
+    data: impl Serialize + Clone,
     target: PathBuf,
     relative: PathBuf,
     container: &super::CodegenContainer,

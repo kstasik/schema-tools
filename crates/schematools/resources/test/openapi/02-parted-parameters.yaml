@@ -1,0 +1,15 @@
+pathId:
+  name: id
+  in: path
+  description: Resource id
+  schema:
+    type: string
+
+page:
+  name: page
+  in: query
+  description: Page number
+  schema:
+    type: integer
+    default: 1
+    minimum: 1
