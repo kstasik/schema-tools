@@ -1,3 +1,9 @@
+## v0.22.1 (2025-07-13)
+
+### Fix
+
+- do not resolve schema from already resolved whole file
+
 ## v0.22.0 (2025-06-15)
 
 ### Feat
