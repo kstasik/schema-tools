@@ -201,30 +201,20 @@ pub struct WrapperType {
     pub strategy: WrapperStrategy,
 }
 
-#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Serialize, Eq, PartialEq)]
 pub enum WrapperTypeKind {
     AllOf,
+    #[default]
     OneOf,
 }
 
-impl Default for WrapperTypeKind {
-    fn default() -> Self {
-        Self::OneOf
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum WrapperStrategy {
+    #[default]
     BruteForce,
     Internally(String),
     Externally,
-}
-
-impl Default for WrapperStrategy {
-    fn default() -> Self {
-        Self::BruteForce
-    }
 }
 
 #[derive(Debug, Serialize, Clone, Eq, PartialEq, Default)]
