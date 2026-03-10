@@ -1,3 +1,9 @@
+## v0.22.3 (2026-03-10)
+
+### Fix
+
+- externally discriminated simple variants + mixup type and anyOf (#126)
+
 ## v0.22.2 (2025-09-18)
 
 ### Fix
