@@ -43,8 +43,13 @@ pub trait Extractor {
 #[derive(Serialize)]
 pub struct DiscriminatorMeta {
     pub property: String,
-    pub value: DiscriminatorValue,
     pub properties: Option<usize>,
+
+    // Inner model value
+    pub value: DiscriminatorValue,
+
+    // Outer model value, for backward compatiblity, maybe it can be simplified
+    pub outer: FlatModel,
 }
 
 #[derive(Serialize)]
@@ -62,13 +67,24 @@ pub struct DiscriminatorValueModel {
 }
 
 impl DiscriminatorValueModel {
-    pub fn flat(model: &FlatModel) -> Option<DiscriminatorValue> {
-        model.name.clone().map(|name| {
-            DiscriminatorValue::Model(Self {
-                name,
-                kind: model.type_.clone(),
-            })
-        })
+    pub fn flat(f: &FlatModel) -> DiscriminatorValue {
+        if f.type_ == "array" {
+            // probably here logic should be reverted, and only if object it
+            // should inner name
+            DiscriminatorValue::Simple(f.clone())
+        } else {
+            f.model
+                .as_ref()
+                .and_then(|inner| {
+                    inner.name.clone().map(|name| {
+                        DiscriminatorValue::Model(Self {
+                            name,
+                            kind: inner.type_.clone(),
+                        })
+                    })
+                })
+                .unwrap_or(DiscriminatorValue::Simple(f.clone()))
+        }
     }
 }
 
@@ -151,11 +167,8 @@ impl Simple {
 
                     DiscriminatorMeta {
                         property: f.name.clone().unwrap(),
-                        value: f
-                            .model
-                            .as_ref()
-                            .and_then(|e| DiscriminatorValueModel::flat(e))
-                            .unwrap_or(DiscriminatorValue::Simple(f.clone())),
+                        value: DiscriminatorValueModel::flat(f),
+                        outer: f.clone(),
                         properties: Some(object.properties.len()),
                     }
                 })
@@ -170,11 +183,8 @@ impl Simple {
 
                         DiscriminatorMeta {
                             property: f.name.clone().unwrap(),
-                            value: f
-                                .model
-                                .as_ref()
-                                .and_then(|e| DiscriminatorValueModel::flat(e))
-                                .unwrap_or(DiscriminatorValue::Simple(f.clone())),
+                            value: DiscriminatorValueModel::flat(f),
+                            outer: f.clone(),
                             properties: Some(object.properties.len() - 1),
                         }
                     })
@@ -269,6 +279,7 @@ impl Extractor for Discriminator {
                                 name: value,
                                 kind: "string".to_string(),
                             }),
+                            outer: f.clone(),
                             properties,
                         })
                         .unwrap(),
