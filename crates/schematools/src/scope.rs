@@ -99,6 +99,7 @@ impl BasicNamer {
             None
         };
 
+        #[allow(clippy::filter_next)]
         match self
             .parts
             .iter()
