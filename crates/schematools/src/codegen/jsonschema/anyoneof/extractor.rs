@@ -47,9 +47,6 @@ pub struct DiscriminatorMeta {
 
     // Inner model value
     pub value: DiscriminatorValue,
-
-    // Outer model value, for backward compatiblity, maybe it can be simplified
-    pub outer: FlatModel,
 }
 
 #[derive(Serialize)]
@@ -168,7 +165,6 @@ impl Simple {
                     DiscriminatorMeta {
                         property: f.name.clone().unwrap(),
                         value: DiscriminatorValueModel::flat(f),
-                        outer: f.clone(),
                         properties: Some(object.properties.len()),
                     }
                 })
@@ -184,7 +180,6 @@ impl Simple {
                         DiscriminatorMeta {
                             property: f.name.clone().unwrap(),
                             value: DiscriminatorValueModel::flat(f),
-                            outer: f.clone(),
                             properties: Some(object.properties.len() - 1),
                         }
                     })
@@ -279,7 +274,6 @@ impl Extractor for Discriminator {
                                 name: value,
                                 kind: "string".to_string(),
                             }),
-                            outer: f.clone(),
                             properties,
                         })
                         .unwrap(),
