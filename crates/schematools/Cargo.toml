@@ -29,10 +29,10 @@ walkdir = "2"
 json-patch = { version = "1.2", optional = true }
 semver = { version = "1.0", optional = true }
 git2 = { version = "0.20", optional = true }
-md5 = "0.7.0"
+md5 = "0.8.0"
 Inflector = { version = "0.11" }
-digest = "0.10.1"
-pluralizer = { version = "0.4", optional = true }
+digest = "=0.10.2"
+pluralizer = { version = "0.5", optional = true }
 
 [dev-dependencies]
 serial_test = "2.0"
