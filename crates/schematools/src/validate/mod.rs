@@ -21,7 +21,7 @@ pub fn validate_openapi(schema: &Schema) -> Result<(), Error> {
     match result {
         Err(errors) => {
             for e in errors {
-                log::error!("{}", e.to_string());
+                log::error!("{}", e);
             }
 
             Err(Error::SchemaValidation(schema.get_url().to_string()))
