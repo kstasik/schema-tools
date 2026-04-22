@@ -1,3 +1,10 @@
+## v0.22.5 (2026-04-22)
+
+### Fix
+
+- update few dependencies
+- allow integer enums
+
 ## v0.22.4 (2026-04-14)
 
 ### Fix
