@@ -1,12 +1,76 @@
 use pluralizer::pluralize;
 use regex::Regex;
 use std::collections::HashMap;
+use std::sync::Arc;
 use tera::to_value;
 
 use inflector::Inflector;
 use serde_json::Value;
 use tera::Tera;
 use tera::{try_get_value, Result as TeraResult};
+
+pub mod bucket_counter {
+    use std::{
+        collections::HashMap,
+        sync::{Arc, Mutex},
+    };
+
+    use tera::{to_value, Function, Value};
+
+    #[derive(Default)]
+    pub struct MultiBucketCounter {
+        registry: Mutex<HashMap<String, HashMap<String, usize>>>,
+    }
+
+    pub fn get_bucket_count(counter: Arc<MultiBucketCounter>) -> impl Function {
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            let bucket = args
+                .get("bucket")
+                .and_then(|v| v.as_str())
+                .unwrap_or("default");
+
+            let name = args
+                .get("name")
+                .and_then(|v| v.as_str())
+                .ok_or("Argument 'name' is required")?;
+
+            let mut root_map = counter
+                .registry
+                .lock()
+                .map_err(|_| tera::Error::msg("Failed to acquire lock on the counter"))?;
+
+            let bucket_map = root_map.entry(bucket.to_string()).or_default();
+
+            let entry = bucket_map.entry(name.to_string()).or_insert(0);
+            let current_count = *entry;
+            *entry += 1;
+
+            if current_count == 0 {
+                Ok(Value::Null)
+            } else {
+                Ok(to_value(entry).unwrap())
+            }
+        }
+    }
+
+    pub fn clear_bucket(counter: Arc<MultiBucketCounter>) -> impl Function {
+        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
+            let bucket = args
+                .get("bucket")
+                .and_then(|v| v.as_str())
+                .ok_or("Argument 'bucket' is required")?;
+
+            let mut root_map = counter
+                .registry
+                .lock()
+                .map_err(|_| tera::Error::msg("Failed to acquire lock on the counter"))?;
+
+            root_map.remove(bucket);
+
+            Ok(Value::Null)
+        }
+    }
+}
 
 pub fn register(tera: &mut Tera) {
     tera.register_filter("camelcase", camelcase);
@@ -27,6 +91,17 @@ pub fn register(tera: &mut Tera) {
     tera.register_filter("filter_inarray", filter_inarray);
     tera.register_filter("filter_not_inarray", filter_not_inarray);
     tera.register_filter("plural", plural);
+
+    // bucket counter
+    let counter = Arc::new(bucket_counter::MultiBucketCounter::default());
+    tera.register_function(
+        "get_bucket_count",
+        bucket_counter::get_bucket_count(counter.clone()),
+    );
+    tera.register_function(
+        "clear_bucket",
+        bucket_counter::clear_bucket(counter.clone()),
+    );
 }
 
 pub fn pascalcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
