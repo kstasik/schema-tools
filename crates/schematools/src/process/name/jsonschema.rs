@@ -181,7 +181,7 @@ fn get_title(
         }
 
         let proposal = scope.namer().simple().map(|s| {
-            log::debug!("{} -> {}", scope, &s);
+            log::debug!("{} -> {}", scope, s);
             Some(s)
         })?;
 
