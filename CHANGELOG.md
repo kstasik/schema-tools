@@ -1,3 +1,9 @@
+## v0.23.0 (2026-05-28)
+
+### Feat
+
+- uniqness helpers + additional properties fix (#129)
+
 ## v0.22.5 (2026-04-22)
 
 ### Fix
