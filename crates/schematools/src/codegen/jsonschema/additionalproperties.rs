@@ -18,6 +18,13 @@ pub fn from_object_with_additional_properties(
 
     match schema.get("additionalProperties") {
         Some(value) => match value {
+            Value::Object(map) if map.is_empty() => {
+                Ok(Model::new(ModelType::ObjectType(ObjectType {
+                    name,
+                    properties: vec![],
+                    additional: true,
+                })))
+            }
             Value::Object(_) => {
                 // todo: mix of additionalProperties + properties support
                 scope.form("additionalProperties");
