@@ -1918,7 +1918,7 @@ dependencies = [
 
 [[package]]
 name = "schematools"
-version = "0.22.4"
+version = "0.23.0"
 dependencies = [
  "Inflector",
  "digest",
@@ -1946,7 +1946,7 @@ dependencies = [
 
 [[package]]
 name = "schematools-cli"
-version = "0.22.4"
+version = "0.23.0"
 dependencies = [
  "clap",
  "env_logger",
