@@ -13,6 +13,7 @@ pub mod requestbody;
 pub mod responses;
 pub mod security;
 
+#[derive(Default)]
 pub struct OpenapiExtractOptions {
     pub wrappers: bool,
     pub nested_arrays_as_models: bool,
@@ -26,20 +27,6 @@ pub struct OpenapiExtractOptions {
     pub only_endpoints: Vec<String>,
     /// Remove models that are not referenced by any kept endpoint.
     pub skip_unused_models: bool,
-}
-
-impl Default for OpenapiExtractOptions {
-    fn default() -> Self {
-        Self {
-            wrappers: false,
-            nested_arrays_as_models: false,
-            optional_and_nullable_as_models: false,
-            keep_schema: tools::Filter::default(),
-            skip_endpoints: vec![],
-            only_endpoints: vec![],
-            skip_unused_models: false,
-        }
-    }
 }
 #[derive(Default)]
 pub struct EndpointContainer {
@@ -295,7 +282,7 @@ pub fn extract(
                 )?;
 
                 for endpoint in endpoints.into_iter() {
-                    tags.append(&mut endpoint.get_tags().clone());
+                    tags.extend(endpoint.get_tags().iter().cloned());
                     econtainer.add(endpoint);
                 }
             }
@@ -304,9 +291,7 @@ pub fn extract(
         },
     )?;
 
-    let filtering = !skip_endpoints.is_empty()
-        || !only_endpoints.is_empty()
-        || skip_unused_models;
+    let filtering = !skip_endpoints.is_empty() || !only_endpoints.is_empty() || skip_unused_models;
 
     if filtering {
         let skip: std::collections::HashSet<&str> =
@@ -323,28 +308,28 @@ pub fn extract(
             econtainer.endpoints.iter().map(|e| e.operation()).collect();
 
         mcontainer.retain(|m| {
-            let ops: Vec<&str> = m
-                .spaces
-                .list
-                .iter()
-                .filter_map(|s| match s {
-                    crate::scope::Space::Operation(o) => Some(o.as_str()),
-                    _ => None,
-                })
-                .collect();
+            let mut ops = m.spaces.list.iter().filter_map(|s| match s {
+                crate::scope::Space::Operation(o) => Some(o.as_str()),
+                _ => None,
+            });
 
-            if ops.is_empty() {
+            let first = ops.next();
+            if first.is_none() {
                 return !skip_unused_models;
             }
 
-            ops.iter().any(|o| kept.contains(o))
+            std::iter::once(first.unwrap())
+                .chain(ops)
+                .any(|o| kept.contains(o))
         });
 
-        tags = econtainer
-            .endpoints
-            .iter()
-            .flat_map(|e| e.get_tags().clone())
-            .collect();
+        tags.clear();
+        tags.extend(
+            econtainer
+                .endpoints
+                .iter()
+                .flat_map(|e| e.get_tags().iter().cloned()),
+        );
         tags.sort();
         tags.dedup();
     }
@@ -592,7 +577,10 @@ mod tests {
 
         assert_eq!(openapi.endpoints.len(), 1);
         let value = serde_json::to_value(&openapi).unwrap();
-        assert_eq!(value["endpoints"][0]["operation"].as_str().unwrap(), "createPet");
+        assert_eq!(
+            value["endpoints"][0]["operation"].as_str().unwrap(),
+            "createPet"
+        );
 
         let names = model_names(&openapi);
         assert!(names.contains(&"Pet".to_string()));
@@ -695,12 +683,7 @@ mod tests {
 
         let client = Client::new();
         let storage = SchemaStorage::new(&schema, &client);
-        let openapi = super::extract(
-            &schema,
-            &storage,
-            OpenapiExtractOptions::default(),
-        )
-        .unwrap();
+        let openapi = super::extract(&schema, &storage, OpenapiExtractOptions::default()).unwrap();
 
         let names = model_names(&openapi);
         assert!(
@@ -839,16 +822,15 @@ mod tests {
 
         let client = Client::new();
         let storage = SchemaStorage::new(&schema, &client);
-        let openapi = super::extract(
-            &schema,
-            &storage,
-            OpenapiExtractOptions::default(),
-        )
-        .unwrap();
+        let openapi = super::extract(&schema, &storage, OpenapiExtractOptions::default()).unwrap();
 
         let value = serde_json::to_value(&openapi).unwrap();
         let models = value["models"]["models"].as_array().unwrap();
-        assert_eq!(models.len(), 1, "identical untitled inline models should merge");
+        assert_eq!(
+            models.len(),
+            1,
+            "identical untitled inline models should merge"
+        );
 
         let ops: Vec<_> = models[0]["spaces"]
             .as_array()
