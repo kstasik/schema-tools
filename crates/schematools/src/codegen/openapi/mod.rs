@@ -18,6 +18,28 @@ pub struct OpenapiExtractOptions {
     pub nested_arrays_as_models: bool,
     pub optional_and_nullable_as_models: bool,
     pub keep_schema: tools::Filter,
+    /// Operation ids of endpoints that should be dropped. Models that are only
+    /// referenced by dropped endpoints are also removed from the output.
+    pub skip_endpoints: Vec<String>,
+    /// Only these operation ids are kept. All other endpoints and models tied
+    /// exclusively to them are removed.
+    pub only_endpoints: Vec<String>,
+    /// Remove models that are not referenced by any kept endpoint.
+    pub skip_unused_models: bool,
+}
+
+impl Default for OpenapiExtractOptions {
+    fn default() -> Self {
+        Self {
+            wrappers: false,
+            nested_arrays_as_models: false,
+            optional_and_nullable_as_models: false,
+            keep_schema: tools::Filter::default(),
+            skip_endpoints: vec![],
+            only_endpoints: vec![],
+            skip_unused_models: false,
+        }
+    }
 }
 #[derive(Default)]
 pub struct EndpointContainer {
@@ -130,9 +152,20 @@ pub fn extract(
 
     let root = schema.get_body();
     let resolver = &SchemaResolver::new(schema, storage);
+
+    let OpenapiExtractOptions {
+        wrappers: _,
+        nested_arrays_as_models: _,
+        optional_and_nullable_as_models,
+        keep_schema,
+        skip_endpoints,
+        only_endpoints,
+        skip_unused_models,
+    } = options;
+
     let options = &JsonSchemaExtractOptions {
-        optional_and_nullable_as_models: options.optional_and_nullable_as_models,
-        keep_schema: options.keep_schema,
+        optional_and_nullable_as_models,
+        keep_schema,
         ..Default::default()
     };
 
@@ -271,6 +304,51 @@ pub fn extract(
         },
     )?;
 
+    let filtering = !skip_endpoints.is_empty()
+        || !only_endpoints.is_empty()
+        || skip_unused_models;
+
+    if filtering {
+        let skip: std::collections::HashSet<&str> =
+            skip_endpoints.iter().map(|s| s.as_str()).collect();
+        let only: std::collections::HashSet<&str> =
+            only_endpoints.iter().map(|s| s.as_str()).collect();
+
+        econtainer.endpoints.retain(|e| {
+            let op = e.operation();
+            !skip.contains(op) && (only.is_empty() || only.contains(op))
+        });
+
+        let kept: std::collections::HashSet<&str> =
+            econtainer.endpoints.iter().map(|e| e.operation()).collect();
+
+        mcontainer.retain(|m| {
+            let ops: Vec<&str> = m
+                .spaces
+                .list
+                .iter()
+                .filter_map(|s| match s {
+                    crate::scope::Space::Operation(o) => Some(o.as_str()),
+                    _ => None,
+                })
+                .collect();
+
+            if ops.is_empty() {
+                return !skip_unused_models;
+            }
+
+            ops.iter().any(|o| kept.contains(o))
+        });
+
+        tags = econtainer
+            .endpoints
+            .iter()
+            .flat_map(|e| e.get_tags().clone())
+            .collect();
+        tags.sort();
+        tags.dedup();
+    }
+
     tags.sort();
     tags.dedup();
 
@@ -352,5 +430,205 @@ impl Openapi {
         });
 
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{schema::Schema, storage::SchemaStorage, Client};
+    use serde_json::json;
+
+    fn test_schema() -> Schema {
+        Schema::from_json(json!({
+            "openapi": "3.0.0",
+            "info": { "title": "Test", "version": "1.0.0" },
+            "components": {
+                "schemas": {
+                    "Pet": {
+                        "type": "object",
+                        "title": "Pet",
+                        "properties": { "id": { "type": "integer" } }
+                    },
+                    "PetInput": {
+                        "type": "object",
+                        "title": "PetInput",
+                        "properties": { "name": { "type": "string" } }
+                    },
+                    "Unused": {
+                        "type": "object",
+                        "title": "Unused",
+                        "properties": { "x": { "type": "string" } }
+                    }
+                }
+            },
+            "paths": {
+                "/pets": {
+                    "get": {
+                        "operationId": "listPets",
+                        "responses": {
+                            "200": {
+                                "description": "ok",
+                                "content": {
+                                    "application/json": {
+                                        "schema": { "$ref": "#/components/schemas/Pet" }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "post": {
+                        "operationId": "createPet",
+                        "requestBody": {
+                            "required": true,
+                            "content": {
+                                "application/json": {
+                                    "schema": { "$ref": "#/components/schemas/PetInput" }
+                                }
+                            }
+                        },
+                        "responses": {
+                            "201": {
+                                "description": "created",
+                                "content": {
+                                    "application/json": {
+                                        "schema": { "$ref": "#/components/schemas/Pet" }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }))
+    }
+
+    fn extract(options: OpenapiExtractOptions) -> Openapi {
+        let schema = test_schema();
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+
+        super::extract(&schema, &storage, options).unwrap()
+    }
+
+    fn model_names(openapi: &Openapi) -> Vec<String> {
+        openapi
+            .models
+            .models()
+            .iter()
+            .map(|m| m.name().unwrap_or_default().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn test_no_skip_endpoints() {
+        let openapi = extract(OpenapiExtractOptions::default());
+
+        let value = serde_json::to_value(&openapi).unwrap();
+        let endpoints: Vec<_> = value["endpoints"].as_array().unwrap().clone();
+
+        assert_eq!(endpoints.len(), 2);
+        let operations: Vec<_> = endpoints
+            .iter()
+            .map(|e| e["operation"].as_str().unwrap())
+            .collect();
+        assert!(operations.contains(&"listPets"));
+        assert!(operations.contains(&"createPet"));
+
+        let names = model_names(&openapi);
+        assert!(names.contains(&"Pet".to_string()));
+        assert!(names.contains(&"PetInput".to_string()));
+        assert!(names.contains(&"Unused".to_string()));
+    }
+
+    #[test]
+    fn test_skip_endpoint_removes_only_related_models() {
+        let openapi = extract(OpenapiExtractOptions {
+            skip_endpoints: vec!["listPets".to_string()],
+            ..Default::default()
+        });
+
+        let value = serde_json::to_value(&openapi).unwrap();
+        let endpoints: Vec<_> = value["endpoints"].as_array().unwrap().clone();
+
+        assert_eq!(endpoints.len(), 1);
+        assert_eq!(endpoints[0]["operation"].as_str().unwrap(), "createPet");
+
+        let names = model_names(&openapi);
+        assert!(
+            names.contains(&"Pet".to_string()),
+            "Pet is also used by createPet, so it must stay"
+        );
+        assert!(
+            names.contains(&"PetInput".to_string()),
+            "PetInput is used by createPet, so it must stay"
+        );
+        assert!(
+            names.contains(&"Unused".to_string()),
+            "Unused is not tied to any endpoint, so it must stay"
+        );
+    }
+
+    #[test]
+    fn test_skip_all_endpoints_keeps_unused_models() {
+        let openapi = extract(OpenapiExtractOptions {
+            skip_endpoints: vec!["listPets".to_string(), "createPet".to_string()],
+            ..Default::default()
+        });
+
+        assert!(openapi.endpoints.is_empty());
+        let names = model_names(&openapi);
+        assert!(names.contains(&"Unused".to_string()));
+        assert!(!names.contains(&"Pet".to_string()));
+        assert!(!names.contains(&"PetInput".to_string()));
+    }
+
+    #[test]
+    fn test_only_endpoint_keeps_related_models_and_drops_others() {
+        let openapi = extract(OpenapiExtractOptions {
+            only_endpoints: vec!["createPet".to_string()],
+            ..Default::default()
+        });
+
+        assert_eq!(openapi.endpoints.len(), 1);
+        let value = serde_json::to_value(&openapi).unwrap();
+        assert_eq!(value["endpoints"][0]["operation"].as_str().unwrap(), "createPet");
+
+        let names = model_names(&openapi);
+        assert!(names.contains(&"Pet".to_string()));
+        assert!(names.contains(&"PetInput".to_string()));
+        assert!(
+            names.contains(&"Unused".to_string()),
+            "Unused is not tied to any endpoint, so it stays by default"
+        );
+    }
+
+    #[test]
+    fn test_only_endpoint_with_skip_unused_removes_unused_models() {
+        let openapi = extract(OpenapiExtractOptions {
+            only_endpoints: vec!["listPets".to_string()],
+            skip_unused_models: true,
+            ..Default::default()
+        });
+
+        assert_eq!(openapi.endpoints.len(), 1);
+        let names = model_names(&openapi);
+        assert!(names.contains(&"Pet".to_string()));
+        assert!(!names.contains(&"PetInput".to_string()));
+        assert!(!names.contains(&"Unused".to_string()));
+    }
+
+    #[test]
+    fn test_skip_unused_models_removes_only_unused() {
+        let openapi = extract(OpenapiExtractOptions {
+            skip_unused_models: true,
+            ..Default::default()
+        });
+
+        assert_eq!(openapi.endpoints.len(), 2);
+        let names = model_names(&openapi);
+        assert!(names.contains(&"Pet".to_string()));
+        assert!(names.contains(&"PetInput".to_string()));
+        assert!(!names.contains(&"Unused".to_string()));
     }
 }
