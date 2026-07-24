@@ -107,7 +107,7 @@ impl Registry {
     }
 }
 
-#[cfg(feature = "git2")]
+#[cfg(feature = "git")]
 pub fn discover_git(
     repository: &str,
     source: GitCheckoutType,
@@ -116,25 +116,11 @@ pub fn discover_git(
     use fs4::fs_std::FileExt;
 
     let mut directory = std::env::temp_dir();
-    let mut refspecs: Vec<String> = vec![];
 
-    let revparse = match source {
-        GitCheckoutType::Tag(tag) => {
-            refspecs.push(format!("refs/tags/{tag}:refs/remotes/origin/tags/{tag}"));
-
-            format!("refs/remotes/origin/tags/{tag}")
-        }
-        GitCheckoutType::Rev(rev) => {
-            refspecs.push(String::from("refs/heads/*:refs/remotes/origin/*"));
-            refspecs.push(String::from("HEAD:refs/remotes/origin/HEAD"));
-
-            rev
-        }
-        GitCheckoutType::Branch(branch) => {
-            refspecs.push(format!("refs/heads/{branch}:refs/remotes/origin/{branch}"));
-
-            format!("refs/remotes/origin/{branch}")
-        }
+    let revparse = match &source {
+        GitCheckoutType::Tag(tag) => format!("refs/tags/{tag}"),
+        GitCheckoutType::Rev(rev) => rev.clone(),
+        GitCheckoutType::Branch(branch) => format!("refs/heads/{branch}"),
     };
 
     use md5::{Digest, Md5};
@@ -163,32 +149,114 @@ pub fn discover_git(
     } else if directory.exists() {
         log::debug!("already exists: {:?}", directory);
         return Ok(Registry::new(directory));
-    } else {
-        fs::create_dir_all(&directory).map_err(Error::DiscoveryCacheRegistryError)?;
+    }
+
+    if let Some(parent) = directory.parent() {
+        fs::create_dir_all(parent).map_err(Error::DiscoveryCacheRegistryError)?;
     }
 
     log::debug!("checking out: {:?}", directory);
 
-    let repo = git2::Repository::init(directory.clone()).map_err(Error::GitDiscoveryError)?;
-    let mut opts = git2::FetchOptions::new();
+    // For branches/tags we can hint gix to fetch a specific ref; for arbitrary
+    // revisions we fetch the default set and resolve the object locally.
+    let ref_name: Option<&str> = match &source {
+        GitCheckoutType::Branch(b) => Some(b.as_str()),
+        GitCheckoutType::Tag(t) => Some(t.as_str()),
+        GitCheckoutType::Rev(_) => None,
+    };
 
-    repo.remote_anonymous(repository)
-        .map_err(Error::GitDiscoveryError)?
-        .fetch(&refspecs, Some(&mut opts), None)
-        .map_err(Error::GitDiscoveryError)?;
+    let mut prepare = gix::prepare_clone(repository, &directory)
+        .map_err(|e| Error::GitDiscoveryError(e.to_string()))?;
+    if let Some(name) = ref_name {
+        prepare = prepare
+            .with_ref_name(Some(name))
+            .map_err(|e| Error::GitDiscoveryError(e.to_string()))?;
+    }
 
-    let obj = repo
-        .revparse_single(&revparse)
-        .map_err(Error::GitDiscoveryError)?;
+    let interrupt = std::sync::atomic::AtomicBool::new(false);
+    let (repo, _outcome) = prepare
+        .fetch_only(gix::progress::Discard, &interrupt)
+        .map_err(|e| Error::GitDiscoveryError(e.to_string()))?;
 
-    repo.checkout_tree(&obj, None)
-        .map_err(Error::GitDiscoveryError)?;
+    let target = match &source {
+        GitCheckoutType::Rev(rev) => repo
+            .rev_parse_single(rev.as_str())
+            .map_err(|e| Error::GitDiscoveryError(e.to_string()))?,
+        GitCheckoutType::Branch(branch) => repo
+            .rev_parse_single(format!("refs/remotes/origin/{branch}").as_str())
+            .map_err(|e| Error::GitDiscoveryError(e.to_string()))?,
+        GitCheckoutType::Tag(tag) => repo
+            .rev_parse_single(format!("refs/tags/{tag}").as_str())
+            .map_err(|e| Error::GitDiscoveryError(e.to_string()))?,
+    }
+    .detach();
+
+    checkout_commit(&repo, target).map_err(Error::GitDiscoveryError)?;
 
     Ok(Registry::new(directory))
 }
 
+#[cfg(feature = "git")]
+fn checkout_commit(repo: &gix::Repository, target: gix::ObjectId) -> Result<(), String> {
+    use gix::refs::transaction::{Change, LogChange, PreviousValue, RefEdit, RefLog};
+    use gix::refs::Target;
+
+    let workdir = repo
+        .workdir()
+        .ok_or_else(|| "repository has no working tree".to_string())?;
+
+    let tree_id = repo
+        .find_object(target)
+        .map_err(|e| e.to_string())?
+        .peel_to_kind(gix::object::Kind::Tree)
+        .map_err(|e| e.to_string())?
+        .id();
+
+    let validate = gix::validate::path::component::Options::default();
+    let state = gix::index::State::from_tree(&tree_id, &repo.objects, validate)
+        .map_err(|e| e.to_string())?;
+    let mut index = gix::index::File::from_state(state, repo.index_path());
+
+    // Detach HEAD at the requested commit.
+    let edit = RefEdit {
+        change: Change::Update {
+            log: LogChange {
+                mode: RefLog::AndReference,
+                force_create_reflog: false,
+                message: format!("checkout {target}").into(),
+            },
+            expected: PreviousValue::Any,
+            new: Target::Object(target),
+        },
+        name: "HEAD".try_into().expect("HEAD is a valid ref name"),
+        deref: true,
+    };
+    repo.edit_reference(edit).map_err(|e| e.to_string())?;
+
+    let opts = gix::worktree::state::checkout::Options {
+        overwrite_existing: true,
+        destination_is_initially_empty: true,
+        ..Default::default()
+    };
+    let interrupt = std::sync::atomic::AtomicBool::new(false);
+    gix::worktree::state::checkout(
+        &mut index,
+        workdir.to_path_buf(),
+        repo.objects.clone(),
+        &gix::progress::Discard,
+        &gix::progress::Discard,
+        &interrupt,
+        opts,
+    )
+    .map_err(|e| e.to_string())?;
+
+    index.write(Default::default()).map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg(test)]
-#[cfg(feature = "git2")]
+#[cfg(feature = "git")]
 mod tests {
     use super::*;
     use serial_test::serial;

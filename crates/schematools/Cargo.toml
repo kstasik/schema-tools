@@ -8,8 +8,9 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["codegen", "git2", "http", "json-patch", "fs4"]
+default = ["codegen", "git", "http", "json-patch", "fs4"]
 codegen = ["tera", "semver", "pluralizer"]
+git = ["gix"]
 http = ["jsonschema/resolve-http", "reqwest"]
 
 [dependencies]
@@ -28,7 +29,7 @@ tera = { version = "2", optional = true }
 walkdir = "2"
 json-patch = { version = "4.2", optional = true }
 semver = { version = "1.0", optional = true }
-git2 = { version = "0.21", optional = true, features = ["https", "ssh"] }
+gix = { version = "0.86", default-features = false, optional = true, features = ["basic", "extras", "comfort", "sha1", "blocking-network-client", "blocking-http-transport-reqwest-rust-tls"] }
 fs4 = { version = "0.12", optional = true }
 md5 = { package = "md-5", version = "0.11" }
 cruet = "1"

@@ -58,8 +58,8 @@ pub enum Error {
     DiscoveryInvalidUrlError(url::ParseError),
 
     #[error("Cannot discover git repository: {0}")]
-    #[cfg(feature = "git2")]
-    GitDiscoveryError(git2::Error),
+    #[cfg(feature = "git")]
+    GitDiscoveryError(String),
 
     #[error("Openapi schema format is invalid")]
     InvalidOpenapiSchemaError,
