@@ -1,6 +1,9 @@
 #![allow(clippy::large_enum_variant)]
 
 use std::collections::HashMap;
+use std::collections::BTreeMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 use serde::{ser::SerializeStruct, Serialize};
 use serde_json::{Map, Value};
@@ -74,14 +77,18 @@ impl ModelContainer {
             let model = self.models.get(*id as usize).unwrap();
 
             (Some(*id), model)
-        } else if self.exists(&model) {
-            let id = self
-                .models
-                .iter()
-                .position(|s| (*s).is_like(&model))
-                .unwrap();
-            let model = self.models.get(id).unwrap();
-            (Some(id as u32), model)
+        } else if let Some(id) = self.models.iter().position(|s| s.is_like(&model)) {
+            let id = id as u32;
+
+            self.models
+                .get_mut(id as usize)
+                .unwrap()
+                .add_spaces(scope);
+            self.mapping.insert(key, id);
+
+            let model = self.models.get(id as usize).unwrap();
+
+            (Some(id), model)
         } else {
             let name = model.name().unwrap();
 
@@ -363,13 +370,47 @@ pub fn extract_type(
     })
 }
 
+
+fn schema_hash(node: &Value) -> u64 {
+    let normalized = normalize_schema(node);
+    let mut hasher = DefaultHasher::new();
+    serde_json::to_vec(&normalized)
+        .expect("failed to serialize schema")
+        .hash(&mut hasher);
+    hasher.finish()
+}
+
+fn normalize_schema(node: &Value) -> Value {
+    match node {
+        Value::Object(map) => {
+            let mut sorted: BTreeMap<String, Value> = BTreeMap::new();
+            for (key, value) in map.iter() {
+                if key == "title" || key == "description" {
+                    continue;
+                }
+                sorted.insert(key.clone(), normalize_schema(value));
+            }
+            Value::Object(sorted.into_iter().collect())
+        }
+        Value::Array(arr) => Value::Array(arr.iter().map(normalize_schema).collect()),
+        other => other.clone(),
+    }
+}
 fn add_validation_and_nullable(
     model: types::Model,
     schema: &Map<String, Value>,
     mcontainer: &mut ModelContainer,
     keep_schema: bool,
 ) -> types::Model {
+    let hash = if let Some(hash) = model.attributes.schema_hash {
+        hash
+    } else {
+        schema_hash(&Value::Object(schema.clone()))
+    };
+
     if model.attributes.validation.is_some() {
+        let mut model = model;
+        model.attributes.schema_hash = Some(hash);
         return model;
     }
 
@@ -454,6 +495,7 @@ fn add_validation_and_nullable(
         } else {
             None
         },
+        schema_hash: Some(hash),
         ..types::Attributes::default()
     };
 
