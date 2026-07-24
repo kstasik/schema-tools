@@ -20,6 +20,11 @@ Just another approach to openapi/jsonschema code generator. It's a home project 
 
 It is designed to speed up development of microservices heavly using json objects (json schemas on api level as well events).
 
+## Documentation
+
+- [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md) — how `schema-tools` loads, processes, and generates code.
+- [`docs/TEMPLATE_VARIABLES.md`](docs/TEMPLATE_VARIABLES.md) — complete reference of variables available in Tera templates.
+
 Main differences in approach between other solutions like `openapi-generator`:
 
 - more robust template language like jinja2
@@ -249,16 +254,16 @@ For more information how to write template files please refer to [Tera docs](htt
 
 ### Codegen template inheritance
 
-Codegen allows to defined multiple `--template` options.
+Codegen allows to define multiple `--template` options.
 
 ```
-schematools codegen openapi.json --template dir1/ --template2 dir2/ --target-dir output/
+schematools codegen openapi.json --template dir1/ --template dir2/ --target-dir output/
 ```
 
-Files from all directories are loaded one by one and in case of conflicts they are overwritten. There is also option to point to registry which currently may be only a **git repository**:
+Files from all directories are loaded one by one and in case of conflicts they are overwritten: if two added template directories contain a file with the same relative filename, the file from the last added directory wins. There is also option to point to registry which currently may be only a **git repository**:
 
 ```
-schematools codegen openapi.json --template REGISTRY::dir1/ --template2 dir2/ --target-dir output/
+schematools codegen openapi.json --template REGISTRY::dir1/ --template dir2/ --target-dir output/
 ```
 
 ### Codegen ready to use templates
