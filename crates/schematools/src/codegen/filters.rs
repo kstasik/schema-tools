@@ -98,10 +98,7 @@ pub fn register(tera: &mut Tera) {
         "get_bucket_count",
         bucket_counter::get_bucket_count(counter.clone()),
     );
-    tera.register_function(
-        "clear_bucket",
-        bucket_counter::clear_bucket(counter.clone()),
-    );
+    tera.register_function("clear_bucket", bucket_counter::clear_bucket(counter));
 }
 
 pub fn pascalcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {

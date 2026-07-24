@@ -1,8 +1,7 @@
 #![allow(clippy::large_enum_variant)]
 
-use std::collections::HashMap;
-use std::collections::BTreeMap;
 use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 use serde::{ser::SerializeStruct, Serialize};
@@ -31,6 +30,8 @@ pub struct ModelContainer {
     formats: Vec<String>,
     models: Vec<types::Model>,
     mapping: HashMap<String, u32>,
+    by_name: HashMap<String, u32>,
+    by_hash: HashMap<u64, Vec<u32>>,
     any: types::Model,
 }
 
@@ -54,13 +55,14 @@ impl Default for ModelContainer {
             formats: vec![],
             models: vec![],
             mapping: HashMap::new(),
+            by_name: HashMap::new(),
+            by_hash: HashMap::new(),
             any: types::Model::new(types::ModelType::AnyType(types::AnyType {})),
         }
     }
 }
 
 impl ModelContainer {
-    #[allow(clippy::map_entry)]
     pub fn add(
         &mut self,
         scope: &mut SchemaScope,
@@ -72,50 +74,58 @@ impl ModelContainer {
         }
 
         let key = scope.path();
-        if self.mapping.contains_key(&key) {
-            let id = self.mapping.get(&key).unwrap();
-            let model = self.models.get(*id as usize).unwrap();
+        if let Some(&id) = self.mapping.get(&key) {
+            self.models[id as usize].add_spaces(scope);
+            return (Some(id), &self.models[id as usize]);
+        }
 
-            (Some(*id), model)
-        } else if let Some(id) = self.models.iter().position(|s| s.is_like(&model)) {
-            let id = id as u32;
-
-            self.models
-                .get_mut(id as usize)
-                .unwrap()
-                .add_spaces(scope);
-            self.mapping.insert(key, id);
-
-            let model = self.models.get(id as usize).unwrap();
-
-            (Some(id), model)
-        } else {
-            let name = model.name().unwrap();
-
-            if self.models.iter().any(|c| c.name().unwrap() == name) {
-                let new_name = tools::bump_suffix_number(name);
-                log::warn!(
-                    "{}: absolute: {}, conflict, renaming to: {}",
-                    scope,
-                    key,
-                    new_name
-                );
-
-                self.add(scope, model.rename(new_name))
-            } else if let Some(index) = self.mapping.get(&key) {
-                (Some(*index), self.models.get(*index as usize).unwrap())
-            } else {
-                self.mapping.insert(key, self.models.len() as u32);
-                self.models.push(model);
-
-                let id = self.models.len() - 1;
-                let model = self.models.get(id).unwrap();
-                (Some(id as u32), model)
+        if let Some(hash) = model.attributes.schema_hash {
+            if let Some(candidates) = self.by_hash.get(&hash) {
+                if let Some(&id) = candidates
+                    .iter()
+                    .find(|&&id| self.models[id as usize].is_like(&model))
+                {
+                    self.models[id as usize].add_spaces(scope);
+                    self.mapping.insert(key, id);
+                    return (Some(id), &self.models[id as usize]);
+                }
             }
         }
+
+        let name = model.name().unwrap();
+
+        if self.by_name.contains_key(name) {
+            let new_name = tools::bump_suffix_number(name);
+            log::warn!(
+                "{}: absolute: {}, conflict, renaming to: {}",
+                scope,
+                key,
+                new_name
+            );
+
+            return self.add(scope, model.rename(new_name));
+        }
+
+        let id = self.models.len() as u32;
+        self.mapping.insert(key, id);
+        self.models.push(model);
+        let name = self.models[id as usize].name().unwrap();
+        self.by_name.insert(name.to_string(), id);
+        if let Some(hash) = self.models[id as usize].attributes.schema_hash {
+            self.by_hash.entry(hash).or_default().push(id);
+        }
+
+        (Some(id), &self.models[id as usize])
     }
 
-    pub fn exists(&mut self, model: &types::Model) -> bool {
+    pub fn exists(&self, model: &types::Model) -> bool {
+        if let Some(hash) = model.attributes.schema_hash {
+            if let Some(candidates) = self.by_hash.get(&hash) {
+                return candidates
+                    .iter()
+                    .any(|&id| self.models[id as usize].is_like(model));
+            }
+        }
         self.models.iter().any(|s| s.is_like(model))
     }
 
@@ -128,6 +138,8 @@ impl ModelContainer {
     pub fn retain(&mut self, mut f: impl FnMut(&types::Model) -> bool) {
         self.models.retain(|m| f(m));
         self.mapping.clear();
+        self.by_name.clear();
+        self.by_hash.clear();
     }
 
     pub fn resolve(&mut self, scope: &mut SchemaScope) -> Option<&types::Model> {
@@ -370,30 +382,47 @@ pub fn extract_type(
     })
 }
 
-
-fn schema_hash(node: &Value) -> u64 {
-    let normalized = normalize_schema(node);
+fn schema_hash(schema: &Map<String, Value>) -> u64 {
     let mut hasher = DefaultHasher::new();
-    serde_json::to_vec(&normalized)
-        .expect("failed to serialize schema")
-        .hash(&mut hasher);
+    hash_schema_map(schema, &mut hasher);
     hasher.finish()
 }
 
-fn normalize_schema(node: &Value) -> Value {
+fn hash_schema_map(map: &Map<String, Value>, state: &mut DefaultHasher) {
+    "object".hash(state);
+    let mut entries: Vec<(&String, &Value)> = map.iter().collect();
+    entries.retain(|(k, _)| *k != "title" && *k != "description");
+    entries.sort_by(|a, b| a.0.cmp(b.0));
+    entries.len().hash(state);
+    for (k, v) in entries {
+        k.hash(state);
+        hash_schema_value(v, state);
+    }
+}
+
+fn hash_schema_value(node: &Value, state: &mut DefaultHasher) {
     match node {
-        Value::Object(map) => {
-            let mut sorted: BTreeMap<String, Value> = BTreeMap::new();
-            for (key, value) in map.iter() {
-                if key == "title" || key == "description" {
-                    continue;
-                }
-                sorted.insert(key.clone(), normalize_schema(value));
-            }
-            Value::Object(sorted.into_iter().collect())
+        Value::Null => "null".hash(state),
+        Value::Bool(b) => {
+            "bool".hash(state);
+            b.hash(state);
         }
-        Value::Array(arr) => Value::Array(arr.iter().map(normalize_schema).collect()),
-        other => other.clone(),
+        Value::Number(n) => {
+            "number".hash(state);
+            n.to_string().hash(state);
+        }
+        Value::String(s) => {
+            "string".hash(state);
+            s.hash(state);
+        }
+        Value::Array(a) => {
+            "array".hash(state);
+            a.len().hash(state);
+            for v in a {
+                hash_schema_value(v, state);
+            }
+        }
+        Value::Object(o) => hash_schema_map(o, state),
     }
 }
 fn add_validation_and_nullable(
@@ -405,7 +434,7 @@ fn add_validation_and_nullable(
     let hash = if let Some(hash) = model.attributes.schema_hash {
         hash
     } else {
-        schema_hash(&Value::Object(schema.clone()))
+        schema_hash(schema)
     };
 
     if model.attributes.validation.is_some() {
