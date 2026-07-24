@@ -2,7 +2,7 @@ use std::{fmt::Display, fs};
 
 use clap::Parser;
 
-#[cfg(feature = "git2")]
+#[cfg(feature = "git")]
 use schematools::discovery::discover_git;
 use schematools::{
     discovery::{Discovery, GitCheckoutType, Registry},
@@ -68,9 +68,9 @@ impl Opts {
                 let registry = if opts.uri.starts_with('.') {
                     add_local_registry(opts)
                 } else {
-                    #[cfg(not(feature = "git2"))]
-                    panic!("git2 feature not built; only local registry supported");
-                    #[cfg(feature = "git2")]
+                    #[cfg(not(feature = "git"))]
+                    panic!("git feature not built; only local registry supported");
+                    #[cfg(feature = "git")]
                     add_git_registry(opts)
                 }?;
 
@@ -109,7 +109,7 @@ fn add_local_registry(opts: &AddOpts) -> Result<Registry, Error> {
     }
 }
 
-#[cfg(feature = "git2")]
+#[cfg(feature = "git")]
 fn add_git_registry(opts: &AddOpts) -> Result<Registry, Error> {
     let checkout = if let Some(branch) = opts.branch.clone() {
         Ok(GitCheckoutType::Branch(branch))

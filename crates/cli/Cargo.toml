@@ -7,9 +7,9 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["codegen", "git2", "http", "json-patch", "semver"]
+default = ["codegen", "git", "http", "json-patch", "semver"]
 codegen = ["schematools/codegen"]
-git2 = ["schematools/git2"]
+git = ["schematools/git"]
 http = ["schematools/http"]
 json-patch = ["schematools/json-patch"]
 semver = ["schematools/semver"]
