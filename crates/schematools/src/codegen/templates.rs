@@ -7,7 +7,7 @@ use crate::{discovery::Discovered, error::Error, tools};
 use std::{collections::HashMap, fs::File, io::Write, path::PathBuf, process::Command};
 
 use super::openapi::Openapi;
-use inflector::Inflector;
+use cruet::Inflector;
 
 #[derive(Debug)]
 pub struct Templates {
@@ -628,11 +628,11 @@ fn process_render(
     relative: PathBuf,
     container: &super::CodegenContainer,
 ) -> Result<Vec<String>, Error> {
-    let mut ctx = Context::from_serialize(serde_json::to_value(data).unwrap()).unwrap();
+    let mut ctx = Context::from_serialize(&serde_json::to_value(data).unwrap()).unwrap();
 
     let data = serde_json::to_value(container).unwrap();
     for (key, value) in data.as_object().unwrap() {
-        ctx.insert(key, value);
+        ctx.insert(key.to_string(), value);
     }
 
     let result = tera

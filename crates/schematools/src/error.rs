@@ -16,7 +16,7 @@ pub enum Error {
     IncorrectVersionError(semver::Version, semver::Version, String),
 
     #[error("Cannot deserialize yaml document: {0}")]
-    DeserializeYamlError(serde_yaml::Error),
+    DeserializeYamlError(yaml_serde::Error),
 
     #[error("Filter {0} is incorrect")]
     IncorrectFilterError(String),

@@ -96,7 +96,7 @@ impl Output {
     pub fn show(self: &Output, value: &Value) {
         let result = match self.output.as_str() {
             "json" => serde_json::to_string_pretty(value).unwrap(),
-            "yaml" => serde_yaml::to_string(value).unwrap(),
+            "yaml" => yaml_serde::to_string(value).unwrap(),
             _ => panic!("Output format not supported"),
         };
 

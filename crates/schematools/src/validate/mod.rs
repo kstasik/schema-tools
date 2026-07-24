@@ -1,4 +1,4 @@
-use jsonschema::{Draft, JSONSchema};
+use jsonschema::Draft;
 use serde_json::{from_slice, Value};
 
 use crate::error::Error;
@@ -11,37 +11,32 @@ pub fn validate_openapi(schema: &Schema) -> Result<(), Error> {
         from_slice(include_bytes!("../../resources/openapi/schema-3.0.x.json"));
     let spec = &result.unwrap();
 
-    let specification = JSONSchema::options()
+    let validator = jsonschema::options()
         .with_draft(Draft::Draft4)
-        .compile(spec)
+        .build(spec)
         .unwrap();
 
-    let result = specification.validate(value);
-
-    match result {
-        Err(errors) => {
-            for e in errors {
-                log::error!("{}", e);
-            }
-
-            Err(Error::SchemaValidation(schema.get_url().to_string()))
+    if !validator.is_valid(value) {
+        for e in validator.iter_errors(value) {
+            log::error!("{}", e);
         }
-        _ => Ok(()),
+
+        return Err(Error::SchemaValidation(schema.get_url().to_string()));
     }
+
+    Ok(())
 }
 
 pub fn validate_jsonschema(schema: &Schema) -> Result<(), Error> {
     let value = schema.get_body();
 
-    let result = JSONSchema::options()
+    jsonschema::options()
         .with_draft(Draft::Draft4)
-        .compile(value);
-
-    match result {
-        Err(e) => Err(Error::SchemaCompilation {
+        .build(value)
+        .map_err(|e| Error::SchemaCompilation {
             url: schema.get_url().to_string(),
             reason: e.to_string(),
-        }),
-        _ => Ok(()),
-    }
+        })?;
+
+    Ok(())
 }

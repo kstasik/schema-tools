@@ -137,21 +137,26 @@ pub fn discover_git(
         }
     };
 
-    let digest = md5::compute(&revparse);
+    use md5::{Digest, Md5};
+    let digest = Md5::digest(&revparse);
+    let digest_bytes: &[u8] = digest.as_ref();
+    let digest_string = digest_bytes
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
     directory.push("schema-tools");
     fs::create_dir_all(&directory).map_err(Error::DiscoveryCacheRegistryError)?; // create
-                                                                                 // schema-tools dir
 
     let lock = std::fs::OpenOptions::new()
         .create(true)
         .truncate(false)
         .read(true)
         .write(true)
-        .open(directory.join(format!("{digest:x}.lock")))
+        .open(directory.join(format!("{digest_string}.lock")))
         .map_err(Error::DiscoveryLockError)?;
 
     lock.lock_exclusive().map_err(Error::DiscoveryLockError)?;
-    directory.push(format!("{digest:x}"));
+    directory.push(digest_string);
 
     if directory.exists() && no_cache {
         fs::remove_dir_all(directory.as_path()).map_err(Error::DiscoveryCleanRegistryError)?;

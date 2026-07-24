@@ -77,8 +77,12 @@ impl Opts {
                 if let Some(lock) = &opts.lock {
                     log::info!("calculating registry hash...");
 
-                    let calculated =
-                        format!("{:x}", hash::calculate::<sha2::Sha256>(&registry.path)?);
+                    let hash = hash::calculate::<sha2::Sha256>(&registry.path)?;
+                    let calculated: &[u8] = hash.as_ref();
+                    let calculated = calculated
+                        .iter()
+                        .map(|b| format!("{b:02x}"))
+                        .collect::<String>();
 
                     if !calculated.eq(lock) {
                         return Err(Error::DiscoveryInvalidLock(lock.clone(), calculated));

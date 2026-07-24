@@ -1,7 +1,7 @@
 use super::word::{pluralize, singularize};
 
 use crate::error::Error;
-use inflector::Inflector;
+use cruet::Inflector;
 use regex::Regex;
 
 pub struct Endpoint {

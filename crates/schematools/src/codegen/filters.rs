@@ -1,13 +1,9 @@
 use pluralizer::pluralize;
 use regex::Regex;
-use std::collections::HashMap;
 use std::sync::Arc;
-use tera::to_value;
 
-use inflector::Inflector;
-use serde_json::Value;
-use tera::Tera;
-use tera::{try_get_value, Result as TeraResult};
+use cruet::Inflector;
+use tera::{Kwargs, State, Tera, TeraResult, Value};
 
 pub mod bucket_counter {
     use std::{
@@ -15,59 +11,56 @@ pub mod bucket_counter {
         sync::{Arc, Mutex},
     };
 
-    use tera::{to_value, Function, Value};
+    use tera::{Function, Kwargs, State, TeraResult, Value};
 
     #[derive(Default)]
     pub struct MultiBucketCounter {
         registry: Mutex<HashMap<String, HashMap<String, usize>>>,
     }
 
-    pub fn get_bucket_count(counter: Arc<MultiBucketCounter>) -> impl Function {
-        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            let bucket = args
-                .get("bucket")
-                .and_then(|v| v.as_str())
-                .unwrap_or("default");
+    pub fn get_bucket_count(counter: Arc<MultiBucketCounter>) -> impl Function<TeraResult<Value>> {
+        move |kwargs: Kwargs, _: &State| -> TeraResult<Value> {
+            let bucket = kwargs
+                .get::<String>("bucket")?
+                .unwrap_or_else(|| "default".to_string());
 
-            let name = args
-                .get("name")
-                .and_then(|v| v.as_str())
-                .ok_or("Argument 'name' is required")?;
+            let name = kwargs
+                .get::<String>("name")?
+                .ok_or_else(|| tera::Error::message("Argument 'name' is required"))?;
 
             let mut root_map = counter
                 .registry
                 .lock()
-                .map_err(|_| tera::Error::msg("Failed to acquire lock on the counter"))?;
+                .map_err(|_| tera::Error::message("Failed to acquire lock on the counter"))?;
 
-            let bucket_map = root_map.entry(bucket.to_string()).or_default();
+            let bucket_map = root_map.entry(bucket).or_default();
 
-            let entry = bucket_map.entry(name.to_string()).or_insert(0);
+            let entry = bucket_map.entry(name).or_insert(0);
             let current_count = *entry;
             *entry += 1;
 
             if current_count == 0 {
-                Ok(Value::Null)
+                Ok(Value::none())
             } else {
-                Ok(to_value(entry).unwrap())
+                Ok(Value::from_serializable(&*entry))
             }
         }
     }
 
-    pub fn clear_bucket(counter: Arc<MultiBucketCounter>) -> impl Function {
-        move |args: &HashMap<String, Value>| -> tera::Result<Value> {
-            let bucket = args
-                .get("bucket")
-                .and_then(|v| v.as_str())
-                .ok_or("Argument 'bucket' is required")?;
+    pub fn clear_bucket(counter: Arc<MultiBucketCounter>) -> impl Function<TeraResult<Value>> {
+        move |kwargs: Kwargs, _: &State| -> TeraResult<Value> {
+            let bucket = kwargs
+                .get::<String>("bucket")?
+                .ok_or_else(|| tera::Error::message("Argument 'bucket' is required"))?;
 
             let mut root_map = counter
                 .registry
                 .lock()
-                .map_err(|_| tera::Error::msg("Failed to acquire lock on the counter"))?;
+                .map_err(|_| tera::Error::message("Failed to acquire lock on the counter"))?;
 
-            root_map.remove(bucket);
+            root_map.remove(&bucket);
 
-            Ok(Value::Null)
+            Ok(Value::none())
         }
     }
 }
@@ -101,251 +94,167 @@ pub fn register(tera: &mut Tera) {
     tera.register_function("clear_bucket", bucket_counter::clear_bucket(counter));
 }
 
-pub fn pascalcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("pascalcase", "value", String, value);
-    let case = s.to_pascal_case();
-
-    Ok(to_value(case).unwrap())
+pub fn pascalcase(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    Ok(value.to_pascal_case())
 }
 
-pub fn camelcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("camelcase", "value", String, value);
-    let case = s.to_camel_case();
-
-    Ok(to_value(case).unwrap())
+pub fn camelcase(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    Ok(value.to_camel_case())
 }
 
-pub fn snakecase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("snakecase", "value", String, value);
-    let case = s.to_snake_case();
-
-    Ok(to_value(case).unwrap())
+pub fn snakecase(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    Ok(value.to_snake_case())
 }
 
-pub fn upper_snakecase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("upper_snakecase", "value", String, value);
-    let case = s.to_screaming_snake_case();
-
-    Ok(to_value(case).unwrap())
+pub fn upper_snakecase(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    Ok(value.to_screaming_snake_case())
 }
 
-pub fn kebabcase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("kebabcase", "value", String, value);
-    let case = s.to_kebab_case();
-
-    Ok(to_value(case).unwrap())
+pub fn kebabcase(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    Ok(value.to_kebab_case())
 }
 
-pub fn traincase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("traincase", "value", String, value);
-    let case = s.to_train_case();
-
-    Ok(to_value(case).unwrap())
+pub fn traincase(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    Ok(value.to_train_case())
 }
 
-pub fn titlecase(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("titlecase", "value", String, value);
-    let case = s.to_title_case();
-
-    Ok(to_value(case).unwrap())
+pub fn titlecase(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    Ok(value.to_title_case())
 }
 
-pub fn lcfirst(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("lcfirst", "value", String, value);
-    let lcfirst = s[..1].to_ascii_lowercase() + &s[1..];
+pub fn lcfirst(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    let lcfirst = value[..1].to_ascii_lowercase() + &value[1..];
 
-    Ok(to_value(lcfirst).unwrap())
+    Ok(lcfirst)
 }
 
-pub fn ucfirst(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let o = try_get_value!("ucfirst", "value", String, value);
-    let ucfirst = o[..1].to_ascii_uppercase() + &o[1..];
+pub fn ucfirst(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    let ucfirst = value[..1].to_ascii_uppercase() + &value[1..];
 
-    Ok(to_value(ucfirst).unwrap())
+    Ok(ucfirst)
 }
 
-pub fn nospaces(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let mut s = try_get_value!("nospaces", "value", String, value);
+pub fn nospaces(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    let mut s = value.to_string();
     s.retain(|c| !c.is_whitespace());
 
-    Ok(to_value(s).unwrap())
+    Ok(s)
 }
 
-pub fn path_parts(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
-    let data = try_get_value!("path_parts", "value", String, value);
-
-    let to = match args.get("to") {
-        Some(val) => try_get_value!("path_parts", "to", String, val),
-        None => return Err(tera::Error::msg("Please provide to parameter")),
-    };
+pub fn path_parts(value: &str, kwargs: Kwargs, _: &State) -> TeraResult<String> {
+    let to = kwargs.must_get::<String>("to")?;
 
     let path = Regex::new("\\{[A-z0-9\\-]+\\}")
         .unwrap()
-        .replace_all(&data, to.as_str());
+        .replace_all(value, to.as_str());
 
-    Ok(to_value(path).unwrap())
+    Ok(path.into_owned())
 }
 
-pub fn when_numeric(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
-    let value = try_get_value!("when_numeric", "value", String, value);
-
+pub fn when_numeric(value: &str, kwargs: Kwargs, _: &State) -> TeraResult<String> {
     if value.chars().next().is_some_and(char::is_numeric) {
-        let prefix = match args.get("prefix") {
-            Some(val) => try_get_value!("when_numeric", "prefix", String, val),
-            None => return Err(tera::Error::msg("Please provide prefix parameter")),
-        };
+        let prefix = kwargs.must_get::<String>("prefix")?;
 
-        Ok(to_value(format!("{prefix}{value}")).unwrap())
+        Ok(format!("{prefix}{value}"))
     } else {
-        Ok(to_value(value).unwrap())
+        Ok(value.to_string())
     }
 }
 
-pub fn filter_not(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
-    let mut arr = try_get_value!("filter_not", "value", Vec<Value>, value);
+pub fn filter_not(value: Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+    let mut arr: Vec<Value> = value.as_array().map(|s| s.to_vec()).unwrap_or_default();
+
     if arr.is_empty() {
-        return Ok(arr.into());
+        return Ok(Value::from_serializable(&arr));
     }
 
-    let key = match args.get("attribute") {
-        Some(val) => try_get_value!("filter_not", "attribute", String, val),
-        None => {
-            return Err(tera::Error::msg(
-                "The `filter_not` filter has to have an `attribute` argument",
-            ))
-        }
-    };
-    let value = args.get("value").unwrap_or(&Value::Null);
+    let key = kwargs.must_get::<String>("attribute")?;
+    let expected = kwargs.get::<Value>("value")?.unwrap_or_else(Value::none);
 
-    let json_pointer = ["/", &key.replace('.', "/")].join("");
-    arr = arr
-        .into_iter()
-        .filter(|v| {
-            let val = v.pointer(&json_pointer).unwrap_or(&Value::Null);
-            val != value
-        })
-        .collect::<Vec<_>>();
+    arr.retain(|v| {
+        let val = v.get_from_path(&key).cloned().unwrap_or_else(Value::none);
+        val != expected
+    });
 
-    Ok(to_value(arr).unwrap())
+    Ok(Value::from_serializable(&arr))
 }
 
-pub fn filter_startswith(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
-    let mut arr = try_get_value!("filter_startswith", "value", Vec<Value>, value);
+pub fn filter_startswith(value: Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+    let mut arr: Vec<Value> = value.as_array().map(|s| s.to_vec()).unwrap_or_default();
+
     if arr.is_empty() {
-        return Ok(arr.into());
+        return Ok(Value::from_serializable(&arr));
     }
 
-    let key = match args.get("attribute") {
-        Some(val) => try_get_value!("filter_startswith", "attribute", String, val),
-        None => {
-            return Err(tera::Error::msg(
-                "The `filter_startswith` filter has to have an `attribute` argument",
-            ))
-        }
-    };
+    let key = kwargs.must_get::<String>("attribute")?;
 
-    let match_ = match args.get("match") {
-        Some(val) => try_get_value!("filter_startswith", "match", bool, val),
-        None => true,
-    };
+    let match_ = kwargs.get::<bool>("match")?.unwrap_or(true);
 
-    let value = match args.get("value") {
-        Some(val) => try_get_value!("filter_startswith", "value", String, val),
-        None => {
-            return Err(tera::Error::msg(
-                "The `filter_startswith` filter has to have an `value` argument",
-            ))
-        }
-    };
+    let match_value = kwargs.must_get::<String>("value")?;
 
-    let json_pointer = ["/", &key.replace('.', "/")].join("");
-    arr = arr
-        .into_iter()
-        .filter(|v| {
-            let val = v.pointer(&json_pointer).unwrap_or(&Value::Null);
+    arr.retain(|v| {
+        let val = v.get_from_path(&key).cloned().unwrap_or_else(Value::none);
 
-            val.as_str()
-                .map(|s| (match_ && s.starts_with(&value)) || (!match_ && !s.starts_with(&value)))
-                .unwrap_or(match_)
-        })
-        .collect::<Vec<_>>();
-
-    Ok(to_value(arr).unwrap())
-}
-
-pub fn filter_inarray(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
-    let mut arr = try_get_value!("filter_inarray", "value", Vec<Value>, value);
-    if arr.is_empty() {
-        return Ok(arr.into());
-    }
-
-    let key = match args.get("attribute") {
-        Some(val) => try_get_value!("filter_inarray", "attribute", String, val),
-        None => {
-            return Err(tera::Error::msg(
-                "The `filter_inarray` filter has to have an `attribute` argument",
-            ))
-        }
-    };
-    let values = args.get("values").unwrap_or(&Value::Null);
-
-    if let Value::Array(accepted) = values {
-        let json_pointer = ["/", &key.replace('.', "/")].join("");
-        arr = arr
-            .into_iter()
-            .filter(|v| {
-                let val = v.pointer(&json_pointer).unwrap_or(&Value::Null);
-
-                accepted.contains(val)
+        val.as_str()
+            .map(|s| {
+                (match_ && s.starts_with(&match_value)) || (!match_ && !s.starts_with(&match_value))
             })
-            .collect::<Vec<_>>();
+            .unwrap_or(match_)
+    });
 
-        Ok(to_value(arr).unwrap())
+    Ok(Value::from_serializable(&arr))
+}
+
+pub fn filter_inarray(value: Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+    let mut arr: Vec<Value> = value.as_array().map(|s| s.to_vec()).unwrap_or_default();
+
+    if arr.is_empty() {
+        return Ok(Value::from_serializable(&arr));
+    }
+
+    let key = kwargs.must_get::<String>("attribute")?;
+    let values = kwargs.get::<Value>("values")?.unwrap_or_else(Value::none);
+
+    if let Some(accepted) = values.as_array() {
+        arr.retain(|v| {
+            let val = v.get_from_path(&key).cloned().unwrap_or_else(Value::none);
+
+            accepted.contains(&val)
+        });
+
+        Ok(Value::from_serializable(&arr))
     } else {
-        Err(tera::Error::msg(
+        Err(tera::Error::message(
             "The `filter_inarray` filter has to have an `values` argument, type: array",
         ))
     }
 }
 
-pub fn filter_not_inarray(value: &Value, args: &HashMap<String, Value>) -> TeraResult<Value> {
-    let mut arr = try_get_value!("filter_inarray", "value", Vec<Value>, value);
+pub fn filter_not_inarray(value: Value, kwargs: Kwargs, _: &State) -> TeraResult<Value> {
+    let mut arr: Vec<Value> = value.as_array().map(|s| s.to_vec()).unwrap_or_default();
+
     if arr.is_empty() {
-        return Ok(arr.into());
+        return Ok(Value::from_serializable(&arr));
     }
 
-    let key = match args.get("attribute") {
-        Some(val) => try_get_value!("filter_not_inarray", "attribute", String, val),
-        None => {
-            return Err(tera::Error::msg(
-                "The `filter_not_inarray` filter has to have an `attribute` argument",
-            ))
-        }
-    };
-    let values = args.get("values").unwrap_or(&Value::Null);
+    let key = kwargs.must_get::<String>("attribute")?;
+    let values = kwargs.get::<Value>("values")?.unwrap_or_else(Value::none);
 
-    if let Value::Array(rejected) = values {
-        let json_pointer = ["/", &key.replace('.', "/")].join("");
-        arr = arr
-            .into_iter()
-            .filter(|v| {
-                let val = v.pointer(&json_pointer).unwrap_or(&Value::Null);
+    if let Some(rejected) = values.as_array() {
+        arr.retain(|v| {
+            let val = v.get_from_path(&key).cloned().unwrap_or_else(Value::none);
 
-                !rejected.contains(val)
-            })
-            .collect::<Vec<_>>();
+            !rejected.contains(&val)
+        });
 
-        Ok(to_value(arr).unwrap())
+        Ok(Value::from_serializable(&arr))
     } else {
-        Err(tera::Error::msg(
+        Err(tera::Error::message(
             "The `filter_inarray` filter has to have an `values` argument, type: array",
         ))
     }
 }
 
-pub fn plural(value: &Value, _: &HashMap<String, Value>) -> TeraResult<Value> {
-    let s = try_get_value!("plural", "value", String, value);
-    let plural = pluralize(&s, 2, false);
-
-    Ok(to_value(plural).unwrap())
+pub fn plural(value: &str, _: Kwargs, _: &State) -> TeraResult<String> {
+    Ok(pluralize(value, 2, false))
 }
