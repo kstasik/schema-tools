@@ -17,12 +17,12 @@ semver = ["schematools/semver"]
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_yaml = { workspace = true }
+yaml_serde = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 
 clap = { version = "4.6", features = ["derive"] }
 env_logger = "0.11"
-sha2 = "0.10"
+sha2 = "0.11"
 
 schematools = { version = "0.24.0", path = "../schematools" }

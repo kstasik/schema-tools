@@ -83,7 +83,7 @@ impl Schema {
 
         let body = if content_type.clone().unwrap_or_default().contains("yaml") || is_yaml_extension
         {
-            let mut docs = serde_yaml::Deserializer::from_str(response.as_ref())
+            let mut docs = yaml_serde::Deserializer::from_str(response.as_ref())
                 .map(|d| Value::deserialize(d).map_err(Error::DeserializeYamlError))
                 .collect::<Result<Vec<_>, _>>()?;
 

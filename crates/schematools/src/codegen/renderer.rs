@@ -15,11 +15,11 @@ pub fn create(
 ) -> Result<Renderer, Error> {
     let mut tera = Tera::default();
 
+    super::filters::register(&mut tera);
+
     // todo: more borrowing, less allocating
     tera.add_raw_templates(discovered.templates.clone())
         .map_err(Error::CodegenTemplatesParseError)?;
-
-    super::filters::register(&mut tera);
 
     let templates = super::templates::get(discovered)?;
     if !templates.includes(required) {
