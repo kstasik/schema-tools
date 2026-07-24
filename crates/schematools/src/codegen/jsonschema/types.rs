@@ -26,6 +26,10 @@ impl Model {
     }
 
     pub fn is_like(&self, other: &Model) -> bool {
+        if let (Some(a), Some(b)) = (self.attributes.schema_hash, other.attributes.schema_hash) {
+            return a == b;
+        }
+
         self.inner == other.inner && self.spaces == other.spaces
     }
 
@@ -226,7 +230,7 @@ pub struct NullableOptionalWrapperType {
     pub model: FlatModel,
 }
 
-#[derive(Debug, Serialize, Clone, Eq, PartialEq)]
+#[derive(Debug, Serialize, Clone, Eq)]
 pub struct Attributes {
     #[serde(rename = "description")]
     pub description: Option<String>,
@@ -251,6 +255,21 @@ pub struct Attributes {
 
     #[serde(rename = "x")]
     pub x: std::collections::HashMap<String, Value>,
+
+    #[serde(skip)]
+    pub schema_hash: Option<u64>,
+}
+
+impl PartialEq for Attributes {
+    fn eq(&self, other: &Self) -> bool {
+        self.default == other.default
+            && self.nullable == other.nullable
+            && self.required == other.required
+            && self.reference == other.reference
+            && self.validation == other.validation
+            && self.schema == other.schema
+            && self.x == other.x
+    }
 }
 
 impl Model {
@@ -571,6 +590,7 @@ impl Default for Attributes {
             reference: false,
             schema: None,
             x: std::collections::HashMap::new(),
+            schema_hash: None,
         }
     }
 }

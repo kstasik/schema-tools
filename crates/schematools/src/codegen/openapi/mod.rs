@@ -631,4 +631,243 @@ mod tests {
         assert!(names.contains(&"PetInput".to_string()));
         assert!(!names.contains(&"Unused".to_string()));
     }
+
+    #[test]
+    fn test_inline_response_models_are_extracted_and_deduplicated() {
+        let schema = Schema::from_json(json!({
+            "openapi": "3.0.0",
+            "info": { "title": "Inline", "version": "1.0.0" },
+            "paths": {
+                "/foo": {
+                    "get": {
+                        "operationId": "getFoo",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "title": "InlineUser",
+                                            "properties": {
+                                                "id": { "type": "integer" },
+                                                "address": {
+                                                    "type": "object",
+                                                    "title": "InlineAddress",
+                                                    "properties": { "city": { "type": "string" } }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "/bar": {
+                    "get": {
+                        "operationId": "getBar",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "title": "InlineUser",
+                                            "properties": {
+                                                "id": { "type": "integer" },
+                                                "address": {
+                                                    "type": "object",
+                                                    "title": "InlineAddress",
+                                                    "properties": { "city": { "type": "string" } }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }));
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+        let openapi = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions::default(),
+        )
+        .unwrap();
+
+        let names = model_names(&openapi);
+        assert!(
+            names.iter().filter(|n| **n == "InlineUser").count() == 1,
+            "identical inline models should be deduplicated"
+        );
+        assert!(names.contains(&"InlineAddress".to_string()));
+
+        let value = serde_json::to_value(&openapi).unwrap();
+        let user = value["models"]["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|m| m["object"]["name"].as_str() == Some("InlineUser"))
+            .unwrap();
+        let ops: Vec<_> = user["spaces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|s| s["Operation"].as_str())
+            .collect();
+        assert!(ops.contains(&"getFoo"));
+        assert!(ops.contains(&"getBar"));
+    }
+
+    #[test]
+    fn test_skip_endpoint_keeps_deduplicated_inline_model() {
+        let schema = Schema::from_json(json!({
+            "openapi": "3.0.0",
+            "info": { "title": "Inline", "version": "1.0.0" },
+            "paths": {
+                "/foo": {
+                    "get": {
+                        "operationId": "getFoo",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "title": "InlineUser",
+                                            "properties": { "id": { "type": "integer" } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "/bar": {
+                    "get": {
+                        "operationId": "getBar",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "title": "InlineUser",
+                                            "properties": { "id": { "type": "integer" } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }));
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+        let openapi = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions {
+                skip_endpoints: vec!["getFoo".to_string()],
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let names = model_names(&openapi);
+        assert!(
+            names.contains(&"InlineUser".to_string()),
+            "InlineUser is still used by getBar, so it must stay"
+        );
+    }
+
+    #[test]
+    fn test_untitled_inline_models_are_deduplicated_and_linked() {
+        let schema = Schema::from_json(json!({
+            "openapi": "3.0.0",
+            "info": { "title": "UntitledInline", "version": "1.0.0" },
+            "paths": {
+                "/foo": {
+                    "get": {
+                        "operationId": "getFoo",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": { "id": { "type": "integer" } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "/bar": {
+                    "get": {
+                        "operationId": "getBar",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": { "id": { "type": "integer" } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }));
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+        let openapi = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions::default(),
+        )
+        .unwrap();
+
+        let value = serde_json::to_value(&openapi).unwrap();
+        let models = value["models"]["models"].as_array().unwrap();
+        assert_eq!(models.len(), 1, "identical untitled inline models should merge");
+
+        let ops: Vec<_> = models[0]["spaces"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|s| s["Operation"].as_str())
+            .collect();
+        assert!(ops.contains(&"getFoo"));
+        assert!(ops.contains(&"getBar"));
+
+        let only_foo = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions {
+                skip_endpoints: vec!["getBar".to_string()],
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(only_foo.models.models().len(), 1);
+    }
 }

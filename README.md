@@ -209,6 +209,10 @@ schema-tools codegen openapi openapi.json --template templates/  --target-dir pk
 - `--nested-arrays-as-models` - some languages allow to create `Vec<HashMap<Vec<HashMap>>>>` / `[][][]int` inline types, some may need to create wrapping types for such cases
 - `--optional-and-nullable-as-models` - openapi allows to create two levels of "nullability", some languages doesnt distinguish between null and undefined. This option wrap all occurrences of nullable and optional fields in separate types
 - `--wrappers` - option to wrap mixed types (oneOf) to custom objects with custom deserialization logic
+- `--skip-endpoint <operation-id>` - skip an endpoint by `operationId`. Can be repeated. Models referenced only by skipped endpoints are removed from the output.
+- `--only-endpoint <operation-id>` - keep only the endpoints with given `operationId`. Can be repeated. All other endpoints and their unique models are removed.
+- `--skip-unused-models` - remove models that are not referenced by any kept endpoint.
+- `--keep-schema <path>` - keep the original JSON schema in selected nodes so it is available in templates. Can be repeated.
 - `-o <options>` - option to pass options (string or json) to all templates files ex. `-o 'name=ordersClient' -o 'usedEndpoints=["/orders", "/orders/{id}/items"]'`
 - `--format` - executes language formatter after code generation ex. `--format "gofmt -w"`
 
