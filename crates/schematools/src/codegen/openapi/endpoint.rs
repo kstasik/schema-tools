@@ -32,6 +32,10 @@ impl Endpoint {
     pub fn get_tags(&self) -> &Vec<String> {
         &self.tags
     }
+
+    pub fn operation(&self) -> &str {
+        &self.operation
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -104,6 +104,20 @@ pub struct OpenapiOpts {
     #[clap(long, required = false)]
     keep_schema: Vec<String>,
 
+    /// Operation id of an endpoint to skip. Can be repeated. Models referenced only by skipped
+    /// endpoints are also removed from the generated output.
+    #[clap(long = "skip-endpoint", required = false)]
+    skip_endpoint: Vec<String>,
+
+    /// Keep only these operation ids. All other endpoints and their unique models are removed.
+    /// Can be repeated.
+    #[clap(long = "only-endpoint", required = false)]
+    only_endpoint: Vec<String>,
+
+    /// Remove models that are not referenced by any kept endpoint.
+    #[clap(long, required = false)]
+    skip_unused_models: bool,
+
     /// Directory with templates, name:: prefix if pointing to registry
     #[clap(long, required = true)]
     template: Vec<String>,
@@ -204,6 +218,9 @@ impl Opts {
                         optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
                         nested_arrays_as_models: opts.nested_arrays_as_models,
                         keep_schema: schematools::tools::Filter::new(&opts.keep_schema)?,
+                        skip_endpoints: opts.skip_endpoint.clone(),
+                        only_endpoints: opts.only_endpoint.clone(),
+                        skip_unused_models: opts.skip_unused_models,
                     },
                 )?;
 

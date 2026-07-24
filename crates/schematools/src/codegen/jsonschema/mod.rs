@@ -112,6 +112,17 @@ impl ModelContainer {
         self.models.iter().any(|s| s.is_like(model))
     }
 
+    pub fn models(&self) -> &[types::Model] {
+        &self.models
+    }
+
+    /// Remove models matching the predicate. The internal path mapping is cleared because
+    /// indices are no longer valid after the filter.
+    pub fn retain(&mut self, mut f: impl FnMut(&types::Model) -> bool) {
+        self.models.retain(|m| f(m));
+        self.mapping.clear();
+    }
+
     pub fn resolve(&mut self, scope: &mut SchemaScope) -> Option<&types::Model> {
         if let Some(index) = self.mapping.get(&scope.path()) {
             let ids = {
