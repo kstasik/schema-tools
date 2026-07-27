@@ -146,6 +146,7 @@ fn simplify_one_or_any_of(
                             node.as_object().unwrap(),
                             container,
                             options.keep_schema.check(node, false),
+                            options.merge_similar_models,
                         )
                         .with_attributes(&attributes)))
                     })

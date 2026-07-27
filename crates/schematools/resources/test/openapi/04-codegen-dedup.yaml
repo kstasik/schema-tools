@@ -1,0 +1,81 @@
+openapi: 3.1.0
+info:
+  title: CodegenDedupApi
+  description: codegen dedup test
+  version: 0.1.0
+
+components:
+  parameters:
+    pathId:
+      name: id
+      in: path
+      description: Resource id
+      schema:
+        type: string
+    page:
+      name: page
+      in: query
+      description: Page number
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+  schemas:
+    ResourceList:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceDefinition'
+    ResourceDefinition2:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    ResourceDefinition:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+paths:
+  /v2/resources/{id}:
+    get:
+      description: Some description
+      operationId: resourceGet
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+        - $ref: '#/components/parameters/page'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceList'
+  /v2/resources2/{id}:
+    get:
+      description: Some description 2
+      operationId: resourceGet2
+      parameters:
+        - $ref: '#/components/parameters/pathId'
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceDefinition2'
