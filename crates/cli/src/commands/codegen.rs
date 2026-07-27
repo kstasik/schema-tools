@@ -64,6 +64,10 @@ pub struct JsonSchemaOpts {
     #[clap(long)]
     pub base_name: Option<String>,
 
+    /// Merge models with the same structure ignoring title and description
+    #[clap(long)]
+    pub merge_similar_models: bool,
+
     /// Directory with templates, name:: prefix if pointing to registry
     #[clap(long, required = true)]
     template: Vec<String>,
@@ -99,6 +103,10 @@ pub struct OpenapiOpts {
     /// Treat nested arrays as models
     #[clap(long)]
     pub nested_arrays_as_models: bool,
+
+    /// Merge models with the same structure ignoring title and description
+    #[clap(long)]
+    pub merge_similar_models: bool,
 
     /// Keep schema condition (allows access to original json schema in selected nodes)
     #[clap(long, required = false)]
@@ -178,6 +186,7 @@ impl Opts {
                         optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
                         nested_arrays_as_models: opts.nested_arrays_as_models,
                         base_name: opts.base_name.clone(),
+                        merge_similar_models: opts.merge_similar_models,
                         allow_list: true,
                         keep_schema: schematools::tools::Filter::new(&opts.keep_schema)?,
                     },
@@ -217,6 +226,7 @@ impl Opts {
                         wrappers: opts.wrappers,
                         optional_and_nullable_as_models: opts.optional_and_nullable_as_models,
                         nested_arrays_as_models: opts.nested_arrays_as_models,
+                        merge_similar_models: opts.merge_similar_models,
                         keep_schema: schematools::tools::Filter::new(&opts.keep_schema)?,
                         skip_endpoints: opts.skip_endpoint.clone(),
                         only_endpoints: opts.only_endpoint.clone(),

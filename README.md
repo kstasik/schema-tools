@@ -155,13 +155,13 @@ It's useful to perform such thing before code generation taking into account tha
 If openapi you received seems broken you may fix it and create [json-patch](http://jsonpatch.com/) file:
 
 ```
-schematools process patch <file> create <original-file> 
+schematools process patch <file> create <original-file>
 ```
 
 Then you can apply such patch to original openapi file during processing:
 
 ```
-schematools process patch <file> apply <patch-file> 
+schematools process patch <file> apply <patch-file>
 ```
 
 ### Merge openapi and bump
@@ -213,6 +213,7 @@ schema-tools codegen openapi openapi.json --template templates/  --target-dir pk
 - `--only-endpoint <operation-id>` - keep only the endpoints with given `operationId`. Can be repeated. All other endpoints and their unique models are removed.
 - `--skip-unused-models` - remove models that are not referenced by any kept endpoint.
 - `--keep-schema <path>` - keep the original JSON schema in selected nodes so it is available in templates. Can be repeated.
+- `--merge-similar-models` - merge models with identical structure ignoring `title` and `description`.
 - `-o <options>` - option to pass options (string or json) to all templates files ex. `-o 'name=ordersClient' -o 'usedEndpoints=["/orders", "/orders/{id}/items"]'`
 - `--format` - executes language formatter after code generation ex. `--format "gofmt -w"`
 
@@ -287,7 +288,7 @@ All commands take same arguments as they were executed separately. The only diff
 schematools chain -vvvv \
    -c 'process merge-all-of --leave-invalid-properties specifications/api.yaml' \
    -c 'process name - --resource-method-version --overwrite' \
-   -c 'validate openapi - ' 
+   -c 'validate openapi - '
    -c 'codegen openapi - \
         --template codegen/server/ \
         --format "gofmt -w" \

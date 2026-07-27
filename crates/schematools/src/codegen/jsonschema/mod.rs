@@ -193,6 +193,7 @@ pub struct JsonSchemaExtractOptions {
     pub nested_arrays_as_models: bool,
     pub optional_and_nullable_as_models: bool,
     pub base_name: Option<String>,
+    pub merge_similar_models: bool,
     pub allow_list: bool,
     pub keep_schema: tools::Filter,
 }
@@ -371,6 +372,7 @@ pub fn extract_type(
                     schema,
                     container,
                     options.keep_schema.check(node, false),
+                    options.merge_similar_models,
                 ))
             }
             _ => {
@@ -430,16 +432,22 @@ fn add_validation_and_nullable(
     schema: &Map<String, Value>,
     mcontainer: &mut ModelContainer,
     keep_schema: bool,
+    merge_similar_models: bool,
 ) -> types::Model {
-    let hash = if let Some(hash) = model.attributes.schema_hash {
-        hash
+    let hash = if merge_similar_models {
+        Some(
+            model
+                .attributes
+                .schema_hash
+                .unwrap_or_else(|| schema_hash(schema)),
+        )
     } else {
-        schema_hash(schema)
+        None
     };
 
     if model.attributes.validation.is_some() {
         let mut model = model;
-        model.attributes.schema_hash = Some(hash);
+        model.attributes.schema_hash = hash;
         return model;
     }
 
@@ -524,7 +532,7 @@ fn add_validation_and_nullable(
         } else {
             None
         },
-        schema_hash: Some(hash),
+        schema_hash: hash,
         ..types::Attributes::default()
     };
 
@@ -744,7 +752,10 @@ mod tests {
             }
         }));
 
-        let options = JsonSchemaExtractOptions::default();
+        let options = JsonSchemaExtractOptions {
+            merge_similar_models: true,
+            ..Default::default()
+        };
 
         let client = reqwest::blocking::Client::new();
         let result = extract(&schema, &SchemaStorage::new(&schema, &client), options);
@@ -754,27 +765,20 @@ mod tests {
         let container = result.unwrap();
         let value = serde_json::to_value(container).unwrap();
 
-        assert!(!value
-            .pointer("/models/1/object/properties/0/nullable")
-            .map(|v| v.as_bool().unwrap())
-            .unwrap());
-        assert_eq!(
-            value
-                .pointer("/models/1/object/properties/0/model/name")
-                .map(|v| v.as_str().unwrap())
-                .unwrap(),
-            "Testing"
-        );
-        assert!(value
-            .pointer("/models/1/object/properties/1/nullable")
-            .map(|v| v.as_bool().unwrap())
-            .unwrap());
-        assert_eq!(
-            value
-                .pointer("/models/1/object/properties/1/model/name")
-                .map(|v| v.as_str().unwrap())
-                .unwrap(),
-            "Testing"
-        );
+        let root = value["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|m| m["object"]["name"].as_str() == Some("MySecretName"))
+            .unwrap();
+
+        let properties = root["object"]["properties"].as_array().unwrap();
+        assert_eq!(properties.len(), 2);
+
+        assert!(!properties[0]["nullable"].as_bool().unwrap());
+        assert_eq!(properties[0]["model"]["name"].as_str().unwrap(), "Testing");
+
+        assert!(properties[1]["nullable"].as_bool().unwrap());
+        assert_eq!(properties[1]["model"]["name"].as_str().unwrap(), "Testing");
     }
 }

@@ -27,6 +27,8 @@ pub struct OpenapiExtractOptions {
     pub only_endpoints: Vec<String>,
     /// Remove models that are not referenced by any kept endpoint.
     pub skip_unused_models: bool,
+    /// Merge models with the same structure ignoring title and description.
+    pub merge_similar_models: bool,
 }
 #[derive(Default)]
 pub struct EndpointContainer {
@@ -148,10 +150,12 @@ pub fn extract(
         skip_endpoints,
         only_endpoints,
         skip_unused_models,
+        merge_similar_models,
     } = options;
 
     let options = &JsonSchemaExtractOptions {
         optional_and_nullable_as_models,
+        merge_similar_models,
         keep_schema,
         ..Default::default()
     };
@@ -421,8 +425,11 @@ impl Openapi {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{schema::Schema, storage::SchemaStorage, Client};
+    use crate::{
+        process::dereference::Dereferencer, schema::Schema, storage::SchemaStorage, Client,
+    };
     use serde_json::json;
+    use url::Url;
 
     fn test_schema() -> Schema {
         Schema::from_json(json!({
@@ -683,7 +690,15 @@ mod tests {
 
         let client = Client::new();
         let storage = SchemaStorage::new(&schema, &client);
-        let openapi = super::extract(&schema, &storage, OpenapiExtractOptions::default()).unwrap();
+        let openapi = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions {
+                merge_similar_models: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
 
         let names = model_names(&openapi);
         assert!(
@@ -763,6 +778,7 @@ mod tests {
             &storage,
             OpenapiExtractOptions {
                 skip_endpoints: vec!["getFoo".to_string()],
+                merge_similar_models: true,
                 ..Default::default()
             },
         )
@@ -822,7 +838,15 @@ mod tests {
 
         let client = Client::new();
         let storage = SchemaStorage::new(&schema, &client);
-        let openapi = super::extract(&schema, &storage, OpenapiExtractOptions::default()).unwrap();
+        let openapi = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions {
+                merge_similar_models: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
 
         let value = serde_json::to_value(&openapi).unwrap();
         let models = value["models"]["models"].as_array().unwrap();
@@ -846,10 +870,147 @@ mod tests {
             &storage,
             OpenapiExtractOptions {
                 skip_endpoints: vec!["getBar".to_string()],
+                merge_similar_models: true,
                 ..Default::default()
             },
         )
         .unwrap();
         assert_eq!(only_foo.models.models().len(), 1);
+    }
+
+    #[test]
+    fn test_similar_inline_models_are_not_merged_without_flag() {
+        let schema = Schema::from_json(json!({
+            "openapi": "3.0.0",
+            "info": { "title": "Inline", "version": "1.0.0" },
+            "paths": {
+                "/foo": {
+                    "get": {
+                        "operationId": "getFoo",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "title": "InlineUser",
+                                            "description": "first description",
+                                            "properties": {
+                                                "id": { "type": "integer" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "/bar": {
+                    "get": {
+                        "operationId": "getBar",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "title": "InlineUserResponse",
+                                            "description": "different description",
+                                            "properties": {
+                                                "id": { "type": "integer" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }));
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+        let openapi = super::extract(&schema, &storage, OpenapiExtractOptions::default()).unwrap();
+
+        let names = model_names(&openapi);
+        assert!(
+            names.contains(&"InlineUser".to_string()),
+            "InlineUser should be present"
+        );
+        assert!(
+            names.contains(&"InlineUserResponse".to_string()),
+            "InlineUserResponse should be present"
+        );
+        assert_eq!(
+            names.len(),
+            2,
+            "similar inline models with different titles should not be merged without --merge-similar-models"
+        );
+    }
+
+    #[test]
+    fn test_codegen_extract_merges_similar_models_from_dereferenced_file() {
+        let url = Url::parse(&format!(
+            "file://{}/resources/test/openapi/04-codegen-dedup.yaml",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap();
+        let mut schema = Schema::load_url(url).unwrap();
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+
+        Dereferencer::options()
+            .with_create_internal_references(true)
+            .with_skip_root_internal_references(true)
+            .process(&mut schema, &storage);
+
+        let without_merge =
+            super::extract(&schema, &storage, OpenapiExtractOptions::default()).unwrap();
+
+        let names = model_names(&without_merge);
+        assert!(
+            names.contains(&"ResourceListData".to_string()),
+            "ResourceListData should be present"
+        );
+        assert!(
+            names.contains(&"ResourceList".to_string()),
+            "ResourceDefinition2 should be present when not merging"
+        );
+        assert!(
+            names.contains(&"ResourceDefinition2".to_string()),
+            "ResourceDefinition2 should be present when not merging"
+        );
+        assert!(
+            names.contains(&"ResourceDefinition".to_string()),
+            "ResourceDefinition2 should be present when not merging"
+        );
+
+        let with_merge = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions {
+                merge_similar_models: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let names = model_names(&with_merge);
+        assert!(
+            names.contains(&"ResourceListData".to_string()),
+            "ResourceListData should be present after merge"
+        );
+        assert!(
+            names.contains(&"ResourceList".to_string()),
+            "ResourceListData should be present after merge"
+        );
+        assert!(
+            !names.contains(&"ResourceDefinition2".to_string()),
+            "ResourceDefinition2 should be merged into ResourceListData"
+        );
     }
 }
