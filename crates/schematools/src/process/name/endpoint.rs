@@ -3,6 +3,12 @@ use super::word::{pluralize, singularize};
 use crate::error::Error;
 use cruet::Inflector;
 use regex::Regex;
+use std::sync::LazyLock;
+
+static METHOD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new("^(get|head|post|put|delete|connect|options|trace|patch)$").unwrap()
+});
+static VERSION: LazyLock<Regex> = LazyLock::new(|| Regex::new("^v([0-9]+)$").unwrap());
 
 pub struct Endpoint {
     original: String,
@@ -14,12 +20,6 @@ pub struct Endpoint {
 
 impl Endpoint {
     pub fn new(method: String, original_path: String) -> Result<Endpoint, Error> {
-        lazy_static! {
-            static ref METHOD: Regex =
-                Regex::new("^(get|head|post|put|delete|connect|options|trace|patch)$").unwrap();
-            static ref VERSION: Regex = Regex::new("^v([0-9]+)$").unwrap();
-        }
-
         let path = original_path
             .trim_matches('/')
             .trim_matches('_')

@@ -113,7 +113,11 @@ pub fn discover_git(
     source: GitCheckoutType,
     no_cache: bool,
 ) -> Result<Registry, Error> {
-    use fs4::fs_std::FileExt;
+    // On Rust 1.89+ `std::fs::File::lock` is stable and takes precedence over
+    // the trait method via inherent-method resolution, so this import is only
+    // needed to support older toolchains.
+    #[allow(unused_imports)]
+    use fs4::FileExt;
 
     let mut directory = std::env::temp_dir();
 
@@ -141,7 +145,7 @@ pub fn discover_git(
         .open(directory.join(format!("{digest_string}.lock")))
         .map_err(Error::DiscoveryLockError)?;
 
-    lock.lock_exclusive().map_err(Error::DiscoveryLockError)?;
+    lock.lock().map_err(Error::DiscoveryLockError)?;
     directory.push(digest_string);
 
     if directory.exists() && no_cache {

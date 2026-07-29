@@ -98,9 +98,7 @@ pub fn name_schema(
             }
 
             // definitions
-            lazy_static! {
-                static ref NESTED_DEFINITIONS: [&'static str; 2] = ["definitions", "$defs"];
-            }
+            static NESTED_DEFINITIONS: [&str; 2] = ["definitions", "$defs"];
 
             for key in NESTED_DEFINITIONS.iter() {
                 if let Some(v) = map.get_mut(*key) {
@@ -117,10 +115,7 @@ pub fn name_schema(
             }
 
             // items
-            lazy_static! {
-                static ref NESTED_NAMES: [&'static str; 5] =
-                    ["items", "oneOf", "allOf", "anyOf", "not"];
-            }
+            static NESTED_NAMES: [&str; 5] = ["items", "oneOf", "allOf", "anyOf", "not"];
 
             for key in NESTED_NAMES.iter() {
                 if let Some(value) = map.get_mut(*key) {
