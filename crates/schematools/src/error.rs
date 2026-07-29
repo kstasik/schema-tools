@@ -48,6 +48,9 @@ pub enum Error {
     #[error("Discovery cache registry error: {0}")]
     DiscoveryCacheRegistryError(std::io::Error),
 
+    #[error("Discovery cannot create lock: {0}")]
+    DiscoveryLockError(std::io::Error),
+
     #[error("Git url format should match git://repository#(branch|tag)?(#directory) pattern")]
     DiscoveryInvalidGitUrl,
 

@@ -113,6 +113,8 @@ pub fn discover_git(
     source: GitCheckoutType,
     no_cache: bool,
 ) -> Result<Registry, Error> {
+    use fs4::fs_std::FileExt;
+
     let mut directory = std::env::temp_dir();
     let mut refspecs: Vec<String> = vec![];
 
@@ -137,6 +139,18 @@ pub fn discover_git(
 
     let digest = md5::compute(&revparse);
     directory.push("schema-tools");
+    fs::create_dir_all(&directory).map_err(Error::DiscoveryCacheRegistryError)?; // create
+                                                                                 // schema-tools dir
+
+    let lock = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .read(true)
+        .write(true)
+        .open(directory.join(format!("{digest:x}.lock")))
+        .map_err(Error::DiscoveryLockError)?;
+
+    lock.lock_exclusive().map_err(Error::DiscoveryLockError)?;
     directory.push(format!("{digest:x}"));
 
     if directory.exists() && no_cache {
