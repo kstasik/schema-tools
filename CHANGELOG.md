@@ -1,3 +1,12 @@
+## v0.24.0 (2026-07-29)
+
+### Feat
+
+- make strong deduplication after parameter
+- small optimizations
+- skip duplicated models
+- add options for skipping some endpoints or keep only selected endpoints
+
 ## v0.23.2 (2026-07-29)
 
 ### Fix
