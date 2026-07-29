@@ -1,3 +1,9 @@
+## v0.23.2 (2026-07-29)
+
+### Fix
+
+- Git template discovery file lock (#133)
+
 ## v0.23.1 (2026-05-29)
 
 ### Fix
