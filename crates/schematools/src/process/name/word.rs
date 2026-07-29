@@ -1,5 +1,6 @@
 #![allow(clippy::trivial_regex)]
 use regex::Regex;
+use std::sync::LazyLock;
 
 // create replacement tuple
 macro_rules! crtpl {
@@ -8,10 +9,9 @@ macro_rules! crtpl {
     };
 }
 
-lazy_static! {
-    // regexp source: https://gist.github.com/tbrianjones/ba0460cc1d55f357e00b
-
-    static ref SINGULAR_LIST: [(Regex, &'static str); 28] = [
+// regexp source: https://gist.github.com/tbrianjones/ba0460cc1d55f357e00b
+static SINGULAR_LIST: LazyLock<[(Regex, &'static str); 28]> = LazyLock::new(|| {
+    [
         crtpl!("(quiz)zes$", "${1}"),
         crtpl!("(matr)ices$", "${1}ix"),
         crtpl!("(vert|ind)ices$", "${1}ex"),
@@ -33,16 +33,21 @@ lazy_static! {
         crtpl!("(li|wi|kni)ves$", "${1}fe"),
         crtpl!("(shea|loa|lea|thie)ves$", "${1}f"),
         crtpl!("(^analy)ses$", "${1}sis"),
-        crtpl!("((a)naly|(b)a|(d)iagno|(p)arenthe|(p)rogno|(s)ynop|(t)he)ses$", "${1}${2}sis"),
+        crtpl!(
+            "((a)naly|(b)a|(d)iagno|(p)arenthe|(p)rogno|(s)ynop|(t)he)ses$",
+            "${1}${2}sis"
+        ),
         crtpl!("([ti])a$", "${1}um"),
         crtpl!("(n)ews$", "${1}ews"),
         crtpl!("(h|bl)ouses$", "${1}ouse"),
         crtpl!("(corpse)s$", "${1}"),
         crtpl!("(us)es$", "${1}"),
-        crtpl!("s$", "")
-    ];
+        crtpl!("s$", ""),
+    ]
+});
 
-    static ref PLURAL_LIST: [(Regex, &'static str); 19] = [
+static PLURAL_LIST: LazyLock<[(Regex, &'static str); 19]> = LazyLock::new(|| {
+    [
         crtpl!("(quiz)$", "${1}zes"),
         crtpl!("^(ox)$", "${1}en"),
         crtpl!("([m|l])ouse$", "${1}ice"),
@@ -52,7 +57,6 @@ lazy_static! {
         crtpl!("(hive)$", "${1}s"),
         crtpl!("(?:([^f])fe|([lr])f)$", "${1}${2}ves"),
         crtpl!("(shea|lea|loa|thie)f$", "${1}ves"),
-
         crtpl!("sis$", "ses"),
         crtpl!("([ti])um$", "${1}a"),
         crtpl!("(tomat|potat|ech|her|vet)o$", "${1}oes"),
@@ -62,9 +66,9 @@ lazy_static! {
         crtpl!("(ax|test)is$", "${1}es"),
         crtpl!("(us)$", "${1}es"),
         crtpl!("s$", "s"),
-        crtpl!("$", "s")
-    ];
-}
+        crtpl!("$", "s"),
+    ]
+});
 
 pub fn singularize(word: String) -> String {
     for (re, replacement) in SINGULAR_LIST.iter() {
