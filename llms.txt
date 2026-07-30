@@ -1,0 +1,30 @@
+# Schema Tools
+
+> `schema-tools` is a Rust CLI/library (`schematools-cli` / `schematools`) that validates, preprocesses, and generates code from OpenAPI and JSON Schema documents using a Tera (jinja2) template engine with custom, user-provided templates.
+
+Repository: https://github.com/kstasik/schema-tools (crates on https://crates.io/crates/schematools-cli and https://crates.io/crates/schematools).
+
+It is a Cargo workspace with two crates: `crates/schematools` (core library: loading, `$ref` resolution, preprocessing, validation, codegen/Tera integration) and `crates/cli` (`clap` command-line wrapper). The main workflow is a `chain` of steps — `process` (dereference, merge-all-of, name, patch, merge-openapi, bump-openapi), `validate`, `codegen` (`json-schema` / `openapi`), `registry` (git-based template sources), and `output` (debug dump) — that pipes a schema through transformations and finally renders `.j2` templates against the extracted model/endpoint data. This project is most useful when writing or debugging **codegen templates**: template authors need to know which CLI commands produce which data and exactly what variables/shapes are exposed to Tera.
+
+## Docs
+
+- [README.md](README.md): install instructions, full CLI command reference (`process dereference|merge-all-of|name|patch|merge-openapi|bump-openapi`, `validate`, `codegen json-schema|openapi`, `chain`, `registry`), codegen options (`--nested-arrays-as-models`, `--optional-and-nullable-as-models`, `--wrappers`, `--skip-endpoint`, `--only-endpoint`, `--skip-unused-models`, `--keep-schema`, `--merge-similar-models`, `-o`, `--format`), template file header syntax (`type=`, `filename=`, `if=`), template inheritance/overriding, and end-to-end `chain` examples.
+- [docs/PROJECT_ARCHITECTURE.md](docs/PROJECT_ARCHITECTURE.md): how the tool loads schemas (`schema.rs`), resolves external files (`storage.rs`) and `$ref` pointers (`resolver.rs`), tracks naming scope (`scope.rs`), runs the `process/` pipeline, extracts models/endpoints for codegen (`codegen/jsonschema`, `codegen/openapi`), handles `oneOf`/`anyOf`/`allOf`/nullable-optional wrapping and model dedup, discovers/renders templates (`discovery.rs`, `codegen/templates.rs`, `renderer.rs`, `filters.rs`), and wires up the CLI/chain mode — with an indexed map of important source files and line ranges.
+- [docs/TEMPLATE_VARIABLES.md](docs/TEMPLATE_VARIABLES.md): the complete Tera context reference for template authors — how the root context (`options`, `models`, `endpoints`, `security`, `tags`, `formats`) is assembled; full shapes of `Model`/`FlatModel`/`attributes`/`regexps` (`type=models`), `Endpoint`/`Parameters`/`Parameter`/`RequestBody`/`Responses`/`MediaModelsContainer`/`MediaModel` (`type=endpoints`), `SecurityScheme`, tag containers (`type=tags`), static file passthrough (`type=static`), built-in custom Tera filters/functions, filename placeholder syntax, and several fully worked template examples (oneOf unions, enums, query params + security, multi-content-type request/response, path-level parameter reuse).
+
+## Source layout
+
+- [Cargo.toml](Cargo.toml): workspace definition, shared dependency versions, workspace version (used for `cargo install schematools-cli@<version>`).
+- [crates/schematools/src](crates/schematools/src): core library — schema loading/resolution, `process/` preprocessors, `codegen/jsonschema` and `codegen/openapi` extraction, template rendering, validation.
+- [crates/schematools/resources](crates/schematools/resources): OpenAPI/JSON-Schema fixtures used in docs, README examples, and tests.
+- [crates/cli/src](crates/cli/src): `clap`-based CLI (`chain`, `codegen`, `process`, `registry`, `validate` subcommands) that drives the library.
+- [CHANGELOG.md](CHANGELOG.md): release history.
+
+## Related
+
+- Example/community codegen templates repo referenced throughout the README and used with `registry add`: https://github.com/kstasik/schema-tools-templates
+- Templating engine used for all codegen: [Tera](https://github.com/Keats/tera) (jinja2-like) — see https://keats.github.io/tera/ for base syntax/filters not specific to this project.
+
+## Optional
+
+- [.clippy.toml](.clippy.toml), [.cz.toml](.cz.toml): lint and commit-convention configuration, not relevant to understanding templates/codegen behavior.

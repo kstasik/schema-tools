@@ -24,6 +24,7 @@ It is designed to speed up development of microservices heavly using json object
 
 - [`docs/PROJECT_ARCHITECTURE.md`](docs/PROJECT_ARCHITECTURE.md) — how `schema-tools` loads, processes, and generates code.
 - [`docs/TEMPLATE_VARIABLES.md`](docs/TEMPLATE_VARIABLES.md) — complete reference of variables available in Tera templates.
+- [`llms.txt`](llms.txt) — [llmstxt.org](https://llmstxt.org)-style index of this project's docs and source layout, intended as a concise entry point for LLM agents/tools working on codegen templates.
 
 Main differences in approach between other solutions like `openapi-generator`:
 
