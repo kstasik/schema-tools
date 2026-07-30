@@ -4,6 +4,7 @@ use serde::ser::SerializeMap;
 use serde::Serialize;
 use serde_json::Map;
 use serde_json::Value;
+use std::collections::{HashMap, HashSet};
 
 use super::jsonschema::{add_types, extract_type, JsonSchemaExtractOptions, ModelContainer};
 
@@ -128,6 +129,73 @@ pub struct Openapi {
     pub tags: Vec<String>,
 }
 
+fn collect_refs(value: &Value, refs: &mut HashSet<String>) {
+    match value {
+        Value::Object(map) => {
+            if let Some(Value::String(reference)) = map.get("$ref") {
+                refs.insert(reference.clone());
+            }
+            for v in map.values() {
+                collect_refs(v, refs);
+            }
+        }
+        Value::Array(arr) => {
+            for v in arr {
+                collect_refs(v, refs);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn topologically_sorted_component_keys(
+    items: &Map<String, Value>,
+    dependency_prefix: &str,
+) -> Vec<String> {
+    let keys: Vec<String> = items.keys().cloned().collect();
+    let mut deps: HashMap<String, HashSet<String>> = HashMap::new();
+    for (key, node) in items {
+        let mut refs = HashSet::new();
+        collect_refs(node, &mut refs);
+        let local_refs: HashSet<String> = refs
+            .iter()
+            .filter_map(|r| r.strip_prefix(dependency_prefix).map(String::from))
+            .collect();
+        deps.insert(key.clone(), local_refs);
+    }
+
+    let mut sorted: Vec<String> = Vec::new();
+    let mut remaining: HashSet<String> = keys.iter().cloned().collect();
+    while !remaining.is_empty() {
+        let mut ready: Vec<String> = remaining
+            .iter()
+            .filter(|k| deps.get(*k).unwrap().iter().all(|d| !remaining.contains(d)))
+            .cloned()
+            .collect();
+
+        if ready.is_empty() {
+            // Cyclic references: pick the alphabetically first remaining
+            // item so the result is still deterministic.
+            let mut cyclic: Vec<String> = remaining.iter().cloned().collect();
+            cyclic.sort();
+            if let Some(key) = cyclic.first() {
+                ready.push(key.clone());
+            }
+        }
+
+        // Use alphabetical order so the result does not depend on the
+        // document order of independent items.
+        ready.sort();
+
+        for key in ready {
+            remaining.remove(&key);
+            sorted.push(key);
+        }
+    }
+
+    sorted
+}
+
 pub fn extract(
     schema: &Schema,
     storage: &SchemaStorage,
@@ -198,74 +266,91 @@ pub fn extract(
     })?;
 
     // components/schemas
-    tools::each_node(
-        root,
-        &mut scope,
-        "/any:components/any:schemas/definition:*",
-        |node, parts, scope| {
-            if let [key] = parts {
-                scope.glue(key);
-
-                add_types(node, &mut mcontainer, scope, resolver, options)?;
-
-                scope.pop();
+    // Process schemas in dependency order so that a schema is always extracted
+    // before any schema that references it. This makes the generated model names
+    // independent of the order in which schemas appear in components.schemas.
+    if let Some(Value::Object(schemas)) = root.get("components").and_then(|c| c.get("schemas")) {
+        for key in topologically_sorted_component_keys(schemas, "#/components/schemas/") {
+            if let Some(node) = schemas.get(&key) {
+                scope.any("components");
+                scope.any("schemas");
+                scope.definition(&key);
+                scope.glue(&key);
+                add_types(node, &mut mcontainer, &mut scope, resolver, options)?;
+                scope.reduce(4);
             }
-            Ok(())
-        },
-    )?;
+        }
+    }
 
     // components/parameters
-    tools::each_node(
-        root,
-        &mut scope,
-        "/any:components/any:parameters/definition:*/any:schema",
-        |node, parts, scope| {
-            if let [key] = parts {
-                scope.glue(key).glue("parameter");
-
-                // todo ?????
-                add_types(node, &mut mcontainer, scope, resolver, options)?;
-
-                scope.reduce(2);
+    if let Some(Value::Object(parameters)) =
+        root.get("components").and_then(|c| c.get("parameters"))
+    {
+        for key in topologically_sorted_component_keys(parameters, "#/components/parameters/") {
+            if let Some(node) = parameters.get(&key).and_then(|p| p.get("schema")) {
+                scope.any("components");
+                scope.any("parameters");
+                scope.definition(&key);
+                scope.any("schema");
+                scope.glue(&key);
+                scope.glue("parameter");
+                add_types(node, &mut mcontainer, &mut scope, resolver, options)?;
+                scope.reduce(6);
             }
-
-            Ok(())
-        },
-    )?;
+        }
+    }
 
     // components/responses
-    tools::each_node(
-        root,
-        &mut scope,
-        "/any:components/any:responses/definition:*/any:content/any:*/any:schema",
-        |node, parts, scope| {
-            if let [key, _] = parts {
-                scope.glue(key).glue("response");
-
-                add_types(node, &mut mcontainer, scope, resolver, options)?;
-
-                scope.reduce(2);
+    if let Some(Value::Object(responses)) = root.get("components").and_then(|c| c.get("responses"))
+    {
+        for key in topologically_sorted_component_keys(responses, "#/components/responses/") {
+            if let Some(Value::Object(content)) = responses.get(&key).and_then(|r| r.get("content"))
+            {
+                for (content_type, media) in content {
+                    if let Some(schema) = media.get("schema") {
+                        scope.any("components");
+                        scope.any("responses");
+                        scope.definition(&key);
+                        scope.any("content");
+                        scope.any(content_type);
+                        scope.any("schema");
+                        scope.glue(&key);
+                        scope.glue("response");
+                        add_types(schema, &mut mcontainer, &mut scope, resolver, options)?;
+                        scope.reduce(8);
+                    }
+                }
             }
-
-            Ok(())
-        },
-    )?;
+        }
+    }
 
     // components/requestBodies
-    tools::each_node(
-        root,
-        &mut scope,
-        "/any:components/any:requestBodies/definition:*/any:content/any:*/any:schema",
-        |node, parts, scope| {
-            if let [key, _] = parts {
-                scope.glue(key).glue("request");
-                add_types(node, &mut mcontainer, scope, resolver, options)?;
-                scope.reduce(2);
+    if let Some(Value::Object(request_bodies)) =
+        root.get("components").and_then(|c| c.get("requestBodies"))
+    {
+        for key in
+            topologically_sorted_component_keys(request_bodies, "#/components/requestBodies/")
+        {
+            if let Some(Value::Object(content)) =
+                request_bodies.get(&key).and_then(|r| r.get("content"))
+            {
+                for (content_type, media) in content {
+                    if let Some(schema) = media.get("schema") {
+                        scope.any("components");
+                        scope.any("requestBodies");
+                        scope.definition(&key);
+                        scope.any("content");
+                        scope.any(content_type);
+                        scope.any("schema");
+                        scope.glue(&key);
+                        scope.glue("request");
+                        add_types(schema, &mut mcontainer, &mut scope, resolver, options)?;
+                        scope.reduce(8);
+                    }
+                }
             }
-
-            Ok(())
-        },
-    )?;
+        }
+    }
 
     tools::each_node(
         root,
@@ -973,19 +1058,15 @@ mod tests {
 
         let names = model_names(&without_merge);
         assert!(
-            names.contains(&"ResourceListData".to_string()),
-            "ResourceListData should be present"
-        );
-        assert!(
             names.contains(&"ResourceList".to_string()),
-            "ResourceDefinition2 should be present when not merging"
-        );
-        assert!(
-            names.contains(&"ResourceDefinition2".to_string()),
-            "ResourceDefinition2 should be present when not merging"
+            "ResourceList should be present"
         );
         assert!(
             names.contains(&"ResourceDefinition".to_string()),
+            "ResourceDefinition should be present when not merging"
+        );
+        assert!(
+            names.contains(&"ResourceDefinition2".to_string()),
             "ResourceDefinition2 should be present when not merging"
         );
 
@@ -1001,16 +1082,187 @@ mod tests {
 
         let names = model_names(&with_merge);
         assert!(
-            names.contains(&"ResourceListData".to_string()),
-            "ResourceListData should be present after merge"
+            names.contains(&"ResourceList".to_string()),
+            "ResourceList should be present after merge"
         );
         assert!(
-            names.contains(&"ResourceList".to_string()),
-            "ResourceListData should be present after merge"
+            names.contains(&"ResourceDefinition".to_string()),
+            "ResourceDefinition should be present after merge"
         );
         assert!(
             !names.contains(&"ResourceDefinition2".to_string()),
-            "ResourceDefinition2 should be merged into ResourceListData"
+            "ResourceDefinition2 should be merged into ResourceDefinition"
         );
+    }
+
+    fn reorder_schemas(schema: &mut Schema, order: &[&str]) {
+        let body = schema.get_body_mut();
+        if let Some(Value::Object(components)) = body.get_mut("components") {
+            if let Some(Value::Object(schemas)) = components.get_mut("schemas") {
+                let mut new_schemas = Map::new();
+                for key in order {
+                    if let Some(value) = schemas.remove(*key) {
+                        new_schemas.insert(key.to_string(), value);
+                    }
+                }
+                for (key, value) in schemas.iter() {
+                    new_schemas.insert(key.clone(), value.clone());
+                }
+                *schemas = new_schemas;
+            }
+        }
+    }
+
+    #[test]
+    fn test_codegen_extract_is_independent_of_components_schema_order() {
+        let url = Url::parse(&format!(
+            "file://{}/resources/test/openapi/04-codegen-dedup.yaml",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap();
+        let mut schema = Schema::load_url(url).unwrap();
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+
+        Dereferencer::options()
+            .with_create_internal_references(true)
+            .with_skip_root_internal_references(true)
+            .process(&mut schema, &storage);
+
+        let names_original = model_names(
+            &super::extract(&schema, &storage, OpenapiExtractOptions::default()).unwrap(),
+        );
+
+        reorder_schemas(
+            &mut schema,
+            &["ResourceList", "ResourceDefinition", "ResourceDefinition2"],
+        );
+
+        let names_reordered = model_names(
+            &super::extract(&schema, &storage, OpenapiExtractOptions::default()).unwrap(),
+        );
+
+        assert_eq!(
+            names_original, names_reordered,
+            "model names should not depend on components.schemas order"
+        );
+    }
+
+    #[test]
+    fn test_codegen_extract_components_order_is_independent() {
+        let build_schema = |component_order: &[&str]| {
+            let mut components = serde_json::Map::new();
+            for section in component_order {
+                match *section {
+                    "schemas" => {
+                        components.insert(
+                            "schemas".to_string(),
+                            serde_json::json!({
+                                "Pet": {
+                                    "type": "object",
+                                    "properties": { "name": { "type": "string" } }
+                                },
+                                "Address": {
+                                    "type": "object",
+                                    "properties": { "street": { "type": "string" } }
+                                }
+                            }),
+                        );
+                    }
+                    "parameters" => {
+                        components.insert(
+                            "parameters".to_string(),
+                            serde_json::json!({
+                                "petParam": {
+                                    "name": "pet",
+                                    "in": "query",
+                                    "schema": { "$ref": "#/components/schemas/Pet" }
+                                }
+                            }),
+                        );
+                    }
+                    "responses" => {
+                        components.insert(
+                            "responses".to_string(),
+                            serde_json::json!({
+                                "DetailedNotFound": {
+                                    "$ref": "#/components/responses/NotFound"
+                                },
+                                "PetResponse": {
+                                    "description": "OK",
+                                    "content": {
+                                        "application/json": {
+                                            "schema": { "$ref": "#/components/schemas/Pet" }
+                                        }
+                                    }
+                                },
+                                "NotFound": {
+                                    "description": "Not found"
+                                }
+                            }),
+                        );
+                    }
+                    "requestBodies" => {
+                        components.insert(
+                            "requestBodies".to_string(),
+                            serde_json::json!({
+                                "PetBody": {
+                                    "content": {
+                                        "application/json": {
+                                            "schema": { "$ref": "#/components/schemas/Pet" }
+                                        }
+                                    }
+                                }
+                            }),
+                        );
+                    }
+                    _ => {}
+                }
+            }
+            Schema::from_json(serde_json::json!({
+                "openapi": "3.1.0",
+                "info": { "title": "T", "version": "1" },
+                "components": components,
+                "paths": {
+                    "/pets": {
+                        "get": {
+                            "operationId": "getPets",
+                            "parameters": [{ "$ref": "#/components/parameters/petParam" }],
+                            "responses": {
+                                "200": { "$ref": "#/components/responses/PetResponse" },
+                                "404": { "$ref": "#/components/responses/DetailedNotFound" }
+                            }
+                        },
+                        "post": {
+                            "operationId": "createPet",
+                            "requestBody": { "$ref": "#/components/requestBodies/PetBody" },
+                            "responses": { "200": { "description": "OK" } }
+                        }
+                    }
+                }
+            }))
+        };
+
+        let client = Client::new();
+
+        let schema_a = build_schema(&["responses", "requestBodies", "parameters", "schemas"]);
+        let storage_a = SchemaStorage::new(&schema_a, &client);
+        let names_a = model_names(
+            &super::extract(&schema_a, &storage_a, OpenapiExtractOptions::default()).unwrap(),
+        );
+
+        let schema_b = build_schema(&["schemas", "parameters", "responses", "requestBodies"]);
+        let storage_b = SchemaStorage::new(&schema_b, &client);
+        let names_b = model_names(
+            &super::extract(&schema_b, &storage_b, OpenapiExtractOptions::default()).unwrap(),
+        );
+
+        assert_eq!(
+            names_a, names_b,
+            "model names should not depend on component section or definition order"
+        );
+        assert!(names_a.contains(&"Pet".to_string()));
+        assert!(names_a.contains(&"Address".to_string()));
     }
 }
