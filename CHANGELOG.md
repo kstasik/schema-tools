@@ -1,3 +1,20 @@
+## v1.0.0 (2026-08-03)
+
+### BREAKING CHANGE
+
+- the `git2` feature flag is renamed to `git`.
+The git discovery backend now uses the pure-Rust `gix` crate with
+`reqwest`/`rustls` HTTPS transport, removing the OpenSSL/libgit2 dependency.
+- custom Tera filters/functions were rewritten for tera 2.x API. Templates probably need changes.
+
+### Feat
+
+- docs about template and project architecture
+
+
+- migrate git backend from git2 to gitoxide (gix) and use rustls
+- update tera, jsonschema, digest
+
 ## v0.24.0 (2026-07-29)
 
 ### Feat
