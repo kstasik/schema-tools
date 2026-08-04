@@ -67,7 +67,7 @@ schematools-cli \
 You can use the `output` command multiple times to inspect how the JSON/YAML file appears at different stages of the process.
 
 ```
-   -c 'output --to-file formatted.json -o json"' \
+   -c 'output --to-file formatted.json -o json' \
 ```
 
 ## using local templates / overwriting original templates
@@ -250,7 +250,7 @@ Example of endpoints.j2:
 - `filename=?` - target filepath to create. May be mixed with options, ex. `filename=clients/%options.name%/endpoints.go`
 - `if=foo:bar` - condition when to use template file. Should be mixed with options ex. `if=%options.type%:server`
 
-For more information how to write template files please refer to [Tera docs](https://tera.netlify.app/docs/). To get list of additional filters we created please visit [filters.rs](https://github.com/kstasik/schema-tools/blob/master/src/codegen/filters.rs).
+For more information how to write template files please refer to [Tera docs](https://keats.github.io/tera/). To get list of additional filters we created please visit [filters.rs](https://github.com/kstasik/schema-tools/blob/master/crates/schematools/src/codegen/filters.rs).
 
 ### Codegen template inheritance
 
@@ -293,7 +293,7 @@ All commands take same arguments as they were executed separately. The only diff
 schematools chain -vvvv \
    -c 'process merge-all-of --leave-invalid-properties specifications/api.yaml' \
    -c 'process name - --resource-method-version --overwrite' \
-   -c 'validate openapi - '
+   -c 'validate openapi - ' \
    -c 'codegen openapi - \
         --template codegen/server/ \
         --format "gofmt -w" \
