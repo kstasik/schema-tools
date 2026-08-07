@@ -1,3 +1,11 @@
+## v1.0.2 (2026-08-07)
+
+### Fix
+
+- typos and update links in README
+- preserve original operationId for --only-endpoint matching
+- restore model deduplication broken since 0.24.0
+
 ## v1.0.1 (2026-08-07)
 
 ### Fix

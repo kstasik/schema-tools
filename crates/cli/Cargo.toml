@@ -25,4 +25,4 @@ clap = { version = "4.6", features = ["derive"] }
 env_logger = "0.11"
 sha2 = "0.11"
 
-schematools = { version = "1.0.1", path = "../schematools" }
+schematools = { version = "1.0.2", path = "../schematools" }
