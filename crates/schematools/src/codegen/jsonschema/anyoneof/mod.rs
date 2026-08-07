@@ -6,10 +6,7 @@ use super::{
 };
 use serde_json::{Map, Value};
 
-use crate::{
-    codegen::jsonschema::types::Attributes, error::Error, resolver::SchemaResolver,
-    scope::SchemaScope,
-};
+use crate::{error::Error, resolver::SchemaResolver, scope::SchemaScope};
 
 mod extractor;
 
@@ -38,7 +35,7 @@ pub fn from_one_or_any_of(
         Some(one_of) => match one_of {
             Value::Array(variants) => {
                 if let Some(converted) =
-                    simplify_one_or_any_of(variants, container, scope, resolver, options)
+                    simplify_one_or_any_of(schema, variants, container, scope, resolver, options)
                 {
                     return converted;
                 }
@@ -96,6 +93,7 @@ pub fn from_one_or_any_of(
 }
 
 fn simplify_one_or_any_of(
+    schema: &Map<String, Value>,
     variants: &[Value],
     container: &mut ModelContainer,
     scope: &mut SchemaScope,
@@ -136,19 +134,29 @@ fn simplify_one_or_any_of(
                         log::debug!("{}: mapping oneOf/anyOf with null to simple type", scope);
 
                         let model = super::extract_type(node, container, scope, resolver, options)?;
-                        let attributes = Attributes {
-                            nullable: true,
-                            ..model.attributes.clone()
-                        };
+                        let mut attributes = model.attributes.clone();
+                        attributes.nullable = true;
 
-                        Ok(Ok(super::add_validation_and_nullable(
+                        if options.merge_similar_models {
+                            attributes.schema_hash = Some(super::schema_hash(schema));
+                        }
+
+                        let mut result = super::add_validation_and_nullable(
                             model,
                             node.as_object().unwrap(),
                             container,
                             options.keep_schema.check(node, false),
                             options.merge_similar_models,
                         )
-                        .with_attributes(&attributes)))
+                        .with_attributes(&attributes);
+
+                        if schema.contains_key("title") {
+                            if let Ok(title) = super::title::extract_title(schema, scope, options) {
+                                result = result.rename(title);
+                            }
+                        }
+
+                        Ok(Ok(result))
                     })
                     .unwrap(),
             )

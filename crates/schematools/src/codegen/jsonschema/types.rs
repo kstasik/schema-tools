@@ -378,7 +378,7 @@ impl Model {
 
     pub fn rename(self, name: String) -> Model {
         // todo: all models could have name ...
-        Model::new(match self.inner {
+        let mut result = Model::new(match self.inner {
             ModelType::ObjectType(mut o) => {
                 o.name = name;
                 ModelType::ObjectType(o)
@@ -408,7 +408,10 @@ impl Model {
                 ModelType::ArrayType(p)
             }
             _ => panic!("Unsupported rename: {name}"),
-        })
+        });
+        result.attributes = self.attributes;
+        result.spaces = self.spaces;
+        result
     }
 }
 
