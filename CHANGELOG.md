@@ -1,3 +1,9 @@
+## v1.0.1 (2026-08-07)
+
+### Fix
+
+- preserve nullability for oneOf [null, $ref] components with merge_similar_models
+
 ## v1.0.0 (2026-08-03)
 
 ### BREAKING CHANGE
