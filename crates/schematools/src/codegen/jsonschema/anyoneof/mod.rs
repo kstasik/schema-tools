@@ -137,7 +137,14 @@ fn simplify_one_or_any_of(
                         let mut attributes = model.attributes.clone();
                         attributes.nullable = true;
 
-                        if options.merge_similar_models {
+                        // Only give the nullable wrapper its own identity (and thus its own
+                        // schema hash) when it carries its own title, meaning it is meant to
+                        // be a distinct named type (e.g. "NullablePriceType" wrapping
+                        // "PriceType"). Otherwise this is just an inline nullable reference to
+                        // the same underlying type, so it must keep the hash of the resolved
+                        // model to be merged with other usages of that same type (avoids
+                        // generating duplicate models like FooVariant, FooVariant2, ...).
+                        if options.merge_similar_models && schema.contains_key("title") {
                             attributes.schema_hash = Some(super::schema_hash(schema));
                         }
 
