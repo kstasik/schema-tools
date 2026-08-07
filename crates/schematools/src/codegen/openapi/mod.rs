@@ -304,12 +304,17 @@ pub fn extract(
             only_endpoints.iter().map(|s| s.as_str()).collect();
 
         econtainer.endpoints.retain(|e| {
-            let op = e.operation();
-            !skip.contains(op) && (only.is_empty() || only.contains(op))
+            let candidates = e.operation_id_candidates();
+            let should_skip = candidates.iter().any(|c| skip.contains(c));
+            let should_keep = only.is_empty() || candidates.iter().any(|c| only.contains(c));
+            !should_skip && should_keep
         });
 
-        let kept: std::collections::HashSet<&str> =
-            econtainer.endpoints.iter().map(|e| e.operation()).collect();
+        let kept: std::collections::HashSet<&str> = econtainer
+            .endpoints
+            .iter()
+            .flat_map(|e| e.operation_id_candidates())
+            .collect();
 
         mcontainer.retain(|m| {
             let mut ops = m.spaces.list.iter().filter_map(|s| match s {
@@ -1011,6 +1016,147 @@ mod tests {
         assert!(
             !names.contains(&"ResourceDefinition2".to_string()),
             "ResourceDefinition2 should be merged into ResourceListData"
+        );
+    }
+
+    #[test]
+    fn test_only_endpoint_matches_original_operation_id_after_overwrite() {
+        let mut schema = Schema::from_json(json!({
+            "openapi": "3.0.0",
+            "info": { "title": "Test", "version": "1.0.0" },
+            "paths": {
+                "/api/v1/taxes/sellers": {
+                    "get": {
+                        "operationId": "getSellersAllTaxes",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "array",
+                                                    "items": { "$ref": "#/components/schemas/SellersAllTaxes" }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "components": {
+                "schemas": {
+                    "SellersAllTaxes": {
+                        "title": "SellersAllTaxes",
+                        "type": "object",
+                        "properties": {
+                            "id": { "type": "string" }
+                        }
+                    }
+                }
+            }
+        }));
+
+        crate::process::name::OpenapiNamer::options()
+            .with_overwrite(true)
+            .with_resource_method_version(true)
+            .process(&mut schema)
+            .unwrap();
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+
+        for merge in [false, true] {
+            let openapi = super::extract(
+                &schema,
+                &storage,
+                OpenapiExtractOptions {
+                    only_endpoints: vec!["getSellersAllTaxes".to_string()],
+                    merge_similar_models: merge,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+
+            assert_eq!(openapi.endpoints.len(), 1);
+            let names = model_names(&openapi);
+            assert!(
+                names.contains(&"SellersAllTaxes".to_string()),
+                "only-endpoint should match x-original-operation-id and keep related models"
+            );
+        }
+    }
+
+    #[test]
+    fn test_only_endpoint_keeps_deduplicated_inline_model() {
+        let schema = Schema::from_json(json!({
+            "openapi": "3.0.0",
+            "info": { "title": "Inline", "version": "1.0.0" },
+            "paths": {
+                "/foo": {
+                    "get": {
+                        "operationId": "getFoo",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "title": "InlineUser",
+                                            "properties": { "id": { "type": "integer" } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "/bar": {
+                    "get": {
+                        "operationId": "getBar",
+                        "responses": {
+                            "200": {
+                                "description": "OK",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {
+                                            "type": "object",
+                                            "title": "InlineUser",
+                                            "properties": { "id": { "type": "integer" } }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }));
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+        let openapi = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions {
+                only_endpoints: vec!["getBar".to_string()],
+                merge_similar_models: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let names = model_names(&openapi);
+        assert_eq!(openapi.endpoints.len(), 1);
+        assert!(
+            names.contains(&"InlineUser".to_string()),
+            "InlineUser is used by getBar, so it must stay"
         );
     }
 

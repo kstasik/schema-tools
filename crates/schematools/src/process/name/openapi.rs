@@ -141,6 +141,20 @@ impl OpenapiNamerOptions {
 
                             if !details.contains_key("operationId") || self.overwrite {
                                 log::debug!("{}/operationId -> {}", ctx, operation_id);
+
+                                if self.overwrite {
+                                    if let Some(Value::String(original)) =
+                                        details.get("operationId")
+                                    {
+                                        if original != &operation_id {
+                                            details.insert(
+                                                "x-original-operation-id".to_string(),
+                                                Value::String(original.clone()),
+                                            );
+                                        }
+                                    }
+                                }
+
                                 details
                                     .insert("operationId".to_string(), Value::String(operation_id));
                             } else {

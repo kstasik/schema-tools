@@ -20,6 +20,8 @@ pub struct Endpoint {
     path: String,
     method: String,
     operation: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    original_operation: Option<String>,
     description: Option<String>,
     tags: Vec<String>,
     parameters: parameters::Parameters,
@@ -35,6 +37,20 @@ impl Endpoint {
 
     pub fn operation(&self) -> &str {
         &self.operation
+    }
+
+    pub fn operation_id_candidates(&self) -> Vec<&str> {
+        let mut candidates = vec![self.operation.as_str()];
+
+        if let Some(original) = self.original_operation.as_ref() {
+            candidates.push(original.as_str());
+        }
+
+        candidates
+    }
+
+    pub fn original_operation_id(&self) -> Option<&str> {
+        self.original_operation.as_deref()
     }
 }
 
@@ -161,10 +177,16 @@ fn new_endpoint(
                 endpoint_parameters.merge(shared)
             }
 
+            let original_operation = x
+                .get("original-operation-id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
             let endpoint = Endpoint {
                 security,
                 description,
                 operation,
+                original_operation,
                 method: method.to_string(),
                 path: path.to_string(),
                 tags,
