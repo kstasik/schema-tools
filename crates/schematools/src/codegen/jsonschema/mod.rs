@@ -94,7 +94,19 @@ impl ModelContainer {
 
         let name = model.name().unwrap();
 
-        if self.by_name.contains_key(name) {
+        if let Some(&id) = self.by_name.get(name) {
+            // The models with the same schema hash are already handled above (when
+            // merge_similar_models is enabled). When it's not (or the model doesn't carry a
+            // hash), still merge models which are structurally identical (same name and same
+            // shape), instead of unconditionally bumping the suffix and generating a duplicate
+            // type. This matches the historical (pre schema-hash) behaviour where identical
+            // schemas were always deduplicated regardless of any option.
+            if self.models[id as usize].is_like(&model) {
+                self.models[id as usize].add_spaces(scope);
+                self.mapping.insert(key, id);
+                return (Some(id), &self.models[id as usize]);
+            }
+
             let new_name = tools::bump_suffix_number(name);
             log::warn!(
                 "{}: absolute: {}, conflict, renaming to: {}",
@@ -779,5 +791,146 @@ mod tests {
         assert_eq!(properties[0]["model"]["name"].as_str().unwrap(), "Testing");
 
         assert!(properties[1]["nullable"].as_bool().unwrap());
+    }
+
+    #[test]
+    fn test_repro_currency_code_enum_duplication() {
+        let schema = Schema::from_json(json!({
+            "definitions": {
+                "CurrencyCodeType": {
+                    "title": "CurrencyCodeType",
+                    "type": "string",
+                    "enum": ["AED", "AFN", "ALL"]
+                }
+            },
+            "title": "schema",
+            "type": "object",
+            "properties": {
+                "CurrencyCodeType": {
+                    "$ref": "#/definitions/CurrencyCodeType"
+                },
+                "Entity": {
+                    "type": "object",
+                    "required": ["currencyCode"],
+                    "properties": {
+                        "currencyCode": {"$ref": "#/definitions/CurrencyCodeType"}
+                    }
+                },
+                "NominalHolder": {
+                    "type": "object",
+                    "required": ["nominalCurrencyCode"],
+                    "properties": {
+                        "nominalCurrencyCode": {
+                            "oneOf": [
+                                {"$ref": "#/definitions/CurrencyCodeType"},
+                                {"type": "null"}
+                            ]
+                        }
+                    }
+                },
+                "AcceptedHolder": {
+                    "type": "object",
+                    "required": ["acceptedCurrencies"],
+                    "properties": {
+                        "acceptedCurrencies": {
+                            "type": ["array", "null"],
+                            "items": {"$ref": "#/definitions/CurrencyCodeType"}
+                        }
+                    }
+                }
+            }
+        }));
+
+        let options = JsonSchemaExtractOptions {
+            merge_similar_models: true,
+            ..Default::default()
+        };
+
+        let client = reqwest::blocking::Client::new();
+        let result = extract(&schema, &SchemaStorage::new(&schema, &client), options);
+
+        assert!(result.is_ok());
+
+        let container = result.unwrap();
+        let value = serde_json::to_value(&container).unwrap();
+
+        let enum_names: Vec<String> = value["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|m| {
+                m.get("enum")
+                    .and_then(|e| e.get("name"))
+                    .and_then(|n| n.as_str())
+                    .map(|s| s.to_string())
+            })
+            .collect();
+
+        assert_eq!(
+            enum_names.len(),
+            1,
+            "expected only one CurrencyCodeType enum model to be generated, got: {:?}",
+            enum_names
+        );
+    }
+
+    #[test]
+    fn test_repro_currency_code_enum_duplication_without_merge_similar_models() {
+        // Identical schemas (same title/name and same shape) referenced from multiple places
+        // must be deduplicated even without --merge-similar-models, matching the behaviour
+        // prior to 0.24.0 where deduplication of exact structural duplicates was unconditional.
+        let schema = Schema::from_json(json!({
+            "definitions": {
+                "CurrencyCodeType": {
+                    "title": "CurrencyCodeType",
+                    "type": "string",
+                    "enum": ["AED", "AFN", "ALL"]
+                }
+            },
+            "title": "schema",
+            "type": "object",
+            "properties": {
+                "CurrencyCodeType": {
+                    "$ref": "#/definitions/CurrencyCodeType"
+                },
+                "Entity": {
+                    "type": "object",
+                    "required": ["currencyCode"],
+                    "properties": {
+                        "currencyCode": {"$ref": "#/definitions/CurrencyCodeType"}
+                    }
+                }
+            }
+        }));
+
+        let options = JsonSchemaExtractOptions::default();
+
+        let client = reqwest::blocking::Client::new();
+        let result = extract(&schema, &SchemaStorage::new(&schema, &client), options);
+
+        assert!(result.is_ok());
+
+        let container = result.unwrap();
+        let value = serde_json::to_value(&container).unwrap();
+
+        let enum_names: Vec<String> = value["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|m| {
+                m.get("enum")
+                    .and_then(|e| e.get("name"))
+                    .and_then(|n| n.as_str())
+                    .map(|s| s.to_string())
+            })
+            .collect();
+
+        assert_eq!(
+            enum_names.len(),
+            1,
+            "expected only one CurrencyCodeType enum model to be generated even without \
+             --merge-similar-models, got: {:?}",
+            enum_names
+        );
     }
 }
