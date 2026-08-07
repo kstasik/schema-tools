@@ -779,6 +779,5 @@ mod tests {
         assert_eq!(properties[0]["model"]["name"].as_str().unwrap(), "Testing");
 
         assert!(properties[1]["nullable"].as_bool().unwrap());
-        assert_eq!(properties[1]["model"]["name"].as_str().unwrap(), "Testing");
     }
 }

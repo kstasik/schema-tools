@@ -1013,4 +1013,89 @@ mod tests {
             "ResourceDefinition2 should be merged into ResourceListData"
         );
     }
+
+    #[test]
+    fn test_nullable_primitive_component_preserved_with_merge_similar_models() {
+        let schema = Schema::from_json(json!({
+            "openapi": "3.0.0",
+            "info": { "title": "Test", "version": "1.0.0" },
+            "components": {
+                "schemas": {
+                    "PriceType": {
+                        "title": "PriceType",
+                        "type": "string",
+                        "format": "decimal"
+                    },
+                    "NullablePriceType": {
+                        "title": "NullablePriceType",
+                        "oneOf": [
+                            {"type": "null"},
+                            {"$ref": "#/components/schemas/PriceType"}
+                        ]
+                    },
+                    "PriceResponse": {
+                        "title": "PriceResponse",
+                        "type": "object",
+                        "required": ["price"],
+                        "properties": {
+                            "price": {"$ref": "#/components/schemas/NullablePriceType"}
+                        }
+                    }
+                }
+            },
+            "paths": {
+                "/price": {
+                    "get": {
+                        "operationId": "getPrice",
+                        "responses": {
+                            "200": {
+                                "description": "ok",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {"$ref": "#/components/schemas/PriceResponse"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }));
+
+        let client = Client::new();
+        let storage = SchemaStorage::new(&schema, &client);
+        let openapi = super::extract(
+            &schema,
+            &storage,
+            OpenapiExtractOptions {
+                merge_similar_models: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let names = model_names(&openapi);
+        assert!(names.contains(&"PriceType".to_string()));
+        assert!(names.contains(&"NullablePriceType".to_string()));
+
+        let value = serde_json::to_value(&openapi).unwrap();
+        let response = value["models"]["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|m| m["object"]["name"].as_str() == Some("PriceResponse"))
+            .expect("PriceResponse model should exist");
+
+        let price = response["object"]["properties"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["name"].as_str() == Some("price"))
+            .expect("price property should exist");
+
+        assert!(
+            price["nullable"].as_bool().unwrap(),
+            "NullablePriceType property should keep nullable=true"
+        );
+    }
 }
